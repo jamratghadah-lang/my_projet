@@ -1,0 +1,49 @@
+{
+  "slug": "conference",
+  "names": "",
+  "date": "",
+  "location": "",
+  "envelope_type": "envelope",
+  "envelope_image": "https://nn022560.sirv.com/%D8%B5%D9%88%D8%B1%20%D8%A7%D9%84%D9%85%D9%88%D9%82%D8%B9/netfily/InShot_20260717_031919255.jpg",
+  "intro_video": "https://nn022560.sirv.com/%D8%B5%D9%88%D8%B1%20%D8%A7%D9%84%D9%85%D9%88%D9%82%D8%B9/netfily/InShot_20260717_173729157.mp4",
+  "gallery": [
+    "https://nn022560.sirv.com/%D8%B5%D9%88%D8%B1%20%D8%A7%D9%84%D9%85%D9%88%D9%82%D8%B9/netfily/InShot_20260718_024559179.png",
+    "https://nn022560.sirv.com/%D8%B5%D9%88%D8%B1%20%D8%A7%D9%84%D9%85%D9%88%D9%82%D8%B9/netfily/InShot_20260717_174450325.jpg",
+    "https://nn022560.sirv.com/%D8%B5%D9%88%D8%B1%20%D8%A7%D9%84%D9%85%D9%88%D9%82%D8%B9/netfily/InShot_20260717_175048780.jpg"
+  ],
+  "decorations": [
+    "https://nn022560.sirv.com/%D8%B5%D9%88%D8%B1%20%D8%A7%D9%84%D9%85%D9%88%D9%82%D8%B9/netfily/InShot_20260715_163059598.png",
+    "https://nn022560.sirv.com/%D8%B5%D9%88%D8%B1%20%D8%A7%D9%84%D9%85%D9%88%D9%82%D8%B9/netfily/InShot_20260717_195236498.png",
+    "https://nn022560.sirv.com/%D8%B5%D9%88%D8%B1%20%D8%A7%D9%84%D9%85%D9%88%D9%82%D8%B9/netfily/InShot_20260717_195118938.png"
+  ],
+  "timeline": [
+    {
+      "time": "",
+      "event": "الاستقبال"
+    },
+    {
+      "time": "",
+      "event": "الافتتاح"
+    },
+    {
+      "time": "",
+      "event": "العشاء"
+    },
+    {
+      "time": "",
+      "event": "الختام"
+    }
+  ],
+  "formspree_override": "",
+  "welcome_message": "",
+  "theme": "olive",
+  "seal_image": "https://nn022560.sirv.com/%D8%B5%D9%88%D8%B1%20%D8%A7%D9%84%D9%85%D9%88%D9%82%D8%B9/netfily/InShot_20260715_163059598.png",
+  "venue_photo": "https://nn022560.sirv.com/%D8%B5%D9%88%D8%B1%20%D8%A7%D9%84%D9%85%D9%88%D9%82%D8%B9/netfily/InShot_20260717_175048780.jpg",
+  "effects": {
+    "mouse_glow": "on",
+    "blur": "medium",
+    "music_url": "",
+    "autoplay_music": "on"
+  },
+  "access_code": "3OWW73RU"
+}

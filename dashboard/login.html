@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>تسجيل الدخول — لوحة تحكم جمرة غضى</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+  body{font-family:Tahoma,Arial,sans-serif;background:#111;color:#eee;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
+  .box{background:#1c1c1c;padding:32px;border-radius:12px;width:90%;max-width:360px;border:1px solid #333}
+  h1{font-size:18px;margin-bottom:20px;text-align:center;color:#d4af37}
+  input{width:100%;padding:10px;margin-bottom:12px;border-radius:6px;border:1px solid #444;background:#222;color:#fff;box-sizing:border-box}
+  button{width:100%;padding:10px;border:none;border-radius:6px;background:#d4af37;color:#111;font-weight:bold;cursor:pointer}
+  button:disabled{opacity:.6;cursor:default}
+  #msg{color:#ff8080;font-size:13px;margin-top:10px;text-align:center;min-height:16px}
+</style>
+</head>
+<body>
+  <div class="box">
+    <h1>لوحة تحكم جمرة غضى</h1>
+    <input type="email" id="email" placeholder="البريد الإلكتروني" autocomplete="username">
+    <input type="password" id="password" placeholder="كلمة المرور" autocomplete="current-password">
+    <button id="loginBtn">دخول</button>
+    <div id="msg"></div>
+  </div>
+
+<script type="module">
+import { auth, signInWithEmailAndPassword, onAuthStateChanged } from "../js/firebase-init.js";
+
+// لو مسجل دخول أصلاً، روحي مباشرة للوحة
+onAuthStateChanged(auth, (user) => {
+  if (user) window.location.href = "index.html";
+});
+
+const btn = document.getElementById("loginBtn");
+const msg = document.getElementById("msg");
+
+btn.addEventListener("click", async () => {
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+  if (!email || !password) { msg.textContent = "عبّي البريد وكلمة المرور"; return; }
+  btn.disabled = true; msg.textContent = "جارِ الدخول...";
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+    window.location.href = "index.html";
+  } catch (e) {
+    msg.textContent = "بيانات الدخول غير صحيحة";
+    btn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>

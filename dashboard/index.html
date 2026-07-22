@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة تحكم جمرة غضى</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+  body{font-family:Tahoma,Arial,sans-serif;background:#111;color:#eee;margin:0;padding:20px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
+  h1{color:#d4af37;font-size:20px;margin:0}
+  button.logout{background:none;border:1px solid #444;color:#ccc;padding:6px 14px;border-radius:6px;cursor:pointer}
+  .grid{display:grid;grid-template-columns:1fr;gap:14px;max-width:420px}
+  .tile{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:18px;text-decoration:none;color:#eee;display:block}
+  .tile h2{margin:0 0 6px;font-size:16px;color:#d4af37}
+  .tile p{margin:0;font-size:13px;color:#999}
+  .tile.soon{opacity:.5;pointer-events:none}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <h1>لوحة تحكم جمرة غضى</h1>
+  <button class="logout" id="logoutBtn">تسجيل الخروج</button>
+</div>
+
+<div class="grid">
+  <a class="tile" href="reminders.html">
+    <h2>📨 تذكير الضيوف</h2>
+    <p>واتساب يدوي أو SMS جماعي قبل يومين من المناسبة</p>
+  </a>
+  <a class="tile" href="qrcodes.html">
+    <h2>🔗 الدعوات ورموز QR</h2>
+    <p>إنشاء وتحميل رمز QR لأي رابط دعوة</p>
+  </a>
+  <a class="tile soon" href="#">
+    <h2>✉️ إعدادات إيميل التأكيدات</h2>
+    <p>قريبًا</p>
+  </a>
+</div>
+
+<script type="module">
+import { auth, signOut, requireLogin } from "../js/firebase-init.js";
+requireLogin(() => {});
+document.getElementById("logoutBtn").addEventListener("click", async () => {
+  await signOut(auth);
+  window.location.href = "login.html";
+});
+</script>
+</body>
+</html>

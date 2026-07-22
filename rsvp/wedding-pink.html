@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>دعوة زفاف - وردي | Ghadah</title>
+    <link rel="icon" href="https://nn022560.sirv.com/%D8%B5%D9%88%D8%B1%20%D8%A7%D9%84%D9%85%D9%88%D9%82%D8%B9/netfily/InShot_20260715_163059598.png">
+    <meta name="robots" content="noindex, nofollow">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Ovo&family=Great+Vibes&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root { 
+            --cream: #fdfaf6; 
+            --gold: #b76e79; 
+            --gold-light: #e8b4bc; 
+            --brown: #5c3b40; 
+            --brown-soft: #8a6c71; 
+            --wine: #4a2d31; 
+            --dark-bg: #3d2528; 
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background-color: var(--cream); font-family: 'Cormorant Garamond', Georgia, serif; color: var(--brown); overflow-x: hidden; -webkit-font-smoothing: antialiased; }
+        .cinzel { font-family: 'Cinzel', Georgia, serif; }
+        .cormorant { font-family: 'Cormorant Garamond', Georgia, serif; }
+        .ovo { font-family: 'Ovo', Georgia, serif; }
+        .amiri { font-family: 'Amiri', Georgia, serif; direction: rtl; }
+        .great-vibes { font-family: 'Great Vibes', cursive; }
+        .italic { font-style: italic; }
+        .text-gold { color: var(--gold); }
+        .text-brown { color: var(--brown); }
+        .text-cream { color: var(--cream); }
+        .text-brown-soft { color: var(--brown-soft); }
+        .wrap { max-width: 760px; margin: 0 auto; padding: 0 24px; text-align: center; }
+        section { padding: 70px 0; position: relative; }
+        @media (max-width: 600px) { section { padding: 52px 0; } }
+        .reveal { opacity: 0; transform: translateY(30px); transition: opacity 1.2s ease, transform 1.2s ease; }
+        .reveal.in { opacity: 1; transform: translateY(0); }
+        #envelope-overlay { position: fixed; inset: 0; z-index: 99999; background-color: var(--cream); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: opacity 1.4s ease; }
+        #envelope-overlay img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .tap-to-open { position: absolute; bottom: 15%; display: flex; flex-direction: column; align-items: center; opacity: 0; animation: fadeInBlock 0.8s ease forwards 0.8s; }
+        @keyframes fadeInBlock { to { opacity: 1; } }
+        .tap-chevron { width: 15px; height: 15px; border-right: 2px solid rgba(183,110,121,.75); border-bottom: 2px solid rgba(183,110,121,.75); transform: rotate(45deg); margin-bottom: 10px; animation: gentlePulse 2s infinite; }
+        .tap-text { font-size: 11px; letter-spacing: 0.26em; color: rgba(183,110,121,.75); text-transform: uppercase; animation: textPulse 2s infinite; }
+        @keyframes gentlePulse { 0%, 100% { opacity: 0.5; transform: rotate(45deg) scale(0.9); } 50% { opacity: 1; transform: rotate(45deg) scale(1.1); } }
+        @keyframes textPulse { 0%, 100% { opacity: 0.6; letter-spacing: 0.26em; } 50% { opacity: 1; letter-spacing: 0.3em; } }
+        #video-container { position: fixed; inset: 0; z-index: 100000; background: #000; opacity: 0; pointer-events: none; transition: opacity 1.4s ease; display: flex; align-items: center; justify-content: center; }
+        #video-container video { width: 100%; height: 100%; object-fit: cover; }
+        #audio-btn { position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; background-color: var(--wine); border-radius: 50%; box-shadow: 0 4px 10px rgba(0,0,0,.18); z-index: 2147483647; display: flex; align-items: center; justify-content: center; cursor: pointer; visibility: hidden; opacity: 0; transition: opacity 0.3s ease; }
+        #audio-btn svg { width: 24px; height: 24px; fill: #fff; }
+        .icon-play { display: none; }
+        .hero { padding-top: 90px; }
+        .hero-eyebrow { font-size: 26px; }
+        .hero-date { font-weight: 600; font-size: 20px; margin-top: 10px; }
+        .hero-names { font-family: 'Great Vibes', cursive; color: var(--gold); font-size: 84px; font-weight: 500; line-height: 1.1; margin: 30px 0; }
+        .hero-names span { display: block; font-family: 'Cormorant Garamond', serif; font-size: 40px; margin: 10px 0; }
+        .bismillah { font-size: 34px; margin-bottom: 20px; }
+        .verses-title { font-size: 38px; font-weight: 500; line-height: 1.3; margin-bottom: 20px; }
+        .couple-message-box { position: relative; max-width: 500px; margin: 40px auto 0; border-radius: 12px; overflow: hidden; box-shadow: 0 15px 35px rgba(0,0,0,0.15); }
+        .couple-message-box img { width: 100%; display: block; transition: transform 0.6s ease; }
+        .couple-message-box:hover img { transform: scale(1.05); }
+        .message-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 30px; text-align: center; z-index: 2; }
+        .countdown-title { font-size: 41px; margin-bottom: 25px; }
+        .countdown-wrapper { display: flex; justify-content: center; align-items: center; gap: 10px; }
+        .cd-block { display: flex; flex-direction: column; align-items: center; min-width: 70px; }
+        .cd-number-wrap { height: 60px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+        .cd-number { font-size: 46px; background: linear-gradient(105deg, #b76e79 0%, #b76e79 25%, #e8b4bc 46%, #f2cbd1 52%, #e8b4bc 58%, #b76e79 75%, #b76e79 100%); background-size: 300% 100%; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: shimmer 4.5s infinite linear; }
+        @keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: -200% 0; } }
+        .cd-label { font-size: 19px; opacity: 0.85; margin-top: 5px; }
+        .cd-sep { font-size: 46px; color: var(--gold); line-height: 60px; padding-bottom: 25px; }
+        .timeline { max-width: 420px; margin: 40px auto; position: relative; }
+        .timeline::before { content: ''; position: absolute; top: 0; bottom: 0; left: 50%; transform: translateX(-50%); width: 1px; background-color: rgba(183,110,121,.35); }
+        .event-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 30px; position: relative; z-index: 2; }
+        .event-time { font-weight: 600; font-size: 26px; text-align: right; min-width: 70px; flex: 1; padding-right: 20px; }
+        .event-dot { width: 9px; height: 9px; background-color: var(--gold); border-radius: 50%; flex-shrink: 0; }
+        .event-name { font-size: 22px; text-align: left; flex: 1; padding-left: 20px; }
+        .map-section {
+            position: relative;
+            background: url('https://nn022560.sirv.com/%D8%B5%D9%88%D8%B1%20%D8%A7%D9%84%D9%85%D9%88%D9%82%D8%B9/netfily/InShot_20260717_041420463.jpg') center/cover no-repeat fixed;
+            border-radius: 12px; margin: 40px 0; padding: 70px 20px; overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .map-section::before { content: ''; position: absolute; inset: 0; background: rgba(253, 250, 246, 0.88); z-index: 0; }
+        .map-section > * { position: relative; z-index: 1; }
+        .map-wrap { position: relative; max-width: 380px; margin: 0 auto; margin-top: 20px; }
+        .map-wrap iframe { width: 100%; height: 260px; border: 2px solid var(--gold); border-radius: 8px; }
+        .rsvp-title { font-size: 41px; margin-bottom: 20px; }
+        .wax-seal { cursor: pointer; width: 150px; transition: transform 0.3s; margin-top: 20px; }
+        .wax-seal:hover { transform: scale(1.05); }
+        #rsvp-modal { position: fixed; inset: 0; z-index: 200000; background: rgba(253,250,246,0.95); display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.4s ease; }
+        #rsvp-modal.active { opacity: 1; pointer-events: all; }
+        .modal-content { background: #fff; padding: 40px; border: 1px solid var(--gold-light); max-width: 400px; width: 90%; text-align: left; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.1); max-height: 90vh; overflow-y: auto; }
+        .close-modal { position: absolute; top: 15px; right: 20px; font-size: 30px; cursor: pointer; color: var(--gold); }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-family: 'Cormorant Garamond'; font-size: 18px; color: var(--brown); }
+        .form-group input[type="text"], .form-group input[type="tel"], .form-group select { width: 100%; padding: 10px; border: 1px solid rgba(183,110,121,.4); font-family: 'Cormorant Garamond'; background: var(--cream); font-size: 16px; color: var(--brown); }
+        .submit-btn { width: 100%; padding: 12px; background: var(--gold); color: #fff; border: none; font-family: 'Cinzel'; font-size: 16px; cursor: pointer; margin-top: 10px; transition: background 0.3s; }
+        #success-msg { display: none; text-align: center; font-size: 24px; color: var(--gold); }
+        .whatsapp-btn { display: inline-flex; align-items: center; justify-content: center; gap: 12px; background-color: transparent; color: var(--gold); border: 1px solid var(--gold); padding: 10px 30px; border-radius: 8px; text-decoration: none; font-size: 22px; font-family: 'Amiri', serif; margin-top: 15px; transition: all 0.3s; }
+        .whatsapp-btn:hover { background-color: var(--gold); color: #fff; box-shadow: 0 4px 15px rgba(183,110,121,0.4); }
+        .whatsapp-btn svg { width: 24px; height: 24px; fill: currentColor; }
+        .success-img-container { position: relative; display: inline-block; width: 100%; margin-top: 20px; }
+        .success-img { width: 100%; border-radius: 10px; display: block; }
+        .success-overlay-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #fff; font-size: 42px; font-weight: 700; text-shadow: 0px 4px 15px rgba(0,0,0,0.8); z-index: 10; width: 100%; text-align: center; }
+        .decor-center { margin: 20px auto; display: block; max-width: 140px; }
+        @media (max-width: 600px) { .hero-names { font-size: 54px; } .verses-title { font-size: 30px; } .countdown-title, .rsvp-title { font-size: 32px; } .cd-number, .cd-sep { font-size: 34px; } .cd-block { min-width: 56px; } .event-time { font-size: 20px; } .event-name { font-size: 18px; } .decor-center { max-width: 90px; } .success-overlay-text { font-size: 32px; } .whatsapp-btn { font-size: 18px; padding: 10px 20px; } }
+    
+        /* ===== إضافات التصميم الزجاجي الفاتح ===== */
+        #page-bg-video { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; object-fit: cover; z-index: -3; }
+        .bg-overlay { position: fixed; inset: 0; background: transparent; z-index: -2; }
+        section { position: relative !important; margin: 24px 0 !important; background: rgba(255, 250, 240, 0.55) !important; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid rgba(212, 175, 55, 0.35) !important; border-radius: 20px !important; box-shadow: 0 10px 30px rgba(0,0,0,0.12) !important; overflow: hidden; }
+        section > * { position: relative; z-index: 2; }
+        .interactive-shimmer { position: absolute; width: 250px; height: 250px; background: radial-gradient(circle, rgba(212,175,55,0.3) 0%, rgba(0,0,0,0) 70%); border-radius: 50%; pointer-events: none; transform: translate(-50%, -50%); opacity: 0; transition: opacity 0.2s ease; z-index: 0; }
+        .envelope-container { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; }
+        .envelope-container::after { content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%; background: linear-gradient(to right, rgba(212,175,55,0) 0%, rgba(212,175,55,0.4) 50%, rgba(212,175,55,0) 100%); transform: skewX(-25deg); animation: shimmer-env 3s infinite; pointer-events: none; }
+        @keyframes shimmer-env { 0% { left: -100%; } 100% { left: 200%; } }
+        .hero { background-image: url('https://nn022560.sirv.com/%D8%B5%D9%88%D8%B1%20%D8%A7%D9%84%D9%85%D9%88%D9%82%D8%B9/n2/nit%20filay%202/InShot_20260719_122222808.png'); background-position: center; background-size: contain; background-repeat: no-repeat; min-height: 420px; display: flex; flex-direction: column; justify-content: center; }
+    </style>
+</head>
+<body data-rsvp-slug="wedding-pink">
+    <video id="page-bg-video" autoplay loop muted playsinline>
+        <source src="https://nn022560.sirv.com/%D8%B5%D9%88%D8%B1%20%D8%A7%D9%84%D9%85%D9%88%D9%82%D8%B9/n2/nit%20filay%202/gemini_generated_video_ad79d838.mp4" type="video/mp4">
+    </video>
+    <div class="bg-overlay"></div>
+
+    <audio id="bgAudio" loop><source src="https://pub-4dc8201144ca418fb604349c73e8c724.r2.dev/Einaudi_ Divenire (1) (1).mp3" type="audio/mp3"></audio>
+    <div id="envelope-overlay">
+        <div class="envelope-container"><img src="https://nn022560.sirv.com/%D8%B5%D9%88%D8%B1%20%D8%A7%D9%84%D9%85%D9%88%D9%82%D8%B9/netfily/InShot_20260716_224741738.jpg" alt="Envelope"></div>
+        <div class="tap-to-open">
+            <div class="tap-chevron"></div>
+            <div class="tap-text cinzel">Tap to open</div>
+        </div>
+    </div>
+    <div id="video-container">
+        <video id="introVideo" playsinline muted preload="auto">
+            <source src="https://nn022560.sirv.com/%D8%B5%D9%88%D8%B1%20%D8%A7%D9%84%D9%85%D9%88%D9%82%D8%B9/netfily/InShot_20260717_034459932.mp4" type="video/mp4">
+        </video>
+    </div>
+    <div id="audio-btn">
+        <svg class="icon-pause" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+        <svg class="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+    </div>
+    <div class="wrap">
+        <section class="hero reveal">
+            <div class="hero-eyebrow cinzel text-gold">Wedding Day</div>
+            <div class="hero-date cinzel text-gold">25.08.26</div>
+            <div class="hero-names">
+                Ahmed
+                <span>&</span>
+                Sarah
+            </div>
+            <img class="decor-center" src="https://nn022560.sirv.com/%D8%B5%D9%88%D8%B1%20%D8%A7%D9%84%D9%85%D9%88%D9%82%D8%B9/netfily/InShot_20260717_195020905.png" alt="Ornament">
+        </section>
+        <section class="reveal">
+            <div class="bismillah amiri text-gold">بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيْمِ</div>
+            <div class="verses-title cormorant italic text-gold">
+                Two Souls<br>One destiny<br>A Lifetime written by Allah
+            </div>
+            <div class="couple-message-box">
+                <img src="https://nn022560.sirv.com/%D8%B5%D9%88%D8%B1%20%D8%A7%D9%84%D9%85%D9%88%D9%82%D8%B9/n2/nit%20filay%202/babypink_final.png" alt="Couple Words Background">
+                <div class="message-overlay" dir="rtl">
+                    <h3 class="cormorant text-gold" style="font-size: 32px; margin-bottom: 15px; font-weight: 600;">كلمة العروسين</h3>
+                    <p class="cormorant text-cream" style="font-size: 20px; line-height: 1.8;">
+                        "يسعدنا أن تشاركونا فرحة بداية حياتنا معاً، حضوركم يكمل سعادتنا ويضفي على يومنا بهجة لا تُنسى. نتشرف بكم."
+                    </p>
+                </div>
+            </div>
+        </section>
+        <section class="reveal" id="countdown-section">
+            <img class="decor-center" style="margin-bottom: 30px;" src="https://nn022560.sirv.com/%D8%B5%D9%88%D8%B1%20%D8%A7%D9%84%D9%85%D9%88%D9%82%D8%B9/netfily/InShot_20260717_195007777.png" alt="Ornament">
+            <div class="countdown-title cormorant text-gold">The Celebration Begins In</div>
+            <div class="countdown-wrapper" id="cd-timer">
+                <div class="cd-block"><div class="cd-number-wrap"><span class="cd-number ovo" id="cd-days">00</span></div><span class="cd-label ovo">Days</span></div>
+                <div class="cd-sep ovo">:</div>
+                <div class="cd-block"><div class="cd-number-wrap"><span class="cd-number ovo" id="cd-hours">00</span></div><span class="cd-label ovo">Hours</span></div>
+                <div class="cd-sep ovo">:</div>
+                <div class="cd-block"><div class="cd-number-wrap"><span class="cd-number ovo" id="cd-mins">00</span></div><span class="cd-label ovo">Minutes</span></div>
+                <div class="cd-sep ovo">:</div>
+                <div class="cd-block"><div class="cd-number-wrap"><span class="cd-number ovo" id="cd-secs">00</span></div><span class="cd-label ovo">Seconds</span></div>
+            </div>
+            <div id="cd-expired" style="display:none;" class="cormorant text-gold countdown-title">See you there!</div>
+            <img class="decor-center" style="margin-top: 40px;" src="https://nn022560.sirv.com/%D8%B5%D9%88%D8%B1%20%D8%A7%D9%84%D9%85%D9%88%D9%82%D8%B9/netfily/InShot_20260717_194952589.png" alt="Ornament">
+        </section>
+        <section class="reveal">
+            <h2 class="cormorant text-gold" style="font-size: 41px;">Schedule of Events</h2>
+            <div class="timeline">
+                <div class="event-row"><div class="event-time cormorant text-gold">5 PM</div><div class="event-dot"></div><div class="event-name cormorant">Guest Arrival</div></div>
+                <div class="event-row"><div class="event-time cormorant text-gold">6 PM</div><div class="event-dot"></div><div class="event-name cormorant">Nikkah Ceremony</div></div>
+                <div class="event-row"><div class="event-time cormorant text-gold">7 PM</div><div class="event-dot"></div><div class="event-name cormorant">Dinner</div></div>
+                <div class="event-row"><div class="event-time cormorant text-gold">9 PM</div><div class="event-dot"></div><div class="event-name cormorant">Dance</div></div>
+            </div>
+            <img class="decor-center" src="https://nn022560.sirv.com/%D8%B5%D9%88%D8%B1%20%D8%A7%D9%84%D9%85%D9%88%D9%82%D8%B9/netfily/InShot_20260717_195032267.png" alt="Ornament">
+        </section>
+        <section class="reveal map-section">
+            <h2 class="cormorant text-gold" style="font-size: 41px;">Location</h2>
+            <div class="cormorant text-brown venue-location-text" style="font-size: 22px; margin-bottom: 20px;">Grand Royal Hall — Riyadh, SA</div>
+            <div class="map-wrap">
+                <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d115822.46328656111!2d46.593674!3d24.8821033!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3e2efd97375bf2a1%3A0xb35a3ccbc0f2452!2sRiyadh%20Saudi%20Arabia!5e0!3m2!1sen!2s!4v1690000000000!5m2!1sen!2s" allowfullscreen="" loading="lazy"></iframe>
+            </div>
+        </section>
+        <section class="reveal">
+            <img class="decor-center" src="https://nn022560.sirv.com/%D8%B5%D9%88%D8%B1%20%D8%A7%D9%84%D9%85%D9%88%D9%82%D8%B9/netfily/InShot_20260717_194938088.png" alt="Ornament">
+            <div class="rsvp-title cormorant text-gold">Confirm Your Attendance</div>
+            <p class="cormorant text-brown" style="font-size: 20px;">To help us prepare for a joyful celebration, kindly confirm your attendance.</p>
+            <img class="wax-seal" id="open-rsvp" src="https://nn022560.sirv.com/%D8%B5%D9%88%D8%B1%20%D8%A7%D9%84%D9%85%D9%88%D9%82%D8%B9/netfily/InShot_20260715_163059598.png" alt="Wax Seal RSVP">
+            <div class="cormorant italic text-gold" style="font-size: 24px; margin-top: 15px;">Click to open</div>
+            <div style="margin-top: 40px; z-index: 2; position: relative; display: flex; flex-direction: column; align-items: center;">
+                <p class="cormorant text-brown" style="font-size: 20px; font-weight: 500;" dir="rtl">للتواصل أو الاستفسار:</p>
+                <a href="https://wa.me/966547266733" target="_blank" class="whatsapp-btn">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.888-.788-1.489-1.761-1.662-2.06-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                    تواصل واستفسار
+                </a>
+            </div>
+            <img class="decor-center" style="margin-top: 40px;" src="https://nn022560.sirv.com/%D8%B5%D9%88%D8%B1%20%D8%A7%D9%84%D9%85%D9%88%D9%82%D8%B9/netfily/InShot_20260717_194922661.png" alt="Ornament">
+        </section>
+        <footer class="reveal" style="padding: 10px 0 90px;">
+            <div class="cormorant italic text-brown-soft" style="font-size: 18px;">Ahmed and Sarah</div>
+        </footer>
+    </div>
+    <div id="rsvp-modal">
+        <div class="modal-content">
+            <span class="close-modal cinzel">&times;</span>
+            <div id="rsvp-form-container">
+                <h2 class="cormorant text-gold" style="font-size:28px; text-align:center; margin-bottom:5px;">Confirm Your Attendance</h2>
+                <p class="cormorant text-brown-soft" style="text-align:center; margin-bottom:20px;">Please RSVP before August 09</p>
+                <form id="rsvpForm" action="https://formspree.io/f/xeeyeppk" method="POST">
+                    <div class="form-group">
+                        <label>Your name</label>
+                        <input type="text" name="Guest_Name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Phone Number <span style="font-size: 15px; color: var(--brown-soft); font-family: 'Amiri', serif;">(للتذكير قبل يومين من الحفل)</span></label>
+                        <input type="tel" name="Phone_Number" required dir="ltr">
+                    </div>
+                    <div class="form-group">
+                        <label>Will you be attending?</label>
+                        <div style="display:flex; align-items:center; gap:5px;"><input type="radio" name="Attendance" value="Accepts with pleasure" required> Accepts with pleasure</div>
+                        <div style="display:flex; align-items:center; gap:5px; margin-top:5px;"><input type="radio" name="Attendance" value="Declines with regret"> Declines with regret</div>
+                    </div>
+                    <div class="form-group"><label>Number of Guests</label><select name="Number_of_Guests" required><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4+">4+</option></select></div>
+                    <button type="submit" class="submit-btn">Submit</button>
+                </form>
+            </div>
+            <div id="success-msg" class="cormorant text-gold">We look forward to seeing you!<br>
+                <div class="success-img-container">
+                    <img class="success-img" src="https://nn022560.sirv.com/%D8%B5%D9%88%D8%B1%20%D8%A7%D9%84%D9%85%D9%88%D9%82%D8%B9/n2/nit%20filay%202/babypink_new_transparent.png" alt="Thank You">
+                    <div class="success-overlay-text amiri">شكراً لكم</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const overlay = document.getElementById('envelope-overlay'), videoContainer = document.getElementById('video-container'), introVideo = document.getElementById('introVideo'), audioBtn = document.getElementById('audio-btn'), bgAudio = document.getElementById('bgAudio');
+            const startExperience = () => { overlay.style.opacity = '0'; bgAudio.volume = 1; if (!window.__rsvpNoAutoplayMusic) { bgAudio.play().catch(e => console.log(e)); } setTimeout(() => { overlay.style.display = 'none'; videoContainer.style.opacity = '1'; videoContainer.style.pointerEvents = 'all'; introVideo.play().catch(e => endVideo()); }, 1400); };
+            overlay.addEventListener('click', startExperience); overlay.addEventListener('touchstart', startExperience);
+            const endVideo = () => { videoContainer.style.opacity = '0'; setTimeout(() => { videoContainer.style.display = 'none'; audioBtn.style.visibility = 'visible'; audioBtn.style.opacity = '1'; }, 1400); };
+            introVideo.addEventListener('timeupdate', () => { if (introVideo.duration - introVideo.currentTime < 0.8) { endVideo(); } }); introVideo.addEventListener('error', endVideo);
+            const iconPause = document.querySelector('.icon-pause'), iconPlay = document.querySelector('.icon-play');
+            audioBtn.addEventListener('click', () => { if (bgAudio.paused) { bgAudio.play(); iconPlay.style.display = 'none'; iconPause.style.display = 'block'; } else { bgAudio.pause(); iconPause.style.display = 'none'; iconPlay.style.display = 'block'; } });
+            const observer = new IntersectionObserver(entries => { entries.forEach(entry => { if (entry.isIntersecting) { entry.target.classList.add('in'); observer.unobserve(entry.target); } }); }, { threshold: 0.2 });
+            document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+            const finalDate = window.__rsvpTargetDate || (new Date().getTime() + (30 * 24 * 60 * 60 * 1000)); 
+            window.__cdTimer = setInterval(() => {
+                const dist = finalDate - new Date().getTime();
+                if (dist < 0) { clearInterval(window.__cdTimer); document.getElementById('cd-timer').style.display = 'none'; document.getElementById('cd-expired').style.display = 'block'; return; }
+                document.getElementById('cd-days').innerText = Math.floor(dist / (1000 * 60 * 60 * 24)); document.getElementById('cd-hours').innerText = Math.floor((dist % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)).toString().padStart(2, '0'); document.getElementById('cd-mins').innerText = Math.floor((dist % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0'); document.getElementById('cd-secs').innerText = Math.floor((dist % (1000 * 60)) / 1000).toString().padStart(2, '0');
+            }, 1000);
+            const modal = document.getElementById('rsvp-modal');
+            document.getElementById('open-rsvp').addEventListener('click', () => modal.classList.add('active'));
+            document.querySelector('.close-modal').addEventListener('click', () => modal.classList.remove('active'));
+            document.getElementById('rsvpForm').addEventListener('submit', function(e) {
+                e.preventDefault(); const form = this; const data = new FormData(form); const submitBtn = form.querySelector('.submit-btn'); const originalBtnText = submitBtn.innerText; submitBtn.innerText = 'Sending...'; submitBtn.style.opacity = '0.7';
+                fetch(form.action, { method: form.method, body: data, headers: { 'Accept': 'application/json' } }).then(response => {
+                    if (response.ok) { document.getElementById('rsvp-form-container').style.display = 'none'; document.getElementById('success-msg').style.display = 'block'; form.reset(); } else { alert("Oops! There was a problem submitting your form."); submitBtn.innerText = originalBtnText; submitBtn.style.opacity = '1'; }
+                }).catch(error => { alert("Oops! There was a problem submitting your form."); submitBtn.innerText = originalBtnText; submitBtn.style.opacity = '1'; });
+            });
+        });
+    </script>
+
+    <script>
+        document.querySelectorAll('section').forEach(sec => {
+            const s = document.createElement('div');
+            s.classList.add('interactive-shimmer');
+            sec.appendChild(s);
+            const moveShimmer = (x, y) => {
+                s.style.opacity = '1';
+                const rect = sec.getBoundingClientRect();
+                s.style.left = (x - rect.left) + 'px';
+                s.style.top = (y - rect.top) + 'px';
+            };
+            sec.addEventListener('mousemove', e => moveShimmer(e.clientX, e.clientY));
+            sec.addEventListener('touchmove', e => { const t = e.touches[0]; moveShimmer(t.clientX, t.clientY); });
+            sec.addEventListener('mouseleave', () => s.style.opacity = '0');
+            sec.addEventListener('touchend', () => s.style.opacity = '0');
+        });
+    </script>
+    <script type="module" src="../js/rsvp-live.js"></script>
+</body>
+</html>

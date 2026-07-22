@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>تذكير الضيوف — لوحة تحكم جمرة غضى</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+  body{font-family:Tahoma,Arial,sans-serif;background:#111;color:#eee;margin:0;padding:20px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+  h1{color:#d4af37;font-size:20px;margin:0}
+  a.back{color:#aaa;text-decoration:none;font-size:14px}
+  .card{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:18px;margin-bottom:18px}
+  .card h2{font-size:15px;color:#d4af37;margin-top:0}
+  .mode-switch{display:flex;gap:10px;margin-bottom:14px}
+  .mode-switch label{flex:1;text-align:center;padding:10px;border-radius:8px;border:1px solid #444;cursor:pointer;background:#222}
+  .mode-switch input{display:none}
+  .mode-switch input:checked + span{color:#111}
+  .mode-switch label:has(input:checked){background:#d4af37;border-color:#d4af37}
+  .mode-switch label:has(input:checked) span{color:#111;font-weight:bold}
+  select,textarea,input[type=text]{width:100%;box-sizing:border-box;padding:9px;border-radius:6px;border:1px solid #444;background:#222;color:#fff;margin-bottom:10px}
+  textarea{min-height:70px;resize:vertical}
+  button{padding:10px 16px;border:none;border-radius:6px;background:#d4af37;color:#111;font-weight:bold;cursor:pointer}
+  button.secondary{background:#333;color:#eee}
+  button:disabled{opacity:.5;cursor:default}
+  .guest-list{list-style:none;padding:0;margin:0}
+  .guest-list li{display:flex;align-items:center;justify-content:space-between;padding:8px 4px;border-bottom:1px solid #2a2a2a;font-size:14px}
+  .guest-list li .who{display:flex;align-items:center;gap:8px}
+  .wa-btn{background:#25D366;color:#fff;padding:6px 12px;border-radius:6px;text-decoration:none;font-size:13px}
+  .hint{color:#999;font-size:12px;margin-top:6px}
+  #status{font-size:13px;margin-top:10px;color:#8ecb8e}
+  .badge{font-size:11px;padding:2px 8px;border-radius:20px;background:#333;color:#ccc}
+  .empty{color:#777;text-align:center;padding:20px;font-size:13px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>تذكير الضيوف (قبل يومين من المناسبة)</h1>
+  <a class="back" href="index.html">← رجوع للوحة</a>
+</div>
+
+<div class="card">
+  <h2>طريقة التذكير</h2>
+  <div class="mode-switch">
+    <label><input type="radio" name="mode" value="whatsapp" id="modeWhatsapp"><span>واتساب يدوي (مجاني)</span></label>
+    <label><input type="radio" name="mode" value="sms" id="modeSms"><span>SMS جماعي تلقائي</span></label>
+  </div>
+
+  <div id="smsOptions" style="display:none">
+    <select id="smsProvider">
+      <option value="">اختاري المزوّد...</option>
+      <option value="msegat">Msegat</option>
+      <option value="unifonic">Unifonic</option>
+      <option value="twilio">Twilio</option>
+    </select>
+    <div class="hint">مفاتيح الربط (API) تُضاف لاحقًا من إعدادات Netlify Environment Variables، مو من هنا — عشان الأمان. الآن الاختيار بيتحفظ بس.</div>
+  </div>
+
+  <label style="font-size:13px;color:#ccc">نص رسالة التذكير (استخدمي {name} ليتم استبدالها باسم الضيف):</label>
+  <textarea id="template">مرحبًا {name}، نذكّركم بمناسبتنا بعد يومين 🌸 بانتظار حضوركم.</textarea>
+
+  <button id="saveSettings">حفظ الإعدادات</button>
+  <span id="status"></span>
+</div>
+
+<div class="card">
+  <h2>الضيوف المؤكدين للحضور</h2>
+  <div id="guestsWrap"><div class="empty">جارِ التحميل...</div></div>
+  <div id="smsSendWrap" style="display:none;margin-top:12px">
+    <button id="sendSmsBtn">إرسال SMS لكل الضيوف</button>
+    <span id="sendStatus" class="hint"></span>
+  </div>
+</div>
+
+<script type="module">
+import {
+  db, requireLogin,
+  collection, getDocs, doc, getDoc, setDoc, query, orderBy,
+} from "../js/firebase-init.js";
+
+let guests = [];
+
+requireLogin(async () => {
+  await loadSettings();
+  await loadGuests();
+});
+
+// ---------- الإعدادات (وضع التذكير + نص الرسالة) ----------
+async function loadSettings() {
+  const ref = doc(db, "settings", "reminders");
+  const snap = await getDoc(ref);
+  const data = snap.exists() ? snap.data() : {};
+
+  const mode = data.mode || "whatsapp";
+  document.getElementById(mode === "sms" ? "modeSms" : "modeWhatsapp").checked = true;
+  document.getElementById("smsOptions").style.display = mode === "sms" ? "block" : "none";
+  document.getElementById("smsProvider").value = data.smsProvider || "";
+  if (data.template) document.getElementById("template").value = data.template;
+
+  document.getElementById("smsSendWrap").style.display = mode === "sms" ? "block" : "none";
+}
+
+document.querySelectorAll('input[name="mode"]').forEach((el) => {
+  el.addEventListener("change", (e) => {
+    const isSms = e.target.value === "sms";
+    document.getElementById("smsOptions").style.display = isSms ? "block" : "none";
+    document.getElementById("smsSendWrap").style.display = isSms ? "block" : "none";
+    renderGuests(); // نعيد رسم القائمة لتبديل زر واتساب / اختيار فقط
+  });
+});
+
+document.getElementById("saveSettings").addEventListener("click", async () => {
+  const mode = document.querySelector('input[name="mode"]:checked')?.value || "whatsapp";
+  const smsProvider = document.getElementById("smsProvider").value;
+  const template = document.getElementById("template").value;
+
+  await setDoc(doc(db, "settings", "reminders"), { mode, smsProvider, template }, { merge: true });
+  const status = document.getElementById("status");
+  status.textContent = "تم الحفظ ✓";
+  setTimeout(() => (status.textContent = ""), 2500);
+});
+
+// ---------- قائمة الضيوف (من responses، الحالة = يحضر) ----------
+async function loadGuests() {
+  const wrap = document.getElementById("guestsWrap");
+  try {
+    const q = query(collection(db, "responses"), orderBy("createdAt", "desc"));
+    const snap = await getDocs(q);
+    guests = [];
+    snap.forEach((d) => {
+      const r = d.data();
+      const attending = r.status === "yes" || r.attending === true || r.status === "يحضر";
+      if (attending && r.phone) {
+        guests.push({ id: d.id, name: r.name || "ضيف", phone: normalizePhone(r.phone) });
+      }
+    });
+    renderGuests();
+  } catch (e) {
+    wrap.innerHTML = `<div class="empty">تعذّر تحميل الضيوف (${e.message})</div>`;
+  }
+}
+
+function normalizePhone(p) {
+  // يشيل المسافات والرموز، ويضيف كود السعودية إذا الرقم يبدأ بصفر
+  let clean = String(p).replace(/[^\d+]/g, "");
+  if (clean.startsWith("0")) clean = "966" + clean.slice(1);
+  if (clean.startsWith("+")) clean = clean.slice(1);
+  return clean;
+}
+
+function renderGuests() {
+  const wrap = document.getElementById("guestsWrap");
+  if (!guests.length) {
+    wrap.innerHTML = `<div class="empty">ما فيه ضيوف مؤكدين حالياً</div>`;
+    return;
+  }
+  const mode = document.querySelector('input[name="mode"]:checked')?.value || "whatsapp";
+  const template = document.getElementById("template").value;
+
+  wrap.innerHTML = `<ul class="guest-list">` + guests.map((g) => {
+    const msg = template.replace(/\{name\}/g, g.name);
+    const waLink = `https://wa.me/${g.phone}?text=${encodeURIComponent(msg)}`;
+    return `<li>
+      <span class="who">${g.name} <span class="badge">${g.phone}</span></span>
+      ${mode === "whatsapp" ? `<a class="wa-btn" target="_blank" href="${waLink}">إرسال واتساب</a>` : ""}
+    </li>`;
+  }).join("") + `</ul>`;
+}
+
+// ---------- إرسال SMS جماعي ----------
+document.getElementById("sendSmsBtn").addEventListener("click", async () => {
+  const btn = document.getElementById("sendSmsBtn");
+  const status = document.getElementById("sendStatus");
+  const template = document.getElementById("template").value;
+
+  if (!guests.length) { status.textContent = "ما فيه ضيوف للإرسال"; return; }
+
+  btn.disabled = true;
+  status.textContent = "جارِ الإرسال...";
+  try {
+    const res = await fetch("/.netlify/functions/send-sms", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ guests, message: template }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      status.textContent = data.error || "المزوّد غير مفعّل بعد — أضيفي مفاتيح API في Netlify";
+    } else {
+      status.textContent = `تم الإرسال لـ ${data.sent} ضيف ✓`;
+    }
+  } catch (e) {
+    status.textContent = "خطأ في الإرسال";
+  }
+  btn.disabled = false;
+});
+</script>
+</body>
+</html>

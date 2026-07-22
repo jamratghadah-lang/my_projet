@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>رموز QR للدعوات — لوحة تحكم جمرة غضى</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+  body{font-family:Tahoma,Arial,sans-serif;background:#111;color:#eee;margin:0;padding:20px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+  h1{color:#d4af37;font-size:20px;margin:0}
+  a.back{color:#aaa;text-decoration:none;font-size:14px}
+  .card{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:18px;margin-bottom:18px}
+  .card h2{font-size:15px;color:#d4af37;margin-top:0}
+  select,input[type=text]{width:100%;box-sizing:border-box;padding:9px;border-radius:6px;border:1px solid #444;background:#222;color:#fff;margin-bottom:10px}
+  button{padding:10px 16px;border:none;border-radius:6px;background:#d4af37;color:#111;font-weight:bold;cursor:pointer}
+  button.secondary{background:#333;color:#eee}
+  .hint{color:#999;font-size:12px;margin-top:6px}
+  .qr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:16px}
+  .qr-item{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:12px;text-align:center}
+  .qr-item canvas{width:100%;height:auto;border-radius:6px;background:#fff}
+  .qr-item .name{font-size:13px;color:#eee;margin:8px 0 4px}
+  .qr-item .link{font-size:11px;color:#888;word-break:break-all;margin-bottom:8px}
+  .qr-item button{width:100%;font-size:12px;padding:7px}
+  .empty{color:#777;text-align:center;padding:20px;font-size:13px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>الدعوات ورموز QR</h1>
+  <a class="back" href="index.html">← رجوع للوحة</a>
+</div>
+
+<div class="card">
+  <h2>رابط دعوة مخصص (رابط طلب حقيقي لعميلة)</h2>
+  <input type="text" id="customUrl" placeholder="الصقي هنا رابط دعوة العميلة كامل">
+  <button id="addCustom">أنشئ رمز QR لهذا الرابط</button>
+  <div class="hint">استخدمي هذا لأي رابط دعوة فعلي أرسلتيه لعميلة، وليس فقط الستايلات العامة بالأسفل.</div>
+</div>
+
+<div class="card">
+  <h2>رموز QR لكل ستايل (روابط عامة للاطلاع على التصميم)</h2>
+  <div class="hint" style="margin-bottom:12px">هذي روابط الستايلات العامة نفسها الموجودة بصفحة "تأكيد الحضور" — مفيدة للمعاينة أو التسويق، مو لطلب عميلة معيّن.</div>
+  <div class="qr-grid" id="presetGrid"></div>
+</div>
+
+<div class="card">
+  <h2>رموز مخصّصة أنشأتها</h2>
+  <div class="qr-grid" id="customGrid"></div>
+  <div class="empty" id="customEmpty">ما أنشأتي أي رمز مخصص لسا</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script type="module">
+import { auth, signOut, requireLogin } from "../js/firebase-init.js";
+requireLogin(() => {});
+
+const RSVP_STYLES = [
+  ["Silver", "wedding-silver"], ["Royal", "wedding-royal"], ["Classic", "wedding-classic"],
+  ["Modern", "wedding-modern"], ["VIP", "wedding-vip"], ["Golden Royal", "wedding-gold"], ["Rose", "wedding-pink"],
+  ["مولود", "baby-boy"], ["مولودة", "baby-girl"],
+  ["تخرج Luxury", "graduation-luxury"], ["تخرج Classic", "graduation-classic"],
+  ["شركات", "corporate"], ["مؤتمرات", "conference"],
+];
+
+const origin = window.location.origin;
+const base = origin + "/rsvp/";
+
+function qrItem(name, url) {
+  const wrap = document.createElement("div");
+  wrap.className = "qr-item";
+  const canvas = document.createElement("canvas");
+  wrap.appendChild(canvas);
+  const nameEl = document.createElement("div");
+  nameEl.className = "name";
+  nameEl.textContent = name;
+  wrap.appendChild(nameEl);
+  const linkEl = document.createElement("div");
+  linkEl.className = "link";
+  linkEl.textContent = url;
+  wrap.appendChild(linkEl);
+  const dl = document.createElement("button");
+  dl.textContent = "تحميل PNG";
+  dl.className = "secondary";
+  dl.addEventListener("click", () => {
+    const a = document.createElement("a");
+    a.download = name.replace(/\s+/g, "-") + "-qr.png";
+    a.href = canvas.toDataURL("image/png");
+    a.click();
+  });
+  wrap.appendChild(dl);
+  QRCode.toCanvas(canvas, url, { width: 240, margin: 1, color: { dark: "#2B2118", light: "#FFFFFF" } });
+  return wrap;
+}
+
+const presetGrid = document.getElementById("presetGrid");
+RSVP_STYLES.forEach(([label, slug]) => {
+  presetGrid.appendChild(qrItem(label, base + slug + ".html"));
+});
+
+const customGrid = document.getElementById("customGrid");
+const customEmpty = document.getElementById("customEmpty");
+document.getElementById("addCustom").addEventListener("click", () => {
+  const val = document.getElementById("customUrl").value.trim();
+  if (!val) return;
+  customEmpty.style.display = "none";
+  customGrid.appendChild(qrItem(val.length > 28 ? val.slice(0, 28) + "…" : val, val));
+  document.getElementById("customUrl").value = "";
+});
+</script>
+</body>
+</html>

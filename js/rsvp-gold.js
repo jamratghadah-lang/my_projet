@@ -1,0 +1,244 @@
+// محرك صفحات تأكيد الحضور بتجربة "الظرف + الفيديو التمهيدي" الذهبية.
+// يقرأ بياناته من content/rsvp/<slug>.json (نفس آلية rsvp-render.js القديمة)
+// كل تعديل (صور/فيديو/ثيم/تواريخ) يصير من ملفات الـJSON أو لوحة التحكم، بدون لمس هذا الملف.
+(function () {
+  const scriptTag = document.currentScript;
+  const slug = scriptTag.dataset.slug;
+
+  function el(tag, cls, text) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text) e.textContent = text;
+    return e;
+  }
+
+  // يطلب من Sirv نسخة WebP مضغوطة من الصورة بدل الأصل الثقيل
+  function optimizeImg(url) {
+    if (!url || !url.includes("sirv.com")) return url;
+    const sep = url.includes("?") ? "&" : "?";
+    return url + sep + "format=webp&q=82";
+  }
+
+  function initLoader() {
+    const loader = document.getElementById("jg-loader");
+    if (!loader) return;
+    const hide = () => {
+      loader.style.opacity = "0";
+      setTimeout(() => { loader.style.display = "none"; }, 800);
+    };
+    const minDelay = new Promise(res => setTimeout(res, 1100));
+    const ready = new Promise(res => {
+      if (document.readyState === "complete") res();
+      else window.addEventListener("load", res, { once: true });
+    });
+    Promise.all([minDelay, ready]).then(hide);
+  }
+
+  function initScrollEffects() {
+    const indicator = document.getElementById("jg-scroll-indicator");
+    const particleLayer = document.getElementById("jg-particle-layer");
+    const decorEls = Array.from(document.querySelectorAll(".jg-decor-img"));
+    let lastParticle = 0;
+
+    function spawnParticle() {
+      if (!particleLayer) return;
+      const p = document.createElement("div");
+      p.className = "jg-particle";
+      p.style.left = Math.random() * 100 + "%";
+      p.style.bottom = "-10px";
+      particleLayer.appendChild(p);
+      setTimeout(() => p.remove(), 2700);
+    }
+
+    function onScroll() {
+      const scrollTop = window.scrollY || document.documentElement.scrollTop;
+      const max = (document.documentElement.scrollHeight - window.innerHeight) || 1;
+      if (indicator) indicator.style.width = Math.min(100, (scrollTop / max) * 100) + "%";
+
+      decorEls.forEach(d => {
+        const speed = parseFloat(d.dataset.speed || "0.15");
+        d.style.transform = `translateY(${scrollTop * speed * -0.4}px)`;
+      });
+
+      const now = Date.now();
+      if (now - lastParticle > 220) {
+        lastParticle = now;
+        spawnParticle();
+      }
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+  }
+
+  function renderTimeline(container, items) {
+    if (!container) return;
+    container.innerHTML = "";
+    const list = (items || []).filter(it => it && (it.time || it.event));
+    if (!list.length) { container.style.display = "none"; return; }
+    list.forEach(it => {
+      const row = el("div", "jg-tl-row");
+      row.appendChild(el("span", "jg-tl-time", it.time || ""));
+      row.appendChild(el("span", "jg-tl-event", it.event || ""));
+      container.appendChild(row);
+    });
+  }
+
+  function startCountdown(dateStr) {
+    const wrap = document.getElementById("jg-countdown");
+    const titleEl = document.getElementById("jg-countdown-title");
+    if (!wrap) return;
+    const target = new Date(dateStr);
+    if (!dateStr || isNaN(target.getTime())) {
+      wrap.style.display = "none";
+      if (titleEl) titleEl.style.display = "none";
+      return;
+    }
+    const nums = {
+      d: document.getElementById("jg-cd-days"),
+      h: document.getElementById("jg-cd-hours"),
+      m: document.getElementById("jg-cd-mins"),
+      s: document.getElementById("jg-cd-secs")
+    };
+    function tick() {
+      const dist = target.getTime() - Date.now();
+      if (dist <= 0) {
+        wrap.innerHTML = "";
+        wrap.textContent = "";
+        if (titleEl) titleEl.textContent = "بانتظاركم";
+        clearInterval(timer);
+        return;
+      }
+      nums.d.textContent = Math.floor(dist / 86400000);
+      nums.h.textContent = String(Math.floor((dist % 86400000) / 3600000)).padStart(2, "0");
+      nums.m.textContent = String(Math.floor((dist % 3600000) / 60000)).padStart(2, "0");
+      nums.s.textContent = String(Math.floor((dist % 60000) / 1000)).padStart(2, "0");
+    }
+    tick();
+    const timer = setInterval(tick, 1000);
+  }
+
+  function wireForm(form, d, settings) {
+    if (!form) return;
+    const endpoint = d.formspree_override || (settings && settings.formspree_id) || "";
+    if (!endpoint) return;
+    form.action = endpoint;
+    form.method = "POST";
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const status = document.getElementById("jg-form-status");
+      fetch(endpoint, {
+        method: "POST",
+        body: new FormData(form),
+        headers: { Accept: "application/json" }
+      }).then(r => {
+        if (r.ok) {
+          form.style.display = "none";
+          if (status) { status.style.display = "block"; status.textContent = "تم استلام تأكيدكم، شكرًا لكم."; }
+        } else if (status) {
+          status.style.display = "block";
+          status.textContent = "حدث خطأ، حاولوا مرة أخرى.";
+        }
+      }).catch(() => {
+        if (status) { status.style.display = "block"; status.textContent = "حدث خطأ، حاولوا مرة أخرى."; }
+      });
+    });
+  }
+
+  function initEnvelope(d) {
+    const overlay = document.getElementById("jg-envelope-overlay");
+    const envImg = document.getElementById("jg-envelope-img");
+    const videoOverlay = document.getElementById("jg-video-overlay");
+    const introVideo = document.getElementById("jg-intro-video");
+
+    if (envImg && d.envelope_image) envImg.src = optimizeImg(d.envelope_image);
+    if (introVideo && d.intro_video) introVideo.querySelector("source").src = d.intro_video;
+
+    if (!overlay) { revealPage(); return; }
+
+    const start = () => {
+      overlay.style.opacity = "0";
+      setTimeout(() => {
+        overlay.style.display = "none";
+        if (introVideo && d.intro_video) {
+          videoOverlay.style.opacity = "1";
+          videoOverlay.style.pointerEvents = "all";
+          introVideo.load();
+          introVideo.play().catch(endVideo);
+        } else {
+          revealPage();
+        }
+      }, 1200);
+    };
+    overlay.addEventListener("click", start);
+    overlay.addEventListener("touchstart", start, { passive: true });
+
+    function endVideo() {
+      if (!videoOverlay) { revealPage(); return; }
+      videoOverlay.style.opacity = "0";
+      setTimeout(() => {
+        videoOverlay.style.display = "none";
+        revealPage();
+      }, 1000);
+    }
+    if (introVideo) {
+      introVideo.addEventListener("timeupdate", () => {
+        if (introVideo.duration && introVideo.duration - introVideo.currentTime < 0.6) endVideo();
+      });
+      introVideo.addEventListener("error", endVideo);
+      introVideo.addEventListener("ended", endVideo);
+    }
+  }
+
+  function revealPage() {
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) { entry.target.classList.add("in"); observer.unobserve(entry.target); }
+      });
+    }, { threshold: 0.15 });
+    document.querySelectorAll(".jg-reveal").forEach(elm => observer.observe(elm));
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    initLoader();
+    Promise.all([
+      fetch("../content/rsvp/" + slug + ".json").then(r => r.json()).catch(() => ({})),
+      fetch("../content/settings.json").then(r => r.json()).catch(() => ({}))
+    ]).then(([d, settings]) => {
+      if (d.theme) document.body.classList.add("jg-theme-" + d.theme);
+
+      if (d.names) {
+        const namesEl = document.getElementById("jg-names");
+        if (namesEl) namesEl.textContent = d.names;
+      }
+      if (d.date) { const e = document.getElementById("jg-date"); if (e) e.textContent = "📅 " + d.date; }
+      if (d.location) { const e = document.getElementById("jg-location"); if (e) e.textContent = "📍 " + d.location; }
+      if (d.welcome_message) {
+        const w = document.getElementById("jg-welcome");
+        if (w) { w.textContent = d.welcome_message; w.style.display = "block"; }
+      }
+
+      const seal = document.getElementById("jg-seal");
+      if (seal && d.seal_image) seal.src = optimizeImg(d.seal_image);
+
+      const venueBg = document.getElementById("jg-venue-bg");
+      if (venueBg && d.venue_photo) venueBg.style.backgroundImage = `url('${optimizeImg(d.venue_photo)}')`;
+
+      const decorIds = ["jg-decor-1", "jg-decor-2", "jg-decor-3"];
+      (d.decorations || []).slice(0, 3).forEach((src, i) => {
+        const img = document.getElementById(decorIds[i]);
+        if (img && src) img.src = optimizeImg(src);
+      });
+
+      renderTimeline(document.getElementById("jg-timeline"), d.timeline);
+      startCountdown(d.date);
+      initScrollEffects();
+
+      const modal = document.getElementById("jg-modal");
+      if (seal && modal) seal.addEventListener("click", () => modal.classList.add("active"));
+      const closeBtn = document.querySelector(".jg-modal-close");
+      if (closeBtn && modal) closeBtn.addEventListener("click", () => modal.classList.remove("active"));
+
+      wireForm(document.getElementById("jg-form"), d, settings);
+      initEnvelope(d);
+    });
+  });
+})();
