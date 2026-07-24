@@ -92,6 +92,66 @@ import { db, collection, addDoc, serverTimestamp } from "./firebase-init.js";
 
   const BLUR_MAP = { none: 0, light: 6, medium: 14, heavy: 24 };
 
+  // يضيف حركة فتح حقيقية (غطاء يفتح لفوق، أو نصين ينفتحان) فوق نفس صورة الظرف/الباب،
+  // بدون ما يغيّر منطق الفيديو/الصوت الأصلي في كل صفحة — الحركة تشتغل بالتوازي مع التلاشي الموجود.
+  // كمان يضيف توهّج ذهبي من نص الظرف/الباب لحظة الفتح (يشتغل مع الأنواع الثلاثة كلها).
+  function applyEnvelopeAnimation(animType, imgEl) {
+    const overlay = document.getElementById("envelope-overlay");
+    if (!overlay || !imgEl) return;
+    const type = animType || "fade";
+
+    const style = document.createElement("style");
+    style.textContent =
+      "#envelope-overlay .env-anim-flap{position:absolute;top:0;left:0;width:100%;height:55%;overflow:hidden;transform-origin:bottom center;transition:transform .9s cubic-bezier(.6,0,.3,1);z-index:2;}" +
+      "#envelope-overlay .env-anim-flap img{position:absolute;top:0;left:0;width:100%;height:182%;object-fit:cover;}" +
+      "#envelope-overlay.env-open .env-anim-flap{transform:rotateX(-120deg);}" +
+      "#envelope-overlay .env-anim-half{position:absolute;top:0;width:50%;height:100%;overflow:hidden;transition:transform 1s cubic-bezier(.6,0,.3,1);z-index:2;}" +
+      "#envelope-overlay .env-anim-half.env-left{left:0;}" +
+      "#envelope-overlay .env-anim-half.env-right{right:0;}" +
+      "#envelope-overlay .env-anim-half img{position:absolute;top:0;height:100%;object-fit:cover;width:200%;}" +
+      "#envelope-overlay .env-anim-half.env-left img{left:0;}" +
+      "#envelope-overlay .env-anim-half.env-right img{right:0;}" +
+      "#envelope-overlay.env-open .env-anim-half.env-left{transform:translateX(-100%);}" +
+      "#envelope-overlay.env-open .env-anim-half.env-right{transform:translateX(100%);}" +
+      "#envelope-overlay .env-seal-glow{position:absolute;top:50%;left:50%;width:40px;height:40px;border-radius:50%;background:radial-gradient(circle, rgba(255,241,199,.95) 0%, rgba(212,175,55,.6) 40%, rgba(212,175,55,0) 75%);transform:translate(-50%,-50%) scale(.3);opacity:0;pointer-events:none;z-index:5;}" +
+      "#envelope-overlay.env-open .env-seal-glow{animation:envSealGlow 1.2s ease-out forwards;}" +
+      "@keyframes envSealGlow{0%{transform:translate(-50%,-50%) scale(.3);opacity:0;}18%{opacity:1;}100%{transform:translate(-50%,-50%) scale(10);opacity:0;}}";
+    document.head.appendChild(style);
+
+    const src = imgEl.getAttribute("src") || imgEl.src;
+
+    if (type === "flap") {
+      const flap = document.createElement("div");
+      flap.className = "env-anim-flap";
+      const flapImg = document.createElement("img");
+      flapImg.src = src;
+      flap.appendChild(flapImg);
+      overlay.insertBefore(flap, overlay.firstChild);
+    } else if (type === "split") {
+      const left = document.createElement("div");
+      left.className = "env-anim-half env-left";
+      const leftImg = document.createElement("img");
+      leftImg.src = src;
+      left.appendChild(leftImg);
+      const right = document.createElement("div");
+      right.className = "env-anim-half env-right";
+      const rightImg = document.createElement("img");
+      rightImg.src = src;
+      right.appendChild(rightImg);
+      overlay.insertBefore(right, overlay.firstChild);
+      overlay.insertBefore(left, overlay.firstChild);
+    }
+
+    // توهّج الختم: يضاف دايمًا (حتى مع التلاشي العادي)
+    const glow = document.createElement("div");
+    glow.className = "env-seal-glow";
+    overlay.appendChild(glow);
+
+    const openNow = () => overlay.classList.add("env-open");
+    overlay.addEventListener("click", openNow, { capture: true });
+    overlay.addEventListener("touchstart", openNow, { capture: true });
+  }
+
   function applyEffects(effects) {
     if (!effects) return;
     const styleEl = document.createElement("style");
@@ -210,6 +270,8 @@ import { db, collection, addDoc, serverTimestamp } from "./firebase-init.js";
       const envImg = document.querySelector("#envelope-overlay img");
       if (envImg) envImg.src = data.envelope_image;
     }
+    // حركة فتح الظرف/الباب (من لوحة التحكم): تلاشي (افتراضي) / فتح غطاء لفوق / فتح لنصين
+    applyEnvelopeAnimation(data.envelope_animation, document.querySelector("#envelope-overlay img"));
     if (data.intro_video) {
       const introSrc = document.querySelector("#introVideo source");
       if (introSrc) { introSrc.src = data.intro_video; document.getElementById("introVideo").load(); }
