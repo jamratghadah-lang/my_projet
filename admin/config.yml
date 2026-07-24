@@ -82,6 +82,11 @@ collections:
                 { label: "فيديو مباشر", value: "video_direct" }
               ] },
             { label: "صورة الظرف / الباب", name: "envelope_image", widget: "image", required: false, hint: "تُستخدم إذا كان نوع الفتحة ظرف أو باب" },
+            { label: "حركة فتح الظرف/الباب", name: "envelope_animation", widget: "select", required: false, default: "fade", hint: "اختاري نوع الحركة اللي تناسب الصورة اللي رفعتيها", options: [
+                { label: "تلاشي بسيط (الافتراضي)", value: "fade" },
+                { label: "فتح الغطاء لفوق (يناسب الظرف)", value: "flap" },
+                { label: "فتح لنصين (يناسب الباب)", value: "split" }
+              ] },
             { label: "فيديو الافتتاح / الخلفية", name: "intro_video", widget: "file", required: false, hint: "يُستخدم إذا كان نوع الفتحة فيديو مباشر، أو كفيديو خلفية" },
             { label: "صور الدعوة", name: "gallery", widget: "list", required: false, field: { label: "صورة", name: "image", widget: "image" } },
             { label: "صور الزخارف", name: "decorations", widget: "list", required: false, field: { label: "زخرفة", name: "image", widget: "image" } },
