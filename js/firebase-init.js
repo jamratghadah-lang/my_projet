@@ -22,6 +22,7 @@ import {
   where,
   limit,
   serverTimestamp,
+  onSnapshot,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -55,6 +56,7 @@ export {
   where,
   limit,
   serverTimestamp,
+  onSnapshot,
 };
 
 // حماية أي صفحة لوحة تحكم: يستدعيها كل ملف Dashboard في بداية تنفيذه

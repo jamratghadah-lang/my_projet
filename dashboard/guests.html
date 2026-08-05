@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>إدارة المدعوين — لوحة تحكم جمرة غضى</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+  *{box-sizing:border-box}
+  body{font-family:Tahoma,Arial,sans-serif;background:#111;color:#eee;margin:0;padding:20px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px}
+  h1{color:#d4af37;font-size:20px;margin:0}
+  a.back{color:#aaa;text-decoration:none;font-size:14px}
+  .card{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:18px;margin-bottom:18px}
+  .card h2{font-size:15px;color:#d4af37;margin-top:0}
+
+  /* ===== Stats ===== */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:18px}
+  .stat{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:16px;text-align:center;position:relative;overflow:hidden}
+  .stat::before{content:"";position:absolute;top:0;right:0;width:4px;height:100%}
+  .stat.total::before{background:#d4af37}
+  .stat.yes::before{background:#4caf50}
+  .stat.no::before{background:#e07a5f}
+  .stat.pending::before{background:#888}
+  .stat .num{font-size:32px;font-weight:bold;line-height:1}
+  .stat.total .num{color:#d4af37}
+  .stat.yes .num{color:#4caf50}
+  .stat.no .num{color:#e07a5f}
+  .stat.pending .num{color:#aaa}
+  .stat .label{font-size:12px;color:#999;margin-top:6px}
+
+  /* ===== Toolbar ===== */
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+  .search-wrap{flex:1;min-width:200px;position:relative}
+  .search-wrap input{width:100%;padding:10px 36px 10px 12px;border-radius:8px;border:1px solid #444;background:#222;color:#fff;font-family:inherit;font-size:14px}
+  .search-wrap .icon{position:absolute;right:10px;top:50%;transform:translateY(-50%);color:#888;font-size:16px;pointer-events:none}
+  select{padding:10px 12px;border-radius:8px;border:1px solid #444;background:#222;color:#fff;font-family:inherit;font-size:14px;cursor:pointer}
+  .export-btns{display:flex;gap:8px}
+  .export-btns button{padding:10px 16px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:6px}
+  .btn-excel{background:#1d6f42;color:#fff}
+  .btn-pdf{background:#c0392b;color:#fff}
+  .export-btns button:disabled{opacity:.5;cursor:default}
+
+  /* ===== Table ===== */
+  .table-wrap{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  thead th{text-align:right;padding:10px 8px;border-bottom:2px solid #333;color:#d4af37;white-space:nowrap}
+  tbody td{padding:10px 8px;border-bottom:1px solid #2a2a2a}
+  tbody tr:hover{background:#222}
+  .badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:bold;white-space:nowrap}
+  .badge.yes{background:rgba(76,175,80,.15);color:#4caf50;border:1px solid rgba(76,175,80,.3)}
+  .badge.no{background:rgba(224,122,95,.15);color:#e07a5f;border:1px solid rgba(224,122,95,.3)}
+  .badge.pending{background:rgba(170,170,170,.15);color:#aaa;border:1px solid rgba(170,170,170,.3)}
+  .empty{color:#777;text-align:center;padding:30px;font-size:14px}
+  .count-hint{font-size:12px;color:#888;margin-top:8px}
+  @media(max-width:600px){.stat .num{font-size:24px}.export-btns{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>📋 إدارة المدعوين</h1>
+  <a class="back" href="index.html">← رجوع للوحة</a>
+</div>
+
+<!-- ===== Live Stats ===== -->
+<div class="stats">
+  <div class="stat total"><div class="num" id="statTotal">0</div><div class="label">إجمالي المدعوين</div></div>
+  <div class="stat yes"><div class="num" id="statYes">0</div><div class="label">مؤكد الحضور</div></div>
+  <div class="stat no"><div class="num" id="statNo">0</div><div class="label">معتذر</div></div>
+  <div class="stat pending"><div class="num" id="statPending">0</div><div class="label">لم يرد</div></div>
+</div>
+
+<div class="card">
+  <h2>قائمة المدعوين</h2>
+  <div class="toolbar">
+    <div class="search-wrap">
+      <input type="text" id="searchInput" placeholder="بحث بالاسم أو رقم الهاتف...">
+      <span class="icon">🔍</span>
+    </div>
+    <select id="filterStatus">
+      <option value="all">كل الحالات</option>
+      <option value="yes">مؤكد الحضور</option>
+      <option value="no">معتذر</option>
+      <option value="pending">لم يرد</option>
+    </select>
+    <div class="export-btns">
+      <button class="btn-excel" id="exportExcel">📊 Excel</button>
+      <button class="btn-pdf" id="exportPdf">📄 PDF</button>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table id="guestTable">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>الاسم</th>
+          <th>الهاتف</th>
+          <th>الحالة</th>
+          <th>عدد الضيوف</th>
+          <th>القالب</th>
+          <th>التاريخ</th>
+        </tr>
+      </thead>
+      <tbody id="guestBody">
+        <tr><td colspan="7" class="empty">جارِ التحميل...</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="count-hint" id="countHint"></div>
+</div>
+
+<!-- ===== Libraries for export ===== -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+<script type="module">
+import {
+  db, requireLogin,
+  collection, query, orderBy, onSnapshot,
+} from "../js/firebase-init.js";
+
+let allGuests = [];
+let unsub = null;
+
+requireLogin(() => {
+  const q = query(collection(db, "responses"), orderBy("createdAt", "desc"));
+  unsub = onSnapshot(q, (snap) => {
+    allGuests = [];
+    snap.forEach((d) => {
+      const r = d.data();
+      let status = "pending";
+      if (r.status === "yes" || r.attending === true || r.status === "يحضر") status = "yes";
+      else if (r.status === "no" || r.attending === false || r.status === "يعتذر") status = "no";
+      allGuests.push({
+        id: d.id,
+        name: r.name || "—",
+        phone: r.phone || "—",
+        status,
+        guests: r.guests || "—",
+        style: r.style || "—",
+        date: r.createdAt ? new Date(r.createdAt.toMillis ? r.createdAt.toMillis() : r.createdAt).toLocaleString("ar-SA") : "—",
+      });
+    });
+    updateStats();
+    renderTable();
+  }, (err) => {
+    document.getElementById("guestBody").innerHTML = '<tr><td colspan="7" class="empty">تعذّر تحميل البيانات</td></tr>';
+  });
+});
+
+// ===== Stats =====
+function updateStats() {
+  const total = allGuests.length;
+  const yes = allGuests.filter(g => g.status === "yes").length;
+  const no = allGuests.filter(g => g.status === "no").length;
+  const pending = allGuests.filter(g => g.status === "pending").length;
+  document.getElementById("statTotal").textContent = total;
+  document.getElementById("statYes").textContent = yes;
+  document.getElementById("statNo").textContent = no;
+  document.getElementById("statPending").textContent = pending;
+}
+
+// ===== Filter + Search =====
+function getFiltered() {
+  const q = document.getElementById("searchInput").value.trim().toLowerCase();
+  const filter = document.getElementById("filterStatus").value;
+  return allGuests.filter(g => {
+    if (filter !== "all" && g.status !== filter) return false;
+    if (q && !g.name.toLowerCase().includes(q) && !String(g.phone).toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+
+// ===== Render Table =====
+function renderTable() {
+  const body = document.getElementById("guestBody");
+  const list = getFiltered();
+  const hint = document.getElementById("countHint");
+
+  if (!list.length) {
+    body.innerHTML = '<tr><td colspan="7" class="empty">لا يوجد مدعوين مطابقين</td></tr>';
+    hint.textContent = "";
+    return;
+  }
+
+  const statusMap = {
+    yes: { cls: "yes", text: "مؤكد الحضور" },
+    no: { cls: "no", text: "معتذر" },
+    pending: { cls: "pending", text: "لم يرد" },
+  };
+
+  body.innerHTML = list.map((g, i) => {
+    const s = statusMap[g.status] || statusMap.pending;
+    return `<tr>
+      <td>${i + 1}</td>
+      <td>${escapeHtml(g.name)}</td>
+      <td dir="ltr" style="text-align:right">${escapeHtml(g.phone)}</td>
+      <td><span class="badge ${s.cls}">${s.text}</span></td>
+      <td>${escapeHtml(String(g.guests))}</td>
+      <td>${escapeHtml(g.style)}</td>
+      <td>${escapeHtml(g.date)}</td>
+    </tr>`;
+  }).join("");
+
+  hint.textContent = `عرض ${list.length} من أصل ${allGuests.length} مدعو`;
+}
+
+function escapeHtml(s) {
+  const d = document.createElement("div");
+  d.textContent = String(s);
+  return d.innerHTML;
+}
+
+// ===== Event listeners =====
+document.getElementById("searchInput").addEventListener("input", renderTable);
+document.getElementById("filterStatus").addEventListener("change", renderTable);
+
+// ===== Export to Excel =====
+document.getElementById("exportExcel").addEventListener("click", () => {
+  const list = getFiltered();
+  if (!list.length) return;
+  const rows = list.map((g, i) => ({
+    "#": i + 1,
+    "الاسم": g.name,
+    "الهاتف": g.phone,
+    "الحالة": g.status === "yes" ? "مؤكد الحضور" : g.status === "no" ? "معتذر" : "لم يرد",
+    "عدد الضيوف": g.guests,
+    "القالب": g.style,
+    "التاريخ": g.date,
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws["!cols"] = [{ wch: 5 }, { wch: 25 }, { wch: 18 }, { wch: 14 }, { wch: 12 }, { wch: 18 }, { wch: 22 }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "المدعوين");
+  XLSX.writeFile(wb, "قائمة-المدعوين.xlsx");
+});
+
+// ===== Export to PDF =====
+document.getElementById("exportPdf").addEventListener("click", () => {
+  const list = getFiltered();
+  if (!list.length) return;
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+
+  doc.setFontSize(16);
+  doc.text("Guest List — قائمة المدعوين", 40, 35);
+
+  const body = list.map((g, i) => [
+    String(i + 1),
+    g.name,
+    g.phone,
+    g.status === "yes" ? "Confirmed" : g.status === "no" ? "Declined" : "No Response",
+    String(g.guests),
+    g.style,
+    g.date,
+  ]);
+
+  doc.autoTable({
+    head: [["#", "Name", "Phone", "Status", "Guests", "Template", "Date"]],
+    body,
+    startY: 50,
+    styles: { fontSize: 9, cellPadding: 4 },
+    headStyles: { fillColor: [212, 175, 55], textColor: 255 },
+    alternateRowStyles: { fillColor: [245, 245, 245] },
+  });
+
+  doc.save("قائمة-المدعوين.pdf");
+});
+
+// ===== Cleanup =====
+window.addEventListener("beforeunload", () => { if (unsub) unsub(); });
+</script>
+</body>
+</html>
