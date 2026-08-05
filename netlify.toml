@@ -1,6 +1,24 @@
 [build]
   publish = "."
 
+# جدولة الدوال التلقائية (Netlify Scheduled Functions)
+# التقرير اليومي: 8 صباحًا بتوقيت UTC (11 صباحًا بتوقيت السعودية)
+[functions."daily-report"]
+  schedule = "0 8 * * *"
+
+# تذكير المدعوين: فحص كل ساعة لإرسال التذكير قبل المناسبة بـ24 ساعة
+[functions."event-reminder"]
+  schedule = "0 * * * *"
+
+# جدولة الدوال التلقائية (Netlify Scheduled Functions)
+# التقرير اليومي: 8 صباحًا بتوقيت UTC (11 صباحًا بتوقيت السعودية)
+[functions."daily-report"]
+  schedule = "0 8 * * *"
+
+# تذكير المدعوين: فحص كل ساعة لإرسال التذكير قبل المناسبة بـ24 ساعة
+[functions."event-reminder"]
+  schedule = "0 * * * *"
+
 [[headers]]
   for = "/*"
   [headers.values]

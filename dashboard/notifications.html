@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>إعدادات التنبيهات — لوحة تحكم جمرة غضى</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+  *{box-sizing:border-box}
+  body{font-family:Tahoma,Arial,sans-serif;background:#111;color:#eee;margin:0;padding:20px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+  h1{color:#d4af37;font-size:20px;margin:0}
+  a.back{color:#aaa;text-decoration:none;font-size:14px}
+  .card{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:18px;margin-bottom:18px}
+  .card h2{font-size:15px;color:#d4af37;margin-top:0}
+  .card p.desc{font-size:13px;color:#999;line-height:1.7;margin:0 0 14px}
+  label{display:block;font-size:13px;color:#ccc;margin-bottom:6px}
+  input,select{width:100%;box-sizing:border-box;padding:10px;border-radius:6px;border:1px solid #444;background:#222;color:#fff;margin-bottom:12px;font-family:inherit;font-size:14px}
+  input[dir=ltr]{direction:ltr;text-align:left}
+  .row{display:flex;gap:12px;flex-wrap:wrap}
+  .row > div{flex:1;min-width:140px}
+  button{padding:10px 18px;border:none;border-radius:6px;background:#d4af37;color:#111;font-weight:bold;cursor:pointer;font-size:14px}
+  button:disabled{opacity:.5;cursor:default}
+  button.secondary{background:#333;color:#eee}
+  #status{font-size:13px;margin-top:10px;display:block}
+  #status.ok{color:#8ecb8e}
+  #status.err{color:#e07a7a}
+  .feature{display:flex;align-items:flex-start;gap:12px;padding:14px 0;border-bottom:1px solid #2a2a2a}
+  .feature:last-child{border-bottom:none}
+  .feature .icon{font-size:20px;flex-shrink:0}
+  .feature .info h3{margin:0 0 4px;font-size:14px;color:#d4af37}
+  .feature .info p{margin:0;font-size:12px;color:#999;line-height:1.6}
+  .badge-on{font-size:11px;padding:2px 8px;border-radius:20px;background:rgba(76,175,80,.15);color:#4caf50;border:1px solid rgba(76,175,80,.3)}
+  .badge-off{font-size:11px;padding:2px 8px;border-radius:20px;background:rgba(170,170,170,.15);color:#aaa;border:1px solid rgba(170,170,170,.3)}
+  .hint{color:#777;font-size:12px;line-height:1.7;margin-top:4px}
+  .test-btn{background:#333;color:#d4af37;border:1px solid #444;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:12px;margin-top:8px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>✉️ إعدادات التنبيهات والتقارير</h1>
+  <a class="back" href="index.html">← رجوع للوحة</a>
+</div>
+
+<div class="card">
+  <h2>الميزات النشطة</h2>
+  <div class="feature">
+    <span class="icon">🔔</span>
+    <div class="info">
+      <h3>تنبيه فوري لكل رد جديد <span id="badgeInstant" class="badge-off">غير مُفعّل</span></h3>
+      <p>يُرسل إيميل إشعار فوري إلى بريدك عند تسجيل كل ضيف لرده (حضور أو اعتذار)، يحتوي على الاسم، الهاتف، الحالة، وعدد المرافقين.</p>
+    </div>
+  </div>
+  <div class="feature">
+    <span class="icon">📊</span>
+    <div class="info">
+      <h3>تقرير ملخص يومي <span id="badgeDaily" class="badge-off">غير مُفعّل</span></h3>
+      <p>يُرسل كل صباح تقرير ملخص بالبريد يحتوي على إحمالي الردود، المؤكدين، المعتذرين، وأحدث 10 ردود.</p>
+    </div>
+  </div>
+  <div class="feature">
+    <span class="icon">⏰</span>
+    <div class="info">
+      <h3>تذكير تلقائي قبل 24 ساعة <span id="badgeReminder" class="badge-off">غير مُفعّل</span></h3>
+      <p>يفحص النظام كل ساعة مواعيد المناسبات. قبل 24 ساعة من أي مناسبة، يُرسل تلقائيًا رسالة SMS تذكير لكل الضيوف المؤكدين.</p>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>إعدادات البريد (SMTP)</h2>
+  <p class="desc">تُضاف القيم في Netlify Environment Variables — مو من هنا — عشان الأمان. هنا بس تتحقق إنها مفعّلة وتجرب الإرسال.</p>
+
+  <div class="row">
+    <div>
+      <label>بريد الاستلام (NOTIFY_EMAIL_TO)</label>
+      <input type="email" id="notifyEmail" dir="ltr" placeholder="you@example.com">
+    </div>
+    <div>
+      <label>خادم SMTP (SMTP_HOST)</label>
+      <input type="text" id="smtpHost" dir="ltr" placeholder="smtp.gmail.com">
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label>المنفذ (SMTP_PORT)</label>
+      <input type="text" id="smtpPort" dir="ltr" placeholder="587">
+    </div>
+    <div>
+      <label>المُرسِل (SMTP_FROM)</label>
+      <input type="text" id="smtpFrom" dir="ltr" placeholder="you@example.com">
+    </div>
+  </div>
+
+  <button id="saveBtn">حفظ الإعدادات</button>
+  <button class="test-btn" id="testBtn">إرسال إيميل تجريبي</button>
+  <span id="status"></span>
+  <div class="hint" id="envHint"></div>
+</div>
+
+<div class="card">
+  <h2>إعدادات التذكير (SMS)</h2>
+  <p class="desc">التذكير التلقائي يستخدم نفس مزوّد SMS المُعدّ في صفحة "تذكير الضيوف". تأكدي من اختيار المزوّد وإضافة مفاتيحه في Netlify.</p>
+  <div id="smsStatus"><span class="badge-off">غير مُفعّل</span></div>
+  <div class="hint" style="margin-top:8px">المزوّد الحالي: <span id="smsProviderName" style="color:#d4af37">—</span></div>
+</div>
+
+<script type="module">
+import {
+  db, requireLogin,
+  doc, getDoc, setDoc,
+} from "../js/firebase-init.js";
+
+requireLogin(async () => {
+  await loadSettings();
+  checkEnv();
+});
+
+async function loadSettings() {
+  try {
+    const snap = await getDoc(doc(db, "settings", "notifications"));
+    const data = snap.exists() ? snap.data() : {};
+    if (data.notifyEmail) document.getElementById("notifyEmail").value = data.notifyEmail;
+    if (data.smtpHost) document.getElementById("smtpHost").value = data.smtpHost;
+    if (data.smtpPort) document.getElementById("smtpPort").value = data.smtpPort;
+    if (data.smtpFrom) document.getElementById("smtpFrom").value = data.smtpFrom;
+  } catch {}
+
+  try {
+    const remSnap = await getDoc(doc(db, "settings", "reminders"));
+    const remData = remSnap.exists() ? remSnap.data() : {};
+    const provider = remData.smsProvider || "";
+    document.getElementById("smsProviderName").textContent = provider || "لم يتم الاختيار";
+    document.getElementById("smsStatus").innerHTML = provider
+      ? `<span class="badge-on">مُفعّل — ${provider}</span>`
+      : `<span class="badge-off">غير مُفعّل</span>`;
+    updateBadge("badgeReminder", !!provider);
+  } catch {}
+}
+
+async function checkEnv() {
+  // نفحص الإعدادات عبر دالة notify-rsvp (ترجع sent:false لو ناقصة)
+  try {
+    const res = await fetch("/.netlify/functions/notify-rsvp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ _test: true, guestName: "اختبار", status: "yes" }),
+    });
+    const data = await res.json();
+    const configured = data.sent === true || (data.sent === false && data.reason !== "SMTP_NOT_CONFIGURED");
+    updateBadge("badgeInstant", configured);
+    updateBadge("badgeDaily", configured);
+    document.getElementById("envHint").textContent = configured
+      ? "الإعدادات مفعّلة في Netlify ✓"
+      : "الإعدادات غير مكتملة — أضيفي متغيرات SMTP في Netlify Environment Variables.";
+  } catch {
+    document.getElementById("envHint").textContent = "تعذّر فحص الإعدادات.";
+  }
+}
+
+function updateBadge(id, on) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.className = on ? "badge-on" : "badge-off";
+  el.textContent = on ? "مُفعّل" : "غير مُفعّل";
+}
+
+document.getElementById("saveBtn").addEventListener("click", async () => {
+  const btn = document.getElementById("saveBtn");
+  const status = document.getElementById("status");
+  const data = {
+    notifyEmail: document.getElementById("notifyEmail").value.trim(),
+    smtpHost: document.getElementById("smtpHost").value.trim(),
+    smtpPort: document.getElementById("smtpPort").value.trim(),
+    smtpFrom: document.getElementById("smtpFrom").value.trim(),
+  };
+  btn.disabled = true;
+  try {
+    await setDoc(doc(db, "settings", "notifications"), data, { merge: true });
+    status.textContent = "تم حفظ الإعدادات ✓";
+    status.className = "ok";
+  } catch {
+    status.textContent = "تعذّر الحفظ";
+    status.className = "err";
+  }
+  btn.disabled = false;
+  setTimeout(() => (status.textContent = ""), 2500);
+});
+
+document.getElementById("testBtn").addEventListener("click", async () => {
+  const btn = document.getElementById("testBtn");
+  const status = document.getElementById("status");
+  btn.disabled = true;
+  status.textContent = "جارِ الإرسال...";
+  status.className = "";
+  try {
+    const res = await fetch("/.netlify/functions/notify-rsvp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        guestName: "إيميل تجريبي",
+        phone: "—",
+        status: "yes",
+        guests: "0",
+        style: "test",
+      }),
+    });
+    const data = await res.json();
+    if (data.sent) {
+      status.textContent = "تم الإرسال! تأكدي من بريدك ✓";
+      status.className = "ok";
+    } else if (data.reason === "SMTP_NOT_CONFIGURED") {
+      status.textContent = "الإعدادات غير مكتملة في Netlify";
+      status.className = "err";
+    } else {
+      status.textContent = "تعذّر الإرسال — راجعي بيانات SMTP";
+      status.className = "err";
+    }
+  } catch {
+    status.textContent = "خطأ في الاتصال";
+    status.className = "err";
+  }
+  btn.disabled = false;
+  setTimeout(() => (status.textContent = ""), 4000);
+});
+</script>
+</body>
+</html>

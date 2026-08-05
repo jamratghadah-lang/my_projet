@@ -498,13 +498,25 @@ import { db, collection, addDoc, serverTimestamp } from "./firebase-init.js";
       form.addEventListener("submit", () => {
         const fd = new FormData(form);
         const attendance = fd.get("Attendance") || fd.get("attendance") || "";
+        const guestName = (fd.get("Guest_Name") || fd.get("guest_name") || "").toString();
+        const phone = (fd.get("Phone_Number") || fd.get("phone_number") || "").toString();
+        const status = /accept/i.test(attendance) ? "yes" : "no";
+        const guestsCount = (fd.get("Number_of_Guests") || fd.get("number_of_guests") || "").toString();
+
         addDoc(collection(db, "responses"), {
-          name: fd.get("Guest_Name") || fd.get("guest_name") || "",
-          phone: fd.get("Phone_Number") || fd.get("phone_number") || "",
-          status: /accept/i.test(attendance) ? "yes" : "no",
-          guests: fd.get("Number_of_Guests") || fd.get("number_of_guests") || "",
+          name: guestName,
+          phone: phone,
+          status: status,
+          guests: guestsCount,
           style: slug,
           createdAt: serverTimestamp(),
+        }).catch(() => {});
+
+        // إرسال إشعار بريدي فوري للوحة التحكم
+        fetch("/.netlify/functions/notify-rsvp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ guestName, phone, status, guests: guestsCount, style: slug }),
         }).catch(() => {});
       });
     }
