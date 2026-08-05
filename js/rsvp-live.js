@@ -50,6 +50,11 @@ import { db, collection, addDoc, serverTimestamp } from "./firebase-init.js";
       countdown: "يبدأ الاحتفال بعد",
       seeYou: "نراكم هناك!",
       tapOpen: "اضغط للفتح",
+      editRsvp: "تعديل التأكيد",
+      cancelRsvp: "إلغاء الحضور",
+      downloadCard: "استلم بطاقة دخولك",
+      qrHint: "امسح الرمز للوصول للدعوة",
+      close: "إغلاق",
     },
     en: {
       rsvpTitle: "Confirm Your Attendance",
@@ -77,6 +82,11 @@ import { db, collection, addDoc, serverTimestamp } from "./firebase-init.js";
       countdown: "The Celebration Begins In",
       seeYou: "See you there!",
       tapOpen: "Tap to open",
+      editRsvp: "Edit RSVP",
+      cancelRsvp: "Cancel Attendance",
+      downloadCard: "Download Entry Card",
+      qrHint: "Scan the code to open the invite",
+      close: "Close",
     },
     fr: {
       rsvpTitle: "Confirmez votre présence",
@@ -104,6 +114,11 @@ import { db, collection, addDoc, serverTimestamp } from "./firebase-init.js";
       countdown: "La célébration commence dans",
       seeYou: "À bientôt !",
       tapOpen: "Touchez pour ouvrir",
+      editRsvp: "Modifier la confirmation",
+      cancelRsvp: "Annuler la présence",
+      downloadCard: "Télécharger la carte d'entrée",
+      qrHint: "Scannez le code pour ouvrir l'invitation",
+      close: "Fermer",
     },
   };
 
@@ -187,6 +202,17 @@ import { db, collection, addDoc, serverTimestamp } from "./firebase-init.js";
       const next = { ar: "EN", en: "FR", fr: "AR" };
       langBtn.textContent = next[lang] || "EN";
     }
+
+    // ترجمة أزرار بطاقة الدخول (تظهر بعد تأكيد الحضور)
+    document.querySelectorAll("#jg-ec-actions button").forEach(btn => {
+      const txt = btn.textContent.trim();
+      if (txt === "استلم بطاقة دخولك" || txt === "Download Entry Card" || txt === "Télécharger la carte d'entrée") btn.textContent = t("downloadCard");
+      else if (txt === "تعديل التأكيد" || txt === "Edit RSVP" || txt === "Modifier la confirmation") btn.textContent = t("editRsvp");
+      else if (txt === "إلغاء الحضور" || txt === "Cancel Attendance" || txt === "Annuler la présence") btn.textContent = t("cancelRsvp");
+      else if (txt === "إغلاق" || txt === "Close" || txt === "Fermer") btn.textContent = t("close");
+      else if (txt === "أترك كلمة للعروسين") btn.textContent = t("guestWall") || txt;
+    });
+    document.querySelectorAll(".jg-ec-qr-hint").forEach(el => { el.textContent = t("qrHint"); });
   }
 
   function setText(sel, val) {

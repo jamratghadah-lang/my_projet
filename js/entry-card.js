@@ -60,6 +60,9 @@
 .jg-ec-guest-label{font-size:.72rem;letter-spacing:.15em;color:#d8bd85;margin-bottom:4px;}
 .jg-ec-guest{font-size:1.9rem;margin-bottom:16px;word-break:break-word;}
 .jg-ec-meta{font-size:.92rem;line-height:1.9;color:#f1e2ba;}
+.jg-ec-qr-wrap{margin:14px 0 6px;display:flex;flex-direction:column;align-items:center;gap:6px;}
+.jg-ec-qr{width:110px;height:110px;border-radius:10px;background:#fff;padding:6px;box-shadow:0 4px 14px rgba(0,0,0,.25);}
+.jg-ec-qr-hint{font-size:.68rem;color:#d8bd85;letter-spacing:.05em;}
 #jg-ec-actions{margin-top:22px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center;position:relative;z-index:2;}
 #jg-ec-actions button{border:1px solid #e8c877;background:transparent;color:#f6e9c9;padding:10px 20px;
   border-radius:999px;cursor:pointer;font-family:inherit;font-size:.85rem;transition:.2s;}
@@ -147,12 +150,32 @@
 
     const actions = el("div");
     actions.id = "jg-ec-actions";
+    // QR code — يرمّز رابط الدعوة الكامل
+    const qrWrap = el("div", "jg-ec-qr-wrap");
+    const qrImg = el("img", "jg-ec-qr");
+    qrImg.alt = "QR";
+    qrWrap.appendChild(qrImg);
+    qrWrap.appendChild(el("div", "jg-ec-qr-hint", "امسح الرمز للوصول للدعوة"));
+    card.appendChild(qrWrap);
+
+    // توليد QR عبر مكتبة qrcode.js
+    ensureQRCode(() => {
+      const inviteUrl = window.location.href.split("?")[0] + (data.access_code ? "?code=" + encodeURIComponent(data.access_code) : "");
+      try {
+        qrImg.src = window.QRCode.toDataURL(inviteUrl, { width: 220, margin: 1, color: { dark: "#3a2a12", light: "#ffffff" } });
+      } catch (e) {
+        qrWrap.style.display = "none";
+      }
+    });
+
     const dlBtn = el("button", "jg-ec-primary", "استلم بطاقة دخولك");
-    const attendBtn = el("button", "", "سأحضر");
+    const editBtn = el("button", "", "تعديل التأكيد");
+    const cancelBtn = el("button", "", "إلغاء الحضور");
     const wallBtn = el("button", "", "أترك كلمة للعروسين");
     const closeBtn2 = el("button", "", "إغلاق");
     actions.appendChild(dlBtn);
-    actions.appendChild(attendBtn);
+    actions.appendChild(editBtn);
+    actions.appendChild(cancelBtn);
     actions.appendChild(wallBtn);
     actions.appendChild(closeBtn2);
 
@@ -160,7 +183,7 @@
     wrap.appendChild(card);
     wrap.appendChild(actions);
 
-    return { wrap, card, closeBtn, closeBtn2, dlBtn, attendBtn, wallBtn };
+    return { wrap, card, closeBtn, closeBtn2, dlBtn, editBtn, cancelBtn, wallBtn };
   }
 
   function el(tag, cls, text) {
@@ -183,6 +206,17 @@
     const s = document.createElement("script");
     s.id = "jg-ec-h2c";
     s.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+    s.onload = cb;
+    document.body.appendChild(s);
+  }
+
+  function ensureQRCode(cb) {
+    if (window.QRCode) return cb();
+    const existing = document.getElementById("jg-ec-qr-lib");
+    if (existing) { existing.addEventListener("load", cb); return; }
+    const s = document.createElement("script");
+    s.id = "jg-ec-qr-lib";
+    s.src = "https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.5.3/qrcode.min.js";
     s.onload = cb;
     document.body.appendChild(s);
   }
@@ -333,7 +367,7 @@
     overlay.id = "jg-ec-overlay";
     document.body.appendChild(overlay);
 
-    const { wrap, card, closeBtn, closeBtn2, dlBtn, attendBtn, wallBtn } = buildCard(cfg, data, guestName);
+    const { wrap, card, closeBtn, closeBtn2, dlBtn, editBtn, cancelBtn, wallBtn } = buildCard(cfg, data, guestName);
     overlay.appendChild(wrap);
 
     // إخفاء زر حائط التعليقات لو معطّل من لوحة التحكم
@@ -349,16 +383,51 @@
     closeBtn2.addEventListener("click", close);
     overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
 
-    attendBtn.addEventListener("click", () => {
-      attendBtn.disabled = true;
-      attendBtn.textContent = "تم! بانتظارك 🌹";
-      showToast("سعداء بحضورك!");
-    });
-
     if (wallEnabled) wallBtn.addEventListener("click", () => openWall(slug, guestName));
 
+    // زر تعديل التأكيد — يغلق البطاقة ويعيد فتح نموذج الحضور
+    editBtn.addEventListener("click", () => {
+      close();
+      const formContainer = document.getElementById("rsvp-form-container");
+      const successMsg = document.getElementById("success-msg");
+      const modal = document.getElementById("rsvp-modal");
+      if (successMsg) successMsg.style.display = "none";
+      if (formContainer) formContainer.style.display = "block";
+      if (modal) modal.classList.add("active");
+    });
+
+    // زر إلغاء الحضور — يغلق البطاقة ويعرض النموذج مع تحديد "يعتذر"
+    cancelBtn.addEventListener("click", () => {
+      close();
+      const formContainer = document.getElementById("rsvp-form-container");
+      const successMsg = document.getElementById("success-msg");
+      const modal = document.getElementById("rsvp-modal");
+      if (successMsg) successMsg.style.display = "none";
+      if (formContainer) formContainer.style.display = "block";
+      if (modal) modal.classList.add("active");
+      const declineRadio = document.querySelector('input[name="Attendance"][value="Declines with regret"]');
+      if (declineRadio) declineRadio.checked = true;
+      const form = document.getElementById("rsvpForm");
+      if (form) form.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+
+    // ترجمة أزرار البطاقة حسب اللغة الحالية
+    const _lang = window.__jgLang || "ar";
+    const _T = {
+      ar: { dl: "استلم بطاقة دخولك", edit: "تعديل التأكيد", cancel: "إلغاء الحضور", close: "إغلاق", wall: "أترك كلمة للعروسين", qr: "امسح الرمز للوصول للدعوة" },
+      en: { dl: "Download Entry Card", edit: "Edit RSVP", cancel: "Cancel Attendance", close: "Close", wall: "Leave a message", qr: "Scan the code to open the invite" },
+      fr: { dl: "Télécharger la carte d'entrée", edit: "Modifier la confirmation", cancel: "Annuler la présence", close: "Fermer", wall: "Laisser un message", qr: "Scannez le code pour ouvrir l'invitation" },
+    };
+    const _t = _T[_lang] || _T.ar;
+    dlBtn.textContent = _t.dl;
+    editBtn.textContent = _t.edit;
+    cancelBtn.textContent = _t.cancel;
+    closeBtn2.textContent = _t.close;
+    wallBtn.textContent = _t.wall;
+    qrWrap.querySelector(".jg-ec-qr-hint").textContent = _t.qr;
+
     dlBtn.addEventListener("click", () => {
-      dlBtn.textContent = "جارِ التجهيز...";
+      dlBtn.textContent = _lang === "ar" ? "جارِ التجهيز..." : _lang === "fr" ? "Préparation..." : "Preparing...";
       ensureHtml2Canvas(() => {
         window.html2canvas(card, { useCORS: true, backgroundColor: null, scale: 2 }).then(canvas => {
           const link = document.createElement("a");
@@ -366,10 +435,10 @@
           link.download = safeName + ".png";
           link.href = canvas.toDataURL("image/png");
           link.click();
-          dlBtn.textContent = "استلم بطاقة دخولك";
+          dlBtn.textContent = _t.dl;
         }).catch(() => {
-          dlBtn.textContent = "تعذّر الحفظ، حاولي مرة أخرى";
-          setTimeout(() => { dlBtn.textContent = "استلم بطاقة دخولك"; }, 2200);
+          dlBtn.textContent = _lang === "ar" ? "تعذّر الحفظ، حاولي مرة أخرى" : _lang === "fr" ? "Échec, réessayez" : "Failed, try again";
+          setTimeout(() => { dlBtn.textContent = _t.dl; }, 2200);
         });
       });
     });
