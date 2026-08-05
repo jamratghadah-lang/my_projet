@@ -1,0 +1,8 @@
+# أي ملف/مجلد موجود فعلاً بالموقع (about.html، rsvp/wedding-gold.html، css/...، إلخ)
+# يُخدَّم عادي كما هو دايمًا — القاعدة تحت ما تشتغل إلا لو الرابط مو موجود أصلاً.
+
+/admin        /admin/index.html      200
+/dashboard    /dashboard/index.html  200
+
+# الرابط المخصص بأسماء العروسين: jamratghadah.com/سارة-احمد
+/:slug        /.netlify/functions/couple-router  200

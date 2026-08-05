@@ -166,6 +166,7 @@ html[data-mode="dark"] .has-dropdown .dropdown{border-color:rgba(246,236,218,.15
 /* -------- الشعار في الهيدر -------- */
 .brand{display:flex;align-items:center;gap:10px;}
 .brand-logo{height:44px;width:auto;display:block;}
+.brand-trademark{height:18px;width:auto;display:block;align-self:flex-start;margin-top:2px;}
 .brand-en{font-family:'Tajawal',sans-serif;font-weight:700;letter-spacing:.12em;
   font-size:.8rem;color:var(--gold);text-transform:uppercase;}
 
@@ -283,6 +284,55 @@ body[data-page="home"] > .site-footer{position:relative;z-index:1;}
 .jg-video-modal-close{
   position:absolute;top:-38px;left:0;color:#fff;font-size:2rem;cursor:pointer;line-height:1;
 }
+
+/* -------- الفيديوهات التعليمية وآراء العملاء -------- */
+.learn-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+  gap:22px;margin-top:20px;
+}
+.learn-card{
+  background:var(--surface);border-radius:var(--radius);
+  overflow:hidden;box-shadow:var(--shadow);
+  transition:transform .35s cubic-bezier(.2,.7,.3,1),box-shadow .35s ease;
+}
+.learn-card:hover{transform:translateY(-4px);box-shadow:0 16px 40px rgba(43,33,24,.16);}
+.learn-card .thumb{aspect-ratio:16/9;background:var(--charcoal);position:relative;cursor:pointer;}
+.learn-card .thumb img{width:100%;height:100%;object-fit:cover;opacity:.92;transition:opacity .3s ease;}
+.learn-card:hover .thumb img{opacity:1;}
+.learn-card .thumb .play{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:1.3rem;
+}
+.learn-card .thumb .play::before{
+  content:"";position:absolute;width:52px;height:52px;border-radius:50%;
+  background:rgba(255,255,255,.16);backdrop-filter:blur(2px);
+  border:1px solid rgba(255,255,255,.5);transition:transform .3s ease,background .3s ease;
+}
+.learn-card:hover .thumb .play::before{transform:scale(1.08);background:rgba(184,146,61,.55);}
+.learn-card .meta{padding:16px 18px 18px;border-top:1px solid var(--beige);}
+.learn-card .meta .ltitle{font-weight:700;font-size:.95rem;}
+
+.testimonial-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  gap:24px;margin-top:20px;
+}
+.testimonial-card{
+  position:relative;background:var(--surface);border-radius:var(--radius);
+  padding:30px 26px 24px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px;
+  transition:transform .35s cubic-bezier(.2,.7,.3,1),box-shadow .35s ease;
+}
+.testimonial-card:hover{transform:translateY(-4px);box-shadow:0 16px 40px rgba(43,33,24,.16);}
+.testimonial-card::before{
+  content:"”";position:absolute;top:6px;inset-inline-end:20px;
+  font-family:var(--font-script);font-size:3.2rem;color:var(--gold-light);opacity:.55;
+  line-height:1;pointer-events:none;
+}
+.testimonial-card .stars{color:var(--gold);letter-spacing:3px;font-size:.85rem;}
+.testimonial-card .ttext{font-size:.94rem;color:var(--ink-soft);flex:1;line-height:1.85;}
+.testimonial-card .tby{display:flex;align-items:center;gap:12px;margin-top:4px;padding-top:14px;border-top:1px solid var(--beige);}
+.testimonial-card .tby img{width:42px;height:42px;border-radius:50%;object-fit:cover;border:1px solid var(--gold-light);}
+.testimonial-card .tname{font-weight:700;font-size:.9rem;color:var(--ink);}
+.testimonial-card .toccasion{font-size:.76rem;color:var(--gold);letter-spacing:.03em;}
 
 .order-box{
   margin-top:50px;background:rgba(255,255,255,.65);backdrop-filter:blur(10px) saturate(140%);-webkit-backdrop-filter:blur(10px) saturate(140%);

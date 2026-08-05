@@ -132,6 +132,25 @@ collections:
                     { label: "شغّال تلقائي (الافتراضي)", value: "on" },
                     { label: "متوقف — الضيف يشغّلها يدوي من زر الصوت", value: "off" }
                   ] }
+              ] },
+            { label: "بطاقة الدخول (تظهر تلقائيًا بعد تأكيد الضيف حضوره)", name: "entry_card", widget: "object", required: false, fields: [
+                { label: "تفعيل البطاقة", name: "enabled", widget: "select", required: false, default: "on", options: [
+                    { label: "مفعّلة (الافتراضي)", value: "on" },
+                    { label: "متوقفة", value: "off" }
+                  ] },
+                { label: "خط البطاقة", name: "font_family", widget: "select", required: false, default: "Aref Ruqaa", options: [
+                    { label: "Aref Ruqaa (خط ديواني فخم)", value: "Aref Ruqaa" },
+                    { label: "Amiri (خط نسخ كلاسيكي)", value: "Amiri" },
+                    { label: "Cairo", value: "Cairo" },
+                    { label: "Tajawal", value: "Tajawal" },
+                    { label: "Reem Kufi (كوفي هندسي)", value: "Reem Kufi" },
+                    { label: "Lalezar (عريض جريء)", value: "Lalezar" },
+                    { label: "Rakkas (خط زخرفي)", value: "Rakkas" },
+                    { label: "Markazi Text", value: "Markazi Text" }
+                  ] },
+                { label: "صورة خلفية البطاقة", name: "background_image", widget: "image", required: false, hint: "اتركيها فاضية وتظهر خلفية ذهبية فاخرة افتراضية" },
+                { label: "شعار / صورة أعلى البطاقة", name: "logo_image", widget: "image", required: false },
+                { label: "الكلمة المكتوبة على البطاقة", name: "text", widget: "text", required: false, default: "بطاقة دخول", hint: "مثال: بطاقة دخول — أو أي عبارة ترحيبية تحبين، تظهر أعلى اسم الضيف" }
               ] }
           ] }
       - { file: "content/rsvp/wedding-royal.json", label: "زفاف - Royal", name: "wedding_royal", media_folder: "/images/uploads/rsvp/wedding-royal", public_folder: "/images/uploads/rsvp/wedding-royal", fields: *rsvp_fields }

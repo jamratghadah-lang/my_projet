@@ -82,22 +82,33 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-// ===== نظام ثنائية اللغة (عربي/إنجليزي) =====
-// أي عنصر فيه data-ar و data-en يتبدّل نصه تلقائياً حسب اللغة المختارة.
+// ===== نظام ثلاثية اللغة (عربي/إنجليزي/فرنسي) =====
+// أي عنصر فيه data-ar و data-en و data-fr يتبدّل نصه تلقائياً حسب اللغة المختارة.
 // اللغة تُحفظ في localStorage تحت مفتاح jg-lang وتنطبق على كل صفحات الموقع.
+// ترتيب الدورة عند الضغط على الزر: عربي → إنجليزي → فرنسي → عربي...
+const LANG_CYCLE = ["ar", "en", "fr"];
+const LANG_LABEL = { ar: "AR", en: "EN", fr: "FR" };
+
 function applyLang(lang) {
+  if (!LANG_CYCLE.includes(lang)) lang = "ar";
   document.documentElement.lang = lang;
-  document.documentElement.dir = lang === "en" ? "ltr" : "rtl";
+  document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
   document.querySelectorAll("[data-ar]").forEach(el => {
-    const txt = lang === "en" ? el.getAttribute("data-en") : el.getAttribute("data-ar");
+    const txt = lang === "ar" ? el.getAttribute("data-ar")
+      : (el.getAttribute("data-" + lang) || el.getAttribute("data-en") || el.getAttribute("data-ar"));
     if (txt !== null) el.textContent = txt;
   });
   document.querySelectorAll("[data-ar-ph]").forEach(el => {
-    const txt = lang === "en" ? el.getAttribute("data-en-ph") : el.getAttribute("data-ar-ph");
+    const txt = lang === "ar" ? el.getAttribute("data-ar-ph")
+      : (el.getAttribute("data-" + lang + "-ph") || el.getAttribute("data-en-ph") || el.getAttribute("data-ar-ph"));
     if (txt !== null) el.setAttribute("placeholder", txt);
   });
   const btn = document.getElementById("lang-toggle");
-  if (btn) btn.textContent = lang === "en" ? "AR" : "EN";
+  if (btn) {
+    const nextLang = LANG_CYCLE[(LANG_CYCLE.indexOf(lang) + 1) % LANG_CYCLE.length];
+    btn.textContent = LANG_LABEL[nextLang];
+    btn.setAttribute("aria-label", "Change language");
+  }
   localStorage.setItem("jg-lang", lang);
 }
 document.addEventListener("DOMContentLoaded", () => {
@@ -105,7 +116,8 @@ document.addEventListener("DOMContentLoaded", () => {
   document.body.addEventListener("click", (e) => {
     if (e.target && e.target.id === "lang-toggle") {
       const current = localStorage.getItem("jg-lang") || "ar";
-      applyLang(current === "ar" ? "en" : "ar");
+      const next = LANG_CYCLE[(LANG_CYCLE.indexOf(current) + 1) % LANG_CYCLE.length];
+      applyLang(next);
     }
   });
 });

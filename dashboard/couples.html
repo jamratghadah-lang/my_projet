@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>الروابط المخصصة — لوحة تحكم جمرة غضى</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+  body{font-family:Tahoma,Arial,sans-serif;background:#111;color:#eee;margin:0;padding:20px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+  h1{color:#d4af37;font-size:20px;margin:0}
+  a.back{color:#aaa;text-decoration:none;font-size:14px}
+  .card{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:18px;margin-bottom:18px}
+  .card h2{font-size:15px;color:#d4af37;margin-top:0}
+  label{display:block;font-size:13px;color:#ccc;margin-bottom:6px}
+  select,input[type=text]{width:100%;box-sizing:border-box;padding:9px;border-radius:6px;border:1px solid #444;background:#222;color:#fff;margin-bottom:12px;font-family:inherit}
+  input[dir=ltr]{direction:ltr;text-align:left}
+  button{padding:10px 16px;border:none;border-radius:6px;background:#d4af37;color:#111;font-weight:bold;cursor:pointer}
+  button.secondary{background:#333;color:#eee}
+  button:disabled{opacity:.5;cursor:default}
+  .hint{color:#999;font-size:12px;margin-top:-6px;margin-bottom:12px;line-height:1.7}
+  #status{font-size:13px;margin-top:10px;display:block}
+  #status.ok{color:#8ecb8e}
+  #status.err{color:#e07a7a}
+  .list{list-style:none;padding:0;margin:0}
+  .list li{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 4px;border-bottom:1px solid #2a2a2a;font-size:13px;flex-wrap:wrap}
+  .list li .who{display:flex;flex-direction:column;gap:2px}
+  .list li .slug{color:#d4af37;font-family:monospace;direction:ltr;text-align:right;unicode-bidi:plaintext}
+  .list li .tpl{color:#999;font-size:11px}
+  .row-actions{display:flex;gap:6px}
+  .row-actions button,.row-actions a{font-size:12px;padding:6px 10px;border-radius:6px;text-decoration:none}
+  .copy-btn{background:#333;color:#eee;border:none;cursor:pointer}
+  .open-btn{background:#222;color:#d4af37;border:1px solid #444}
+  .del-btn{background:#3a1c1c;color:#e07a7a;border:none;cursor:pointer}
+  .empty{color:#777;text-align:center;padding:20px;font-size:13px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>🔗 الروابط المخصصة بأسماء العروسين</h1>
+  <a class="back" href="index.html">← رجوع للوحة</a>
+</div>
+
+<div class="card">
+  <h2>إضافة رابط جديد</h2>
+  <label for="slugInput">الجزء اللي يظهر بالرابط (بالإنجليزي وبدون مسافات، مثال: sara-ahmed)</label>
+  <input type="text" id="slugInput" dir="ltr" placeholder="sara-ahmed">
+  <div class="hint" id="previewLine">الرابط بيصير: jamratghadah.com/sara-ahmed</div>
+
+  <label for="templateSelect">القالب المرتبط بهذا الرابط</label>
+  <select id="templateSelect">
+    <option value="wedding-gold">wedding-gold — ذهبي ملكي</option>
+    <option value="wedding-classic">wedding-classic</option>
+    <option value="wedding-modern">wedding-modern</option>
+    <option value="wedding-pink">wedding-pink</option>
+    <option value="wedding-royal">wedding-royal</option>
+    <option value="wedding-silver">wedding-silver</option>
+    <option value="wedding-vip">wedding-vip</option>
+    <option value="baby-boy">baby-boy</option>
+    <option value="baby-girl">baby-girl</option>
+    <option value="graduation-classic">graduation-classic</option>
+    <option value="graduation-luxury">graduation-luxury</option>
+    <option value="corporate">corporate</option>
+    <option value="conference">conference</option>
+  </select>
+
+  <button id="saveBtn">حفظ الرابط</button>
+  <span id="status"></span>
+</div>
+
+<div class="card">
+  <h2>الروابط الحالية</h2>
+  <ul class="list" id="listWrap"><li class="empty">جارِ التحميل...</li></ul>
+</div>
+
+<script type="module">
+import {
+  db, requireLogin,
+  collection, getDocs, doc, getDoc, setDoc, deleteDoc, serverTimestamp,
+} from "../js/firebase-init.js";
+
+requireLogin(() => { loadList(); });
+
+const SITE_ORIGIN = window.location.origin;
+const RESERVED = ["admin","dashboard","rsvp","categories","content","css","js","netlify","partials",
+  "about","contact","pricing","index","404","robots.txt","sitemap.xml","config.yml"];
+
+const slugInput = document.getElementById("slugInput");
+const previewLine = document.getElementById("previewLine");
+const statusEl = document.getElementById("status");
+const listWrap = document.getElementById("listWrap");
+
+function normalizeSlug(v) {
+  return v.trim().toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9\u0600-\u06FF-]/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+slugInput.addEventListener("input", () => {
+  const s = normalizeSlug(slugInput.value);
+  previewLine.textContent = s ? `الرابط بيصير: ${SITE_ORIGIN.replace(/^https?:\/\//,"")}/${s}` : "الرابط بيصير: jamratghadah.com/sara-ahmed";
+});
+
+function setStatus(msg, ok) {
+  statusEl.textContent = msg;
+  statusEl.className = ok ? "ok" : "err";
+}
+
+document.getElementById("saveBtn").addEventListener("click", async () => {
+  const slug = normalizeSlug(slugInput.value);
+  const template = document.getElementById("templateSelect").value;
+  if (!slug) { setStatus("اكتبي الجزء اللي تبين يظهر بالرابط أول.", false); return; }
+  if (RESERVED.includes(slug)) { setStatus("هذا الاسم محجوز، جربي اسم ثاني.", false); return; }
+
+  try {
+    const existing = await getDoc(doc(db, "couples", slug));
+    if (existing.exists()) { setStatus("فيه رابط بنفس الاسم موجود مسبقًا.", false); return; }
+    await setDoc(doc(db, "couples", slug), { template, createdAt: serverTimestamp() });
+    setStatus("تم حفظ الرابط ✓", true);
+    slugInput.value = "";
+    previewLine.textContent = "الرابط بيصير: jamratghadah.com/sara-ahmed";
+    loadList();
+  } catch (e) {
+    setStatus("تعذر الحفظ، حاولي مرة أخرى.", false);
+  }
+});
+
+async function loadList() {
+  listWrap.innerHTML = '<li class="empty">جارِ التحميل...</li>';
+  try {
+    const snap = await getDocs(collection(db, "couples"));
+    if (snap.empty) { listWrap.innerHTML = '<li class="empty">ما فيه روابط مخصصة بعد.</li>'; return; }
+    listWrap.innerHTML = "";
+    snap.forEach((d) => {
+      const data = d.data();
+      const url = `${SITE_ORIGIN}/${d.id}`;
+      const li = document.createElement("li");
+      li.innerHTML = `
+        <div class="who">
+          <span class="slug">/${d.id}</span>
+          <span class="tpl">${data.template || ""}</span>
+        </div>
+        <div class="row-actions">
+          <a class="open-btn" href="${url}" target="_blank">فتح ↗</a>
+          <button class="copy-btn" data-url="${url}">نسخ الرابط</button>
+          <button class="del-btn" data-id="${d.id}">حذف</button>
+        </div>`;
+      listWrap.appendChild(li);
+    });
+
+    listWrap.querySelectorAll(".copy-btn").forEach((b) => {
+      b.addEventListener("click", () => {
+        navigator.clipboard.writeText(b.dataset.url);
+        b.textContent = "تم النسخ ✓";
+        setTimeout(() => (b.textContent = "نسخ الرابط"), 1500);
+      });
+    });
+    listWrap.querySelectorAll(".del-btn").forEach((b) => {
+      b.addEventListener("click", async () => {
+        if (!confirm("تأكيد حذف هذا الرابط؟")) return;
+        await deleteDoc(doc(db, "couples", b.dataset.id));
+        loadList();
+      });
+    });
+  } catch (e) {
+    listWrap.innerHTML = '<li class="empty">تعذر تحميل القائمة.</li>';
+  }
+}
+</script>
+</body>
+</html>

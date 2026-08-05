@@ -1,0 +1,376 @@
+// js/entry-card.js
+// بطاقة الدخول الفاخرة — تظهر تلقائيًا بعد تأكيد الضيف حضوره في أي صفحة rsvp/*.html
+// (مستقلة تمامًا عن jamrat-app). تُقرأ إعداداتها من نفس content/rsvp/<slug>.json
+// تحت مفتاح "entry_card" — خط، خلفية، شعار، والكلمة المكتوبة — كلها من لوحة التحكم.
+//
+// يُفعَّل بحدث "jg:rsvp-success" يُطلقه فورم كل صفحة بعد نجاح الإرسال، مع تمرير
+// اسم الضيف الذي كتبه بنفسه في الفورم ليظهر مطبوعًا على بطاقته.
+(function () {
+  const FONT_MAP = {
+    "Aref Ruqaa": { css: "'Aref Ruqaa', serif", google: "Aref+Ruqaa:wght@400;700" },
+    "Amiri": { css: "'Amiri', serif", google: "Amiri:wght@400;700" },
+    "Cairo": { css: "'Cairo', sans-serif", google: "Cairo:wght@400;700" },
+    "Tajawal": { css: "'Tajawal', sans-serif", google: "Tajawal:wght@400;700" },
+    "Reem Kufi": { css: "'Reem Kufi', sans-serif", google: "Reem+Kufi:wght@400;700" },
+    "Lalezar": { css: "'Lalezar', cursive", google: "Lalezar" },
+    "Rakkas": { css: "'Rakkas', cursive", google: "Rakkas" },
+    "Markazi Text": { css: "'Markazi Text', serif", google: "Markazi+Text:wght@400;700" },
+  };
+
+  function optimizeImg(url) {
+    if (!url || !url.includes("sirv.com")) return url;
+    const sep = url.includes("?") ? "&" : "?";
+    return url + sep + "format=webp&q=85";
+  }
+
+  function loadFont(name) {
+    const info = FONT_MAP[name] || FONT_MAP["Aref Ruqaa"];
+    const id = "jg-ec-font-" + info.google.split(":")[0];
+    if (!document.getElementById(id)) {
+      const link = document.createElement("link");
+      link.id = id;
+      link.rel = "stylesheet";
+      link.href = "https://fonts.googleapis.com/css2?family=" + info.google + "&display=swap";
+      document.head.appendChild(link);
+    }
+    return info.css;
+  }
+
+  function injectStyles() {
+    if (document.getElementById("jg-ec-styles")) return;
+    const s = document.createElement("style");
+    s.id = "jg-ec-styles";
+    s.textContent = `
+#jg-ec-overlay{position:fixed;inset:0;z-index:999999;background:rgba(20,14,6,.72);
+  display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;
+  pointer-events:none;transition:opacity .4s ease;backdrop-filter:blur(4px);}
+#jg-ec-overlay.active{opacity:1;pointer-events:all;}
+#jg-ec-card{position:relative;width:100%;max-width:380px;aspect-ratio:9/15.5;border-radius:18px;
+  overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5);background:linear-gradient(155deg,#3a2a12,#6b4a1e 45%,#3a2a12);
+  color:#f6e9c9;text-align:center;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:34px 24px;background-size:cover;background-position:center;}
+#jg-ec-card::before{content:"";position:absolute;inset:10px;border:1px solid rgba(246,233,201,.55);
+  border-radius:12px;pointer-events:none;}
+#jg-ec-card::after{content:"";position:absolute;inset:0;background:rgba(20,14,6,.28);pointer-events:none;}
+#jg-ec-card > *{position:relative;z-index:1;}
+.jg-ec-logo{max-width:76px;max-height:76px;object-fit:contain;margin-bottom:14px;}
+.jg-ec-label{font-size:.78rem;letter-spacing:.25em;text-transform:uppercase;color:#e8c877;margin-bottom:18px;}
+.jg-ec-text{font-size:1.3rem;line-height:1.5;margin-bottom:22px;}
+.jg-ec-divider{width:52px;height:1px;background:#e8c877;margin:0 0 18px;}
+.jg-ec-guest-label{font-size:.72rem;letter-spacing:.15em;color:#d8bd85;margin-bottom:4px;}
+.jg-ec-guest{font-size:1.9rem;margin-bottom:16px;word-break:break-word;}
+.jg-ec-meta{font-size:.92rem;line-height:1.9;color:#f1e2ba;}
+#jg-ec-actions{margin-top:22px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center;position:relative;z-index:2;}
+#jg-ec-actions button{border:1px solid #e8c877;background:transparent;color:#f6e9c9;padding:10px 20px;
+  border-radius:999px;cursor:pointer;font-family:inherit;font-size:.85rem;transition:.2s;}
+#jg-ec-actions button.jg-ec-primary{background:#e8c877;color:#241a0c;font-weight:700;}
+#jg-ec-actions button:hover{opacity:.85;}
+#jg-ec-close{position:absolute;top:-14px;left:50%;transform:translateX(-50%);width:34px;height:34px;
+  border-radius:50%;background:#f6e9c9;color:#3a2a12;border:none;font-size:1.1rem;cursor:pointer;z-index:3;}
+@media (max-width:420px){#jg-ec-card{max-width:92vw;}}
+
+#jg-ec-toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:#f6e9c9;color:#3a2a12;padding:12px 22px;border-radius:999px;font-family:inherit;
+  font-size:.9rem;font-weight:700;box-shadow:0 10px 30px rgba(0,0,0,.35);z-index:1000001;
+  opacity:0;transition:.35s ease;pointer-events:none;}
+#jg-ec-toast.active{opacity:1;transform:translateX(-50%) translateY(0);}
+
+#jg-wall-overlay{position:fixed;inset:0;z-index:1000000;background:rgba(20,14,6,.8);
+  display:flex;align-items:center;justify-content:center;padding:16px;opacity:0;pointer-events:none;
+  transition:opacity .35s ease;}
+#jg-wall-overlay.active{opacity:1;pointer-events:all;}
+#jg-wall-modal{position:relative;width:100%;max-width:420px;max-height:86vh;background:#fbf3e2;
+  border-radius:16px;padding:22px;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.5);
+  font-family:inherit;color:#3a2a12;}
+#jg-wall-close{position:absolute;top:-14px;left:50%;transform:translateX(-50%);width:34px;height:34px;
+  border-radius:50%;background:#f6e9c9;color:#3a2a12;border:none;font-size:1.1rem;cursor:pointer;}
+.jg-wall-title{font-size:1.25rem;text-align:center;margin:6px 0 12px;color:#6b4a1e;}
+.jg-wall-notice{background:#efe0bd;border:1px solid #d8bd85;border-radius:10px;padding:9px 12px;
+  font-size:.8rem;line-height:1.6;text-align:center;margin-bottom:14px;color:#5a3f16;}
+.jg-wall-list{overflow-y:auto;flex:1;margin-bottom:12px;display:flex;flex-direction:column;gap:10px;
+  min-height:40px;}
+.jg-wall-empty{font-size:.85rem;color:#9c8a63;text-align:center;padding:10px 0;}
+.jg-wall-item{background:#fff;border:1px solid #ecdfc0;border-radius:10px;padding:10px 12px;}
+.jg-wall-item-name{font-size:.85rem;font-weight:700;color:#6b4a1e;margin-bottom:3px;}
+.jg-wall-item-msg{font-size:.88rem;line-height:1.6;color:#3a2a12;word-break:break-word;}
+.jg-wall-form{border-top:1px solid #ecdfc0;padding-top:12px;display:flex;flex-direction:column;gap:8px;}
+.jg-wall-form input,.jg-wall-form textarea{width:100%;box-sizing:border-box;border:1px solid #d8bd85;
+  border-radius:8px;padding:8px 10px;font-family:inherit;font-size:.88rem;background:#fff;color:#3a2a12;}
+.jg-wall-form textarea{resize:vertical;min-height:60px;}
+.jg-wall-form button{align-self:flex-end;background:#6b4a1e;color:#f6e9c9;border:none;padding:9px 22px;
+  border-radius:999px;cursor:pointer;font-family:inherit;font-size:.85rem;font-weight:700;}
+.jg-wall-form button:disabled{opacity:.6;cursor:default;}
+`;
+    document.head.appendChild(s);
+  }
+
+  function buildCard(cfg, data, guestName) {
+    const wrap = el("div");
+    wrap.id = "jg-ec-wrap";
+    wrap.style.position = "relative";
+
+    const closeBtn = el("button");
+    closeBtn.id = "jg-ec-close";
+    closeBtn.textContent = "×";
+    closeBtn.setAttribute("aria-label", "إغلاق");
+
+    const card = el("div");
+    card.id = "jg-ec-card";
+    const fam = loadFont(cfg.font_family);
+    card.style.fontFamily = fam;
+    if (cfg.background_image) {
+      card.style.backgroundImage = `url('${optimizeImg(cfg.background_image)}')`;
+    }
+
+    if (cfg.logo_image) {
+      const logo = el("img", "jg-ec-logo");
+      logo.src = optimizeImg(cfg.logo_image);
+      logo.alt = "";
+      card.appendChild(logo);
+    }
+
+    card.appendChild(el("div", "jg-ec-label", "بطاقة دخول"));
+    card.appendChild(el("div", "jg-ec-text", cfg.text || "يسعدنا حضوركم"));
+    card.appendChild(el("div", "jg-ec-divider"));
+
+    if (guestName) {
+      card.appendChild(el("div", "jg-ec-guest-label", "الضيف / الضيفة"));
+      card.appendChild(el("div", "jg-ec-guest", guestName));
+    }
+
+    const metaLines = [data.names, data.date, data.location].filter(Boolean);
+    if (metaLines.length) {
+      const meta = el("div", "jg-ec-meta");
+      meta.innerHTML = metaLines.map(t => escapeHtml(t)).join("<br>");
+      card.appendChild(meta);
+    }
+
+    const actions = el("div");
+    actions.id = "jg-ec-actions";
+    const dlBtn = el("button", "jg-ec-primary", "استلم بطاقة دخولك");
+    const attendBtn = el("button", "", "سأحضر");
+    const wallBtn = el("button", "", "أترك كلمة للعروسين");
+    const closeBtn2 = el("button", "", "إغلاق");
+    actions.appendChild(dlBtn);
+    actions.appendChild(attendBtn);
+    actions.appendChild(wallBtn);
+    actions.appendChild(closeBtn2);
+
+    wrap.appendChild(closeBtn);
+    wrap.appendChild(card);
+    wrap.appendChild(actions);
+
+    return { wrap, card, closeBtn, closeBtn2, dlBtn, attendBtn, wallBtn };
+  }
+
+  function el(tag, cls, text) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text) e.textContent = text;
+    return e;
+  }
+
+  function escapeHtml(str) {
+    const d = document.createElement("div");
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  function ensureHtml2Canvas(cb) {
+    if (window.html2canvas) return cb();
+    const existing = document.getElementById("jg-ec-h2c");
+    if (existing) { existing.addEventListener("load", cb); return; }
+    const s = document.createElement("script");
+    s.id = "jg-ec-h2c";
+    s.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+    s.onload = cb;
+    document.body.appendChild(s);
+  }
+
+  function showToast(msg) {
+    let t = document.getElementById("jg-ec-toast");
+    if (!t) {
+      t = el("div");
+      t.id = "jg-ec-toast";
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    requestAnimationFrame(() => t.classList.add("active"));
+    clearTimeout(t.__hideTimer);
+    t.__hideTimer = setTimeout(() => t.classList.remove("active"), 2600);
+  }
+
+  let _fbModule = null;
+  function loadFirebase() {
+    if (_fbModule) return _fbModule;
+    _fbModule = import("./firebase-init.js");
+    return _fbModule;
+  }
+
+  function renderWallList(listEl, docs) {
+    listEl.innerHTML = "";
+    if (!docs.length) {
+      listEl.appendChild(el("div", "jg-wall-empty", "كوني أول من يترك كلمة هنا 🌹"));
+      return;
+    }
+    docs.forEach(d => {
+      const item = el("div", "jg-wall-item");
+      item.appendChild(el("div", "jg-wall-item-name", d.name || "ضيف"));
+      item.appendChild(el("div", "jg-wall-item-msg", d.message || ""));
+      listEl.appendChild(item);
+    });
+  }
+
+  function openWall(slug, guestName) {
+    injectStyles();
+    let overlay = document.getElementById("jg-wall-overlay");
+    if (overlay) overlay.remove();
+    overlay = el("div");
+    overlay.id = "jg-wall-overlay";
+
+    const modal = el("div");
+    modal.id = "jg-wall-modal";
+    const closeBtn = el("button");
+    closeBtn.id = "jg-wall-close";
+    closeBtn.textContent = "×";
+    modal.appendChild(closeBtn);
+    modal.appendChild(el("div", "jg-wall-title", "تعاليق المدعوين"));
+    modal.appendChild(el("div", "jg-wall-notice", "👁 هذا الحائط عام — كل الضيوف يقدرون يشوفون كل الكلمات المكتوبة هنا."));
+
+    const listEl = el("div", "jg-wall-list");
+    listEl.appendChild(el("div", "jg-wall-empty", "يتم التحميل..."));
+    modal.appendChild(listEl);
+
+    const form = el("div", "jg-wall-form");
+    const nameInput = el("input");
+    nameInput.type = "text";
+    nameInput.placeholder = "اسمك";
+    nameInput.value = guestName || "";
+    const msgInput = el("textarea");
+    msgInput.placeholder = "اكتبي/اكتب كلمتك للعروسين هنا...";
+    const submitBtn = el("button", "", "نشر");
+    form.appendChild(nameInput);
+    form.appendChild(msgInput);
+    form.appendChild(submitBtn);
+    modal.appendChild(form);
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add("active"));
+
+    function close() {
+      overlay.classList.remove("active");
+      setTimeout(() => overlay.remove(), 350);
+    }
+    closeBtn.addEventListener("click", close);
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+
+    loadFirebase().then(fb => {
+      const q = fb.query(
+        fb.collection(fb.db, "guest_wall"),
+        fb.where("slug", "==", slug),
+        fb.orderBy("createdAt", "desc"),
+        fb.limit(50)
+      );
+      return fb.getDocs(q).then(snap => {
+        renderWallList(listEl, snap.docs.map(doc => doc.data()));
+      }).then(() => fb);
+    }).catch(() => {
+      renderWallList(listEl, []);
+    });
+
+    submitBtn.addEventListener("click", () => {
+      const name = nameInput.value.trim();
+      const message = msgInput.value.trim();
+      if (!name || !message) {
+        showToast("اكتبي اسمك وكلمتك أولاً");
+        return;
+      }
+      submitBtn.disabled = true;
+      submitBtn.textContent = "جارِ النشر...";
+      loadFirebase().then(fb => {
+        return fb.addDoc(fb.collection(fb.db, "guest_wall"), {
+          slug, name, message, createdAt: fb.serverTimestamp()
+        });
+      }).then(() => {
+        msgInput.value = "";
+        submitBtn.disabled = false;
+        submitBtn.textContent = "نشر";
+        const item = el("div", "jg-wall-item");
+        item.appendChild(el("div", "jg-wall-item-name", name));
+        item.appendChild(el("div", "jg-wall-item-msg", message));
+        const empty = listEl.querySelector(".jg-wall-empty");
+        if (empty) empty.remove();
+        listEl.prepend(item);
+        showToast("تم نشر كلمتك، شكرًا لك 🌹");
+      }).catch(() => {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "نشر";
+        showToast("تعذّر النشر، حاولي مرة أخرى");
+      });
+    });
+  }
+
+  function showCard(data, guestName, slug) {
+    const cfg = data.entry_card || {};
+    if (cfg.enabled === "off") return;
+
+    injectStyles();
+
+    let overlay = document.getElementById("jg-ec-overlay");
+    if (overlay) overlay.remove();
+    overlay = el("div");
+    overlay.id = "jg-ec-overlay";
+    document.body.appendChild(overlay);
+
+    const { wrap, card, closeBtn, closeBtn2, dlBtn, attendBtn, wallBtn } = buildCard(cfg, data, guestName);
+    overlay.appendChild(wrap);
+
+    requestAnimationFrame(() => overlay.classList.add("active"));
+
+    function close() {
+      overlay.classList.remove("active");
+      setTimeout(() => overlay.remove(), 400);
+    }
+    closeBtn.addEventListener("click", close);
+    closeBtn2.addEventListener("click", close);
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+
+    attendBtn.addEventListener("click", () => {
+      attendBtn.disabled = true;
+      attendBtn.textContent = "تم! بانتظارك 🌹";
+      showToast("سعداء بحضورك!");
+    });
+
+    wallBtn.addEventListener("click", () => openWall(slug, guestName));
+
+    dlBtn.addEventListener("click", () => {
+      dlBtn.textContent = "جارِ التجهيز...";
+      ensureHtml2Canvas(() => {
+        window.html2canvas(card, { useCORS: true, backgroundColor: null, scale: 2 }).then(canvas => {
+          const link = document.createElement("a");
+          const safeName = (guestName || "بطاقة-دخول").replace(/[^\u0600-\u06FFa-zA-Z0-9 _-]/g, "").trim() || "بطاقة-دخول";
+          link.download = safeName + ".png";
+          link.href = canvas.toDataURL("image/png");
+          link.click();
+          dlBtn.textContent = "استلم بطاقة دخولك";
+        }).catch(() => {
+          dlBtn.textContent = "تعذّر الحفظ، حاولي مرة أخرى";
+          setTimeout(() => { dlBtn.textContent = "استلم بطاقة دخولك"; }, 2200);
+        });
+      });
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const slug = document.body.getAttribute("data-rsvp-slug");
+    if (!slug) return;
+
+    document.addEventListener("jg:rsvp-success", (ev) => {
+      fetch("../content/rsvp/" + slug + ".json")
+        .then(r => r.json())
+        .then(data => showCard(data, (ev.detail && ev.detail.guestName) || "", slug))
+        .catch(() => {});
+    });
+  });
+})();

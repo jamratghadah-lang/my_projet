@@ -46,5 +46,12 @@
     "music_url": "",
     "autoplay_music": "on"
   },
-  "access_code": "VNZF8XQ8"
+  "access_code": "VNZF8XQ8",
+  "entry_card": {
+    "enabled": "on",
+    "font_family": "Aref Ruqaa",
+    "background_image": "",
+    "logo_image": "",
+    "text": "بطاقة دخول"
+  }
 }

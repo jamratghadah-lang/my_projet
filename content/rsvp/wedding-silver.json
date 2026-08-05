@@ -48,5 +48,12 @@
     "music_url": "",
     "autoplay_music": "on"
   },
-  "access_code": "KFHRJMZZ"
+  "access_code": "KFHRJMZZ",
+  "entry_card": {
+    "enabled": "on",
+    "font_family": "Aref Ruqaa",
+    "background_image": "",
+    "logo_image": "",
+    "text": "بطاقة دخول"
+  }
 }

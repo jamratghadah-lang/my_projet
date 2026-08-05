@@ -68,6 +68,32 @@ collections:
                 { label: "المميزات", name: "features", widget: "list", field: { label: "ميزة", name: "item", widget: "string" } }
               ] }
 
+  - name: "learn"
+    label: "تعليمي وآراء العملاء"
+    files:
+      - file: "content/learn-videos.json"
+        label: "الفيديوهات التعليمية"
+        name: "learn_videos"
+        fields:
+          - { label: "مقدمة الصفحة", name: "intro", widget: "text", required: false }
+          - { label: "الفيديوهات (اسحبي لتغيير الترتيب)", name: "videos", widget: "list", fields: [
+                { label: "عنوان الفيديو", name: "title", widget: "string" },
+                { label: "صورة مصغّرة (thumbnail)", name: "thumbnail_url", widget: "image", required: false },
+                { label: "ملف الفيديو", name: "video_url", widget: "file", required: false }
+              ] }
+      - file: "content/testimonials.json"
+        label: "آراء العملاء"
+        name: "testimonials"
+        fields:
+          - { label: "مقدمة الصفحة", name: "intro", widget: "text", required: false }
+          - { label: "الآراء (اسحبي لتغيير الترتيب)", name: "reviews", widget: "list", fields: [
+                { label: "اسم العميل", name: "name", widget: "string" },
+                { label: "نوع المناسبة", name: "occasion", widget: "string", required: false },
+                { label: "التقييم (من 1 إلى 5)", name: "rating", widget: "number", default: 5, min: 1, max: 5, value_type: "int" },
+                { label: "نص الرأي", name: "text", widget: "text" },
+                { label: "صورة العميل (اختياري)", name: "photo_url", widget: "image", required: false }
+              ] }
+
   - name: "rsvp"
     label: "صفحات تأكيد الحضور (13)"
     files:
