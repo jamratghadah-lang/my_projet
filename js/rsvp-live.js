@@ -22,6 +22,178 @@ import { db, collection, addDoc, serverTimestamp } from "./firebase-init.js";
   };
   const SCALE_MAP = { small: 0.82, medium: 1, large: 1.15, xlarge: 1.32 };
 
+  // ===== ترجمات الواجهة (عربي/إنجليزي/فرنسي) =====
+  const I18N = {
+    ar: {
+      rsvpTitle: "تأكيد الحضور",
+      rsvpPrompt: "لتجهيز استقبال يليق بكم، يرجى تأكيد حضوركم.",
+      guestName: "اسمك",
+      phone: "رقم الهاتف",
+      phoneHint: "(للتذكير قبل يومين من المناسبة)",
+      attending: "هل ستتمكن من الحضور؟",
+      accept: "يقبل بحضوركم",
+      decline: "يعتذر عن الحضور",
+      guestsCount: "عدد الضيوف",
+      children: "حضور الأطفال",
+      childrenHint: "يرجى ذكر الأسماء والأعمار.",
+      childrenNames: "الأسماء والأعمار",
+      songRequest: "أغنية تحب أن تُعزف",
+      submit: "إرسال",
+      sending: "جارٍ الإرسال...",
+      successMsg: "نتطلع إلى رؤيتكم!",
+      thankYou: "شكراً لكم",
+      rsvpBefore: "الرجاء تأكيد الحضور قبل ",
+      clickToOpen: "اضغط للفتح",
+      confirmAttendance: "تأكيد الحضور",
+      location: "الموقع",
+      schedule: "جدول الفعاليات",
+      countdown: "يبدأ الاحتفال بعد",
+      seeYou: "نراكم هناك!",
+      tapOpen: "اضغط للفتح",
+    },
+    en: {
+      rsvpTitle: "Confirm Your Attendance",
+      rsvpPrompt: "To help us prepare for a joyful celebration, kindly confirm your attendance.",
+      guestName: "Your name",
+      phone: "Phone Number",
+      phoneHint: "(for a reminder two days before the event)",
+      attending: "Will you be attending?",
+      accept: "Accepts with pleasure",
+      decline: "Declines with regret",
+      guestsCount: "Number of Guests",
+      children: "Children Attending",
+      childrenHint: "Please include names and ages.",
+      childrenNames: "Names and ages",
+      songRequest: "A Song That Gets You Dancing",
+      submit: "Submit",
+      sending: "Sending...",
+      successMsg: "We look forward to seeing you!",
+      thankYou: "Thank you",
+      rsvpBefore: "Please RSVP before ",
+      clickToOpen: "Click to open",
+      confirmAttendance: "Confirm Your Attendance",
+      location: "Location",
+      schedule: "Schedule of Events",
+      countdown: "The Celebration Begins In",
+      seeYou: "See you there!",
+      tapOpen: "Tap to open",
+    },
+    fr: {
+      rsvpTitle: "Confirmez votre présence",
+      rsvpPrompt: "Pour nous aider à préparer une joyeuse célébration, veuillez confirmer votre présence.",
+      guestName: "Votre nom",
+      phone: "Numéro de téléphone",
+      phoneHint: "(pour un rappel deux jours avant l'événement)",
+      attending: "Serez-vous présent ?",
+      accept: "Accepte avec plaisir",
+      decline: "Décline avec regret",
+      guestsCount: "Nombre d'invités",
+      children: "Enfants présents",
+      childrenHint: "Veuillez inclure les noms et âges.",
+      childrenNames: "Noms et âges",
+      songRequest: "Une chanson qui vous fait danser",
+      submit: "Envoyer",
+      sending: "Envoi...",
+      successMsg: "Nous avons hâte de vous voir !",
+      thankYou: "Merci",
+      rsvpBefore: "Veuillez confirmer avant le ",
+      clickToOpen: "Cliquez pour ouvrir",
+      confirmAttendance: "Confirmez votre présence",
+      location: "Lieu",
+      schedule: "Programme",
+      countdown: "La célébration commence dans",
+      seeYou: "À bientôt !",
+      tapOpen: "Touchez pour ouvrir",
+    },
+  };
+
+  function t(key) {
+    const lang = (window.__jgLang || "ar");
+    return (I18N[lang] && I18N[lang][key]) || I18N.ar[key] || key;
+  }
+
+  function applyLanguage(lang) {
+    if (!I18N[lang]) lang = "ar";
+    window.__jgLang = lang;
+    document.documentElement.lang = lang;
+    document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
+    document.body.classList.remove("lang-ar", "lang-en", "lang-fr");
+    document.body.classList.add("lang-" + lang);
+    localStorage.setItem("jg-lang", lang);
+
+    // ترجمة العناصر ذات data-i18n
+    document.querySelectorAll("[data-i18n]").forEach(el => {
+      const key = el.getAttribute("data-i18n");
+      const val = t(key);
+      if (val) el.textContent = val;
+    });
+    // ترجمة placeholder
+    document.querySelectorAll("[data-i18n-ph]").forEach(el => {
+      const key = el.getAttribute("data-i18n-ph");
+      const val = t(key);
+      if (val) el.setAttribute("placeholder", val);
+    });
+
+    // عناصر محددة بالـ id
+    setText("#rsvp-form-container h2", t("confirmAttendance"));
+    setText(".rsvp-title", t("rsvpTitle"));
+    setText("#rsvp-form-container > p", null); // يُعالج بالتاريخ أدناه
+    setText(".countdown-title", t("countdown"));
+    setText("#cd-expired", t("seeYou"));
+    setText(".tap-text", t("tapOpen"));
+    setText(".rsvp-title + p", t("rsvpPrompt"));
+    setText("section .cormorant.italic.text-gold:last-of-type", t("clickToOpen"));
+
+    // تسميات الفورم
+    setText('label[data-field="guest_name"]', t("guestName"));
+    setText('label[data-field="phone"]', t("phone"));
+    setText('label[data-field="attending"]', t("attending"));
+    setText('label[data-field="guests_count"]', t("guestsCount"));
+    setText('label[data-field="children"]', t("children"));
+    setText('label[data-field="song_request"]', t("songRequest"));
+
+    // أزرار الراديو
+    document.querySelectorAll('input[name="Attendance"][value="Accepts with pleasure"]').forEach(el => {
+      const sib = el.nextSibling;
+      if (sib && sib.nodeType === 3) sib.textContent = " " + t("accept");
+      if (sib && sib.nodeType === 1) sib.textContent = t("accept");
+    });
+    document.querySelectorAll('input[name="Attendance"][value="Declines with regret"]').forEach(el => {
+      const sib = el.nextSibling;
+      if (sib && sib.nodeType === 3) sib.textContent = " " + t("decline");
+      if (sib && sib.nodeType === 1) sib.textContent = t("decline");
+    });
+
+    // زر الإرسال
+    const submitBtn = document.querySelector(".submit-btn");
+    if (submitBtn && !submitBtn.dataset.sending) submitBtn.textContent = t("submit");
+
+    // تلميح الهاتف
+    document.querySelectorAll(".phone-hint").forEach(el => { el.textContent = t("phoneHint"); });
+    document.querySelectorAll(".children-hint").forEach(el => { el.textContent = t("childrenHint"); });
+
+    // رسالة النجاح
+    const successMsg = document.getElementById("success-msg");
+    if (successMsg && successMsg.style.display !== "none") {
+      const firstLine = successMsg.querySelector("br") ? successMsg.childNodes[0] : null;
+      if (firstLine) firstLine.textContent = t("successMsg");
+      const overlay = successMsg.querySelector(".success-overlay-text");
+      if (overlay) overlay.textContent = t("thankYou");
+    }
+
+    // زر اللغة
+    const langBtn = document.getElementById("lang-toggle-rsvp");
+    if (langBtn) {
+      const next = { ar: "EN", en: "FR", fr: "AR" };
+      langBtn.textContent = next[lang] || "EN";
+    }
+  }
+
+  function setText(sel, val) {
+    const el = document.querySelector(sel);
+    if (el && val !== null) el.textContent = val;
+  }
+
   function showAccessDenied() {
     document.documentElement.style.overflow = "hidden";
     document.body.innerHTML =
@@ -37,7 +209,6 @@ import { db, collection, addDoc, serverTimestamp } from "./firebase-init.js";
   }
 
   function parseArabicDate(str) {
-    // يقبل صيغة "12 / 10 / 2026" (يوم/شهر/سنة)
     if (!str) return null;
     const m = String(str).match(/(\d{1,2})\s*\/\s*(\d{1,2})\s*\/\s*(\d{4})/);
     if (!m) return null;
@@ -58,7 +229,6 @@ import { db, collection, addDoc, serverTimestamp } from "./firebase-init.js";
 
   function rebuildTimeline(root, items) {
     if (!root || !Array.isArray(items) || !items.length) return;
-    // نستبدل التايم لاين بس لو فيه وقت حقيقي متعبّى (مو بس أسماء الأحداث الافتراضية من القالب)
     const hasRealTime = items.some(it => it.time && it.time.trim());
     if (!hasRealTime) return;
     root.querySelectorAll(".event-row").forEach(el => el.remove());
@@ -92,9 +262,6 @@ import { db, collection, addDoc, serverTimestamp } from "./firebase-init.js";
 
   const BLUR_MAP = { none: 0, light: 6, medium: 14, heavy: 24 };
 
-  // يضيف حركة فتح حقيقية (غطاء يفتح لفوق، أو نصين ينفتحان) فوق نفس صورة الظرف/الباب،
-  // بدون ما يغيّر منطق الفيديو/الصوت الأصلي في كل صفحة — الحركة تشتغل بالتوازي مع التلاشي الموجود.
-  // كمان يضيف توهّج ذهبي من نص الظرف/الباب لحظة الفتح (يشتغل مع الأنواع الثلاثة كلها).
   function applyEnvelopeAnimation(animType, imgEl) {
     const overlay = document.getElementById("envelope-overlay");
     if (!overlay || !imgEl) return;
@@ -142,7 +309,6 @@ import { db, collection, addDoc, serverTimestamp } from "./firebase-init.js";
       overlay.insertBefore(left, overlay.firstChild);
     }
 
-    // توهّج الختم: يضاف دايمًا (حتى مع التلاشي العادي)
     const glow = document.createElement("div");
     glow.className = "env-seal-glow";
     overlay.appendChild(glow);
@@ -178,6 +344,27 @@ import { db, collection, addDoc, serverTimestamp } from "./firebase-init.js";
     if (effects.autoplay_music === "off") {
       window.__rsvpNoAutoplayMusic = true;
     }
+  }
+
+  // ===== إظهار/إخفاء حقول الاستمارة حسب إعدادات لوحة التحكم =====
+  function applyFormFields(ff) {
+    if (!ff) return;
+    const show = (sel, on) => {
+      document.querySelectorAll(sel).forEach(el => {
+        el.style.display = on ? "" : "none";
+      });
+    };
+    show(".ff-phone", ff.phone !== "off");
+    show(".ff-guests-count", ff.guests_count !== "off");
+    show(".ff-children", ff.children === "on");
+    show(".ff-song-request", ff.song_request === "on");
+
+    // إزالة required من الحقول المخفية حتى ما تمنع الإرسال
+    document.querySelectorAll(".ff-phone input, .ff-guests-count select").forEach(el => {
+      el.required = (ff.phone !== "off" && ff.guests_count !== "off");
+      if (el.tagName === "INPUT" && ff.phone === "off") el.required = false;
+      if (el.tagName === "SELECT" && ff.guests_count === "off") el.required = false;
+    });
   }
 
   function restartCountdown(finalDate) {
@@ -220,7 +407,7 @@ import { db, collection, addDoc, serverTimestamp } from "./firebase-init.js";
       ]);
     } catch (e) { return; }
 
-    // بوابة الحماية: الصفحة ما تفتح إلا برمز صحيح داخل الرابط (اللي يكون مدمج داخل QR)
+    // بوابة الحماية
     if (data.access_code && String(data.access_code).trim()) {
       const urlCode = new URLSearchParams(window.location.search).get("code");
       if (urlCode !== String(data.access_code).trim()) {
@@ -229,26 +416,22 @@ import { db, collection, addDoc, serverTimestamp } from "./firebase-init.js";
       }
     }
 
-    // الأسماء / العنوان
+    // الأسماء
     if (data.names) {
       setNames(document.querySelector(".hero-names"), data.names);
       const footerLine = document.querySelector("footer .cormorant.italic, footer .text-brown-soft");
       if (footerLine) footerLine.textContent = data.names;
     }
 
-    // التاريخ (النص المعروض + التاريخ الفعلي للعد التنازلي)
+    // التاريخ
     if (data.date) {
       const dateEl = document.querySelector(".hero-date, .date-container");
       if (dateEl) dateEl.textContent = data.date;
       const target = parseArabicDate(data.date);
       if (target) restartCountdown(target.getTime());
-      const deadlineEl = document.querySelector("#rsvp-form-container p");
-      if (deadlineEl && /RSVP before|Please RSVP/i.test(deadlineEl.textContent)) {
-        deadlineEl.textContent = "الرجاء تأكيد الحضور قبل " + data.date;
-      }
     }
 
-    // الموقع (النص + خريطة جوجل بدون مفتاح API)
+    // الموقع
     if (data.location) {
       const locEl = document.querySelector(".venue-location-text");
       if (locEl) locEl.textContent = data.location;
@@ -270,7 +453,6 @@ import { db, collection, addDoc, serverTimestamp } from "./firebase-init.js";
       const envImg = document.querySelector("#envelope-overlay img");
       if (envImg) envImg.src = data.envelope_image;
     }
-    // حركة فتح الظرف/الباب (من لوحة التحكم): تلاشي (افتراضي) / فتح غطاء لفوق / فتح لنصين
     applyEnvelopeAnimation(data.envelope_animation, document.querySelector("#envelope-overlay img"));
     if (data.intro_video) {
       const introSrc = document.querySelector("#introVideo source");
@@ -281,14 +463,11 @@ import { db, collection, addDoc, serverTimestamp } from "./firebase-init.js";
       if (seal) seal.src = data.seal_image;
     }
 
-    // نموذج تأكيد الحضور: رابط الإرسال (Formspree خاص بالطلب أو العام)
+    // نموذج تأكيد الحضور
     const form = document.getElementById("rsvpForm");
     const endpoint = data.formspree_override || settings.formspree_id;
     if (form && endpoint) form.action = endpoint;
 
-    // نسخة من كل تأكيد حضور تُكتب أيضًا بقاعدة بيانات Firestore
-    // (نفس القاعدة اللي تقرأ منها أداة "تذكير الضيوف" بلوحة التحكم)
-    // هذا إضافي على إرسال Formspree، ما يوقفه ولا يتعارض معه
     if (form) {
       form.addEventListener("submit", () => {
         const fd = new FormData(form);
@@ -300,14 +479,30 @@ import { db, collection, addDoc, serverTimestamp } from "./firebase-init.js";
           guests: fd.get("Number_of_Guests") || fd.get("number_of_guests") || "",
           style: slug,
           createdAt: serverTimestamp(),
-        }).catch(() => { /* ما نوقف تجربة الضيف لو صار خطأ بالكتابة */ });
+        }).catch(() => {});
       });
     }
 
-    // تصميم النصوص (خط/حجم) من لوحة التحكم
+    // تصميم النصوص
     applyDesign(data.design);
 
-    // التأثيرات البصرية والصوتية من لوحة التحكم
+    // التأثيرات البصرية والصوتية
     applyEffects(data.effects);
+
+    // إظهار/إخفاء حقول الاستمارة
+    applyFormFields(data.form_fields);
+
+    // تطبيق اللغة المحفوظة + ربط زر تبديل اللغة
+    const savedLang = localStorage.getItem("jg-lang") || "ar";
+    applyLanguage(savedLang);
+
+    const langBtn = document.getElementById("lang-toggle-rsvp");
+    if (langBtn) {
+      langBtn.addEventListener("click", () => {
+        const current = window.__jgLang || "ar";
+        const cycle = { ar: "en", en: "fr", fr: "ar" };
+        applyLanguage(cycle[current] || "en");
+      });
+    }
   });
 })();

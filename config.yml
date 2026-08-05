@@ -98,6 +98,28 @@ collections:
               ] },
             { label: "كلمة ترحيبية (من الزوجين / صاحب المناسبة)", name: "welcome_message", widget: "text", required: false, hint: "تظهر أعلى صفحة تأكيد الحضور، تقدرين تكتبينها بأي شكل تحبين" },
             { label: "رابط Formspree خاص (اختياري، يطغى على الرابط العام)", name: "formspree_override", widget: "string", required: false },
+            { label: "حقول استمارة تأكيد الحضور (إظهار/إخفاء)", name: "form_fields", widget: "object", required: false, hint: "تحكمين من هنا في أي الحقول تظهر للضيوف بنموذج تأكيد الحضور", fields: [
+                { label: "إظهار حقل رقم الهاتف", name: "phone", widget: "select", required: false, default: "on", options: [
+                    { label: "مفعّل (الافتراضي)", value: "on" },
+                    { label: "مخفي", value: "off" }
+                  ] },
+                { label: "إظهار حقل عدد الضيوف", name: "guests_count", widget: "select", required: false, default: "on", options: [
+                    { label: "مفعّل (الافتراضي)", value: "on" },
+                    { label: "مخفي", value: "off" }
+                  ] },
+                { label: "إظهار خيار حضور الأطفال", name: "children", widget: "select", required: false, default: "off", options: [
+                    { label: "مفعّل", value: "on" },
+                    { label: "مخفي (الافتراضي)", value: "off" }
+                  ] },
+                { label: "إظهار حقل طلب الأغنية", name: "song_request", widget: "select", required: false, default: "off", options: [
+                    { label: "مفعّل", value: "on" },
+                    { label: "مخفي (الافتراضي)", value: "off" }
+                  ] },
+                { label: "إظهار زر حائط تعليقات الضيوف", name: "guest_wall", widget: "select", required: false, default: "on", options: [
+                    { label: "مفعّل (الافتراضي)", value: "on" },
+                    { label: "مخفي", value: "off" }
+                  ] }
+              ] },
             { label: "تصميم النصوص (الخط والحجم)", name: "design", widget: "object", required: false, hint: "يطبَّق على الأسماء والتاريخ والموقع وكلمة الترحيب والتايم لاين", fields: [
                 { label: "نوع الخط", name: "font_family", widget: "select", required: false, options: [
                     { label: "Aref Ruqaa (خط ديواني فخم)", value: "Aref Ruqaa" },

@@ -266,14 +266,20 @@
     overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
 
     loadFirebase().then(fb => {
+      // نستخدم getDocs بدون orderBy لتفادي خطأ فهرسة Firestore المركّب،
+      // ثم نرتّب النتائج يدويًا في الذاكرة.
       const q = fb.query(
         fb.collection(fb.db, "guest_wall"),
-        fb.where("slug", "==", slug),
-        fb.orderBy("createdAt", "desc"),
-        fb.limit(50)
+        fb.where("slug", "==", slug)
       );
       return fb.getDocs(q).then(snap => {
-        renderWallList(listEl, snap.docs.map(doc => doc.data()));
+        const docs = snap.docs.map(doc => doc.data());
+        docs.sort((a, b) => {
+          const ta = (a.createdAt && a.createdAt.seconds) ? a.createdAt.seconds : 0;
+          const tb = (b.createdAt && b.createdAt.seconds) ? b.createdAt.seconds : 0;
+          return tb - ta;
+        });
+        renderWallList(listEl, docs.slice(0, 50));
       }).then(() => fb);
     }).catch(() => {
       renderWallList(listEl, []);
@@ -315,6 +321,10 @@
     const cfg = data.entry_card || {};
     if (cfg.enabled === "off") return;
 
+    // احترام إعداد "حائط التعليقات" من لوحة التحكم
+    const ff = data.form_fields || {};
+    const wallEnabled = ff.guest_wall !== "off";
+
     injectStyles();
 
     let overlay = document.getElementById("jg-ec-overlay");
@@ -325,6 +335,9 @@
 
     const { wrap, card, closeBtn, closeBtn2, dlBtn, attendBtn, wallBtn } = buildCard(cfg, data, guestName);
     overlay.appendChild(wrap);
+
+    // إخفاء زر حائط التعليقات لو معطّل من لوحة التحكم
+    if (!wallEnabled) wallBtn.style.display = "none";
 
     requestAnimationFrame(() => overlay.classList.add("active"));
 
@@ -342,7 +355,7 @@
       showToast("سعداء بحضورك!");
     });
 
-    wallBtn.addEventListener("click", () => openWall(slug, guestName));
+    if (wallEnabled) wallBtn.addEventListener("click", () => openWall(slug, guestName));
 
     dlBtn.addEventListener("click", () => {
       dlBtn.textContent = "جارِ التجهيز...";

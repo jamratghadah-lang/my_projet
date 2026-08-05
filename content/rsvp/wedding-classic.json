@@ -55,5 +55,12 @@
     "background_image": "",
     "logo_image": "",
     "text": "بطاقة دخول"
+  },
+  "form_fields": {
+    "phone": "on",
+    "guests_count": "on",
+    "children": "off",
+    "song_request": "off",
+    "guest_wall": "on"
   }
 }
