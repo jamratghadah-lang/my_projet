@@ -1,6 +1,6 @@
 [build]
 publish = "."
-command = "npm run build"
+command = ""
 
 [functions]
 [functions.daily-report]
@@ -15,3 +15,18 @@ for = "/*"
 [headers.values]
 X-Frame-Options = "SAMEORIGIN"
 X-Content-Type-Options = "nosniff"
+
+[[redirects]]
+from = "/admin"
+to = "/admin/index.html"
+status = 200
+
+[[redirects]]
+from = "/dashboard"
+to = "/dashboard/index.html"
+status = 200
+
+[[redirects]]
+from = "/:slug"
+to = "/.netlify/functions/couple-router"
+status = 200
