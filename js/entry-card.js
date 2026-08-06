@@ -183,7 +183,7 @@
     wrap.appendChild(card);
     wrap.appendChild(actions);
 
-    return { wrap, card, closeBtn, closeBtn2, dlBtn, editBtn, cancelBtn, wallBtn };
+    return { wrap, card, closeBtn, closeBtn2, dlBtn, editBtn, cancelBtn, wallBtn, qrWrap };
   }
 
   function el(tag, cls, text) {
@@ -351,6 +351,47 @@
     });
   }
 
+  function getDeviceFingerprint() {
+    const key = "jg-device-id";
+    let id = localStorage.getItem(key);
+    if (id) return id;
+    const parts = [
+      navigator.userAgent,
+      navigator.language,
+      screen.width + "x" + screen.height,
+      new Date().getTimezoneOffset().toString(),
+      Math.random().toString(36).slice(2),
+    ];
+    id = btoa(parts.join("|")).slice(0, 32);
+    localStorage.setItem(key, id);
+    return id;
+  }
+
+  async function claimSingleDevice(slug, guestName) {
+    try {
+      const fb = await loadFirebase();
+      const lockRef = fb.doc(fb.db, "entry_card_locks", slug);
+      const snap = await fb.getDoc(lockRef);
+      const deviceId = getDeviceFingerprint();
+
+      if (snap.exists()) {
+        const existing = snap.data();
+        if (existing.deviceId && existing.deviceId !== deviceId) {
+          return { ok: false, reason: "another_device" };
+        }
+      }
+      await fb.setDoc(lockRef, {
+        slug,
+        guestName: guestName || "",
+        deviceId,
+        claimedAt: fb.serverTimestamp(),
+      });
+      return { ok: true };
+    } catch {
+      return { ok: true };
+    }
+  }
+
   function showCard(data, guestName, slug) {
     const cfg = data.entry_card || {};
     if (cfg.enabled === "off") return;
@@ -359,7 +400,38 @@
     const ff = data.form_fields || {};
     const wallEnabled = ff.guest_wall !== "off";
 
+    // تقييد بطاقة الدخول على جهاز واحد
+    if (cfg.single_device === "on") {
+      claimSingleDevice(slug, guestName).then((res) => {
+        if (!res.ok && res.reason === "another_device") {
+          showDeviceLockedMessage();
+        } else {
+          doShowCard(data, guestName, slug, cfg, ff, wallEnabled);
+        }
+      });
+      return;
+    }
+
+    doShowCard(data, guestName, slug, cfg, ff, wallEnabled);
+  }
+
+  function showDeviceLockedMessage() {
     injectStyles();
+    const overlay = el("div");
+    overlay.id = "jg-ec-overlay";
+    overlay.classList.add("active");
+    const msg = el("div");
+    msg.style.cssText = "max-width:360px;text-align:center;color:#f6e9c9;font-family:inherit;padding:30px";
+    msg.innerHTML =
+      '<div style="font-size:3rem;margin-bottom:16px">🔒</div>' +
+      '<h2 style="color:#e8c877;font-size:1.3rem;margin:0 0 12px">البطاقة مفتوحة على جهاز آخر</h2>' +
+      '<p style="line-height:1.8;color:#d8bd85;font-size:.95rem">لأسباب أمنية، يمكن فتح بطاقة الدخول من جهاز واحد فقط. ' +
+      'إذا تعذّر عليك الوصول للبطاقة، تواصلي مع صاحب المناسبة.</p>';
+    overlay.appendChild(msg);
+    document.body.appendChild(overlay);
+  }
+
+  function doShowCard(data, guestName, slug, cfg, ff, wallEnabled) {
 
     let overlay = document.getElementById("jg-ec-overlay");
     if (overlay) overlay.remove();
@@ -367,7 +439,7 @@
     overlay.id = "jg-ec-overlay";
     document.body.appendChild(overlay);
 
-    const { wrap, card, closeBtn, closeBtn2, dlBtn, editBtn, cancelBtn, wallBtn } = buildCard(cfg, data, guestName);
+    const { wrap, card, closeBtn, closeBtn2, dlBtn, editBtn, cancelBtn, wallBtn, qrWrap } = buildCard(cfg, data, guestName);
     overlay.appendChild(wrap);
 
     // إخفاء زر حائط التعليقات لو معطّل من لوحة التحكم

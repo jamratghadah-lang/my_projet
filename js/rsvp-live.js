@@ -7,7 +7,7 @@
 // يُحمَّل كـ type="module" عشان نقدر نستورد Firestore ونربط تأكيدات الحضور
 // بقاعدة البيانات اللي تقرأ منها أداة "تذكير الضيوف" بلوحة التحكم.
 
-import { db, collection, addDoc, serverTimestamp } from "./firebase-init.js";
+import { db, collection, doc, getDoc, setDoc, addDoc, serverTimestamp } from "./firebase-init.js";
 
 (function () {
   const FONT_MAP = {
@@ -234,6 +234,23 @@ import { db, collection, addDoc, serverTimestamp } from "./firebase-init.js";
       '</p></div></div>';
   }
 
+  function lockRsvpForm() {
+    const form = document.getElementById("rsvpForm");
+    if (!form) return;
+    const wrap = form.parentElement || form;
+    const notice = document.createElement("div");
+    notice.style.cssText =
+      "background:rgba(212,175,55,.1);border:1px solid rgba(212,175,55,.3);border-radius:10px;" +
+      "padding:20px;text-align:center;color:#d4af37;font-family:'Tajawal',sans-serif;margin:16px 0";
+    notice.innerHTML =
+      '<div style="font-size:2rem;margin-bottom:10px">📅</div>' +
+      '<p style="margin:0;font-size:1rem;line-height:1.7;color:#cbbfa8">انتهت مدة استقبال الردود لهذه المناسبة. ' +
+      'شكرًا لكل من أكّد حضوره!</p>';
+    form.style.display = "none";
+    form.parentNode.insertBefore(notice, form);
+    form.querySelectorAll("input, button, select, textarea").forEach(el => el.disabled = true);
+  }
+
   function parseArabicDate(str) {
     if (!str) return null;
     const m = String(str).match(/(\d{1,2})\s*\/\s*(\d{1,2})\s*\/\s*(\d{4})/);
@@ -440,6 +457,14 @@ import { db, collection, addDoc, serverTimestamp } from "./firebase-init.js";
         showAccessDenied();
         return;
       }
+    }
+
+    // قفل تلقائي بعد انتهاء تاريخ المناسبة — منع استقبال ردود جديدة
+    const eventDate = parseArabicDate(data.date);
+    const now = new Date();
+    const eventExpired = eventDate && now > new Date(eventDate.getTime() + 24 * 60 * 60 * 1000);
+    if (eventExpired) {
+      lockRsvpForm();
     }
 
     // الأسماء

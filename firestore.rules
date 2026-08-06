@@ -1,0 +1,57 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── الدوال المساعدة ───
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // ─── responses: ردود المدعوين ───
+    // الضيوف (anon) يقدرون يضيفون رد جديد فقط، ما يقدرون يقرؤون أو يعدلون ردود غيرهم.
+    // لوحة التحكم (authenticated) تقرأ وتحذف الردود.
+    match /responses/{responseId} {
+      // إنشاء رد جديد: مفتوح للجميع (الضيوف ما عندهم حساب)
+      allow create: if true;
+      // القراءة والحذف: فقط لوحة التحكم المُسجّلة
+      allow read, delete: if isSignedIn();
+      // لا يمكن تعديل رد بعد إرساله
+      allow update: if false;
+    }
+
+    // ─── couples: روابط الدعوات المخصصة ───
+    match /couples/{slug} {
+      allow read: if true;  // couple-router يحتاج قراءة عامة
+      allow create, update, delete: if isSignedIn();
+    }
+
+    // ─── settings: إعدادات لوحة التحكم ───
+    match /settings/{docId} {
+      allow read: if true;  // صفحات RSVP تقرأ الإعدادات
+      allow write: if isSignedIn();
+    }
+
+    // ─── entry_card_locks: أقفال البطاقة الرقمية (جهاز واحد) ───
+    // إنشاء وتحديث البطاقة: مفتوح للجميع (الضياف ما عندهم حساب)
+    // القراءة والحذف: فقط لوحة التحكم
+    match /entry_card_locks/{slug} {
+      allow create, update: if true;
+      allow read, delete: if isSignedIn();
+    }
+
+    // ─── guest_wall: تعليقات حائط الضيوف ───
+    match /guest_wall/{commentId} {
+      allow create: if true;
+      allow read: if true;
+      allow update, delete: if isSignedIn();
+    }
+
+    // ─── deny by default: أي مجموعة أخرى ───
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
