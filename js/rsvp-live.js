@@ -525,6 +525,10 @@ import { db, collection, doc, getDoc, setDoc, addDoc, serverTimestamp } from "./
   document.addEventListener("DOMContentLoaded", async () => {
     const slug = document.body.dataset.rsvpSlug;
     if (!slug) return;
+    // لو الصفحة وصلت عن طريق الرابط المخصص (jamratghadah.com/sara-ahmed)، هذا
+    // يميّز هذي العميلة عن أي عميلة ثانية تستخدم نفس القالب — بدونه، ردود
+    // الحضور لعميلتين مختلفتين على نفس القالب تنخلط مع بعض.
+    const eventSlug = document.body.dataset.coupleSlug || slug;
 
     let data = {}, settings = {};
     try {
@@ -628,6 +632,7 @@ import { db, collection, doc, getDoc, setDoc, addDoc, serverTimestamp } from "./
           status: status,
           guests: guestsCount,
           style: slug,
+          eventSlug: eventSlug,
           entryCode: entryCode,
           createdAt: serverTimestamp(),
         }).catch(() => {});
@@ -636,7 +641,7 @@ import { db, collection, doc, getDoc, setDoc, addDoc, serverTimestamp } from "./
         fetch("/.netlify/functions/notify-rsvp", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ guestName, phone, status, guests: guestsCount, style: slug, entryCode }),
+          body: JSON.stringify({ guestName, phone, status, guests: guestsCount, style: slug, eventSlug, entryCode }),
         }).catch(() => {});
       });
     }

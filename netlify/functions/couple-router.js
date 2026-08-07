@@ -55,7 +55,10 @@ exports.handler = async (event) => {
       return { statusCode: 404, headers: { "Content-Type": "text/html; charset=utf-8" }, body: notFoundPage() };
     }
     const html = await pageRes.text();
-    return { statusCode: 200, headers: { "Content-Type": "text/html; charset=utf-8" }, body: html };
+    const htmlWithCoupleSlug = html.includes("<body")
+      ? html.replace(/<body(\s|>)/, `<body data-couple-slug="${slug}"$1`)
+      : html;
+    return { statusCode: 200, headers: { "Content-Type": "text/html; charset=utf-8" }, body: htmlWithCoupleSlug };
   } catch (err) {
     return {
       statusCode: 500,
