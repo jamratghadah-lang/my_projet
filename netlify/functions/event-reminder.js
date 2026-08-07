@@ -2,25 +2,26 @@
 //
 // دالة مجدولة تعمل كل ساعة. تفحص جميع روابط الدعوات (مجموعة couples في Firestore)
 // وتقرأ تاريخ كل قالب من ملفات content/rsvp/<slug>.json. لو المناسبة بعد 24 ساعة
-// (±1 ساعة)، تُرسل تذكيرًا تلقائيًا لكل الضيوف المؤكدين عبر مزوّد SMS المُعدّ.
-//
-// لو ما فيه مزوّد SMS مُعدّ، أو ما فيه تاريخ قريب، الدالة تنتهي بصمت.
+// (±1 ساعة):
+//   1) تُرسل تذكيرًا SMS تلقائيًا لكل الضيوف المؤكدين (لو مزوّد SMS مُعدّ).
+//   2) تُرسل تقرير إيميل (Excel+PDF) لصاحبة المناسبة/المدير حسب إعدادات
+//      لوحة التحكم (content/settings.json → reports.before_event).
 //
 // الجدولة في netlify.toml:
 //   [functions."event-reminder"]
 //     schedule = "0 * * * *"   ← كل ساعة
+
+const { resolveRecipients, fetchResponses, buildExcelBuffer, buildPdfBuffer, sendReportEmail, getAdminDb } = require("./_report-lib");
 
 const FIREBASE_API_KEY = "AIzaSyAAYOne0CTht9906nStecbqCHkb_CY6glw";
 const PROJECT_ID = "jamrat-ghadah";
 
 exports.handler = async () => {
   const provider = process.env.SMS_PROVIDER;
-  if (!provider) {
-    return { statusCode: 200, body: JSON.stringify({ sent: false, reason: "SMS_NOT_CONFIGURED" }) };
-  }
 
   try {
-    // 1) اقرأ جميع روابط الدعوات
+    // 1) اقرأ جميع روابط الدعوات (مجموعة "couples" قراءتها عامة بقواعد الأمان،
+    // ما تحتاج صلاحية إدارية)
     const couplesUrl = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/couples?key=${FIREBASE_API_KEY}&pageSize=500`;
     const couplesRes = await fetch(couplesUrl);
     if (!couplesRes.ok) {
@@ -29,21 +30,20 @@ exports.handler = async () => {
     const couplesData = await couplesRes.json();
     const couples = couplesData.documents || [];
 
-    // 2) اقرأ جميع الردود
-    const responsesUrl = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/responses?key=${FIREBASE_API_KEY}&pageSize=500`;
-    const responsesRes = await fetch(responsesUrl);
-    if (!responsesRes.ok) {
-      return { statusCode: 200, body: JSON.stringify({ sent: false, error: "RESPONSES_READ_FAILED" }) };
-    }
-    const responsesData = await responsesRes.json();
-    const responseDocs = responsesData.documents || [];
+    // 2) اقرأ جميع الردود — تحتاج صلاحية إدارية لأن قواعد الأمان تشترط
+    // تسجيل دخول لقراءة "responses"
+    const responsesSnap = await getAdminDb().collection("responses").get();
+    const responseDocs = [];
+    responsesSnap.forEach((doc) => responseDocs.push(doc.data()));
 
     // 3) لكل رابط، اقرأ تاريخ القالب من content/rsvp/<template>.json
     const now = Date.now();
     const WINDOW_MS = 60 * 60 * 1000; // ±1 ساعة
     const TARGET_MS = 24 * 60 * 60 * 1000; // 24 ساعة
 
-    let totalSent = 0;
+    let totalSmsSent = 0;
+    let emailReportSent = false;
+    const eventsInWindow = [];
     const eventHost = process.env.URL || process.env.DEPLOY_URL || "https://jamratghadah.com";
 
     for (const couple of couples) {
@@ -72,34 +72,62 @@ exports.handler = async () => {
       // لو المناسبة بعد 24 ساعة (±1 ساعة)
       if (Math.abs(diff - TARGET_MS) > WINDOW_MS) continue;
 
-      // 4) جمّع الضيوف المؤكدين لهذا القالب
-      const guests = [];
-      for (const doc of responseDocs) {
-        const f = doc.fields || {};
-        const status = f.status?.stringValue || "";
-        const docStyle = f.style?.stringValue || "";
-        if (docStyle !== template && docStyle !== slug) continue;
-        if (status !== "yes") continue;
-        const phone = f.phone?.stringValue || "";
-        if (!phone) continue;
-        const name = f.name?.stringValue || "ضيف";
-        guests.push({ name, phone: normalizePhone(phone) });
-      }
+      eventsInWindow.push({ slug, template, jsonDate });
 
-      if (!guests.length) continue;
+      // 4) جمّع الضيوف المؤكدين لهذا القالب (لتذكير SMS فقط)
+      if (provider) {
+        const guests = [];
+        for (const f of responseDocs) {
+          const status = f.status || "";
+          const docStyle = f.style || "";
+          if (docStyle !== template && docStyle !== slug) continue;
+          if (status !== "yes") continue;
+          const phone = f.phone || "";
+          if (!phone) continue;
+          const name = f.name || "ضيف";
+          guests.push({ name, phone: normalizePhone(phone) });
+        }
 
-      // 5) أرسل التذكير لكل ضيف
-      const reminderText = `تذكير: مناسبتنا غدًا ${jsonDate} 🌸 نتشرف بحضوركم. — جمرة غضى`;
-
-      for (const guest of guests) {
-        try {
-          await sendSMS(provider, guest.phone, reminderText.replace(/\{name\}/g, guest.name));
-          totalSent++;
-        } catch { /* تجاهل الأخطاء الفردية */ }
+        if (guests.length) {
+          const reminderText = `تذكير: مناسبتنا غدًا ${jsonDate} 🌸 نتشرف بحضوركم. — جمرة غضى`;
+          for (const guest of guests) {
+            try {
+              await sendSMS(provider, guest.phone, reminderText.replace(/\{name\}/g, guest.name));
+              totalSmsSent++;
+            } catch { /* تجاهل الأخطاء الفردية */ }
+          }
+        }
       }
     }
 
-    return { statusCode: 200, body: JSON.stringify({ sent: true, totalSent }) };
+    // 5) تقرير إيميل لصاحبة المناسبة/المدير قبل المناسبة بـ24 ساعة
+    if (eventsInWindow.length) {
+      const { recipients, reportsCfg } = await resolveRecipients();
+      if (reportsCfg.before_event !== "off" && recipients.length) {
+        const { rows, total, yes, no, pending } = await fetchResponses();
+        const dateStr = new Date().toLocaleDateString("ar-SA");
+        const eventsList = eventsInWindow.map(e => `- ${e.slug} (${e.jsonDate})`).join("\n");
+
+        const [excelBuf, pdfBuf] = await Promise.all([
+          buildExcelBuffer(rows),
+          buildPdfBuffer(rows, { total, yes, no, pending }, `تقرير ما قبل المناسبة بـ24 ساعة — ${dateStr}`),
+        ]);
+
+        const result = await sendReportEmail({
+          to: recipients,
+          subject: `تذكير: مناسبتكم غدًا — تقرير آخر الردود`,
+          text: `مناسبتكم بعد 24 ساعة تقريبًا:\n${eventsList}\n\nإجمالي: ${total} | مؤكد: ${yes} | معتذر: ${no} | لم يرد: ${pending}`,
+          html: `<div dir="rtl" style="font-family:Tahoma,Arial,sans-serif">مناسبتكم بعد 24 ساعة تقريبًا 🌸<br><br>إجمالي: ${total} | مؤكد: ${yes} | معتذر: ${no} | لم يرد: ${pending}<br><br>الملفات مرفقة بصيغتي Excel وPDF.</div>`,
+          attachments: [
+            { filename: `تقرير-قبل-المناسبة-${dateStr}.xlsx`, content: excelBuf },
+            { filename: `تقرير-قبل-المناسبة-${dateStr}.pdf`, content: pdfBuf },
+          ],
+        });
+        emailReportSent = !!result.sent;
+      }
+    }
+
+    return { statusCode: 200, body: JSON.stringify({ sent: true, totalSmsSent, emailReportSent, eventsInWindow: eventsInWindow.length }) };
   } catch (err) {
     return { statusCode: 200, body: JSON.stringify({ sent: false, error: String(err) }) };
   }

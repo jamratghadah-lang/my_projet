@@ -10,6 +10,15 @@
 import { db, collection, doc, getDoc, setDoc, addDoc, serverTimestamp } from "./firebase-init.js";
 
 (function () {
+  // كود دخول فريد لكل ضيف (مثال: JG-4F7B2K9A) — يُستخدم يوم المناسبة لتسجيل
+  // الدخول عبر تطبيق الاستقبال (jamrat-app)، منفصل عن رابط الدعوة نفسه.
+  function generateEntryCode() {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // بدون أحرف/أرقام متشابهة (O/0, I/1)
+    let code = "JG-";
+    for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    return code;
+  }
+
   const FONT_MAP = {
     "Aref Ruqaa": "'Aref Ruqaa', serif",
     "Amiri": "'Amiri', serif",
@@ -55,6 +64,8 @@ import { db, collection, doc, getDoc, setDoc, addDoc, serverTimestamp } from "./
       downloadCard: "استلم بطاقة دخولك",
       qrHint: "امسح الرمز للوصول للدعوة",
       close: "إغلاق",
+      childrenWelcome: "الأطفال مرحّب بهم 🎈",
+      childrenAdultsOnly: "نعتذر، الدعوة مخصصة للبالغين فقط",
     },
     en: {
       rsvpTitle: "Confirm Your Attendance",
@@ -87,6 +98,8 @@ import { db, collection, doc, getDoc, setDoc, addDoc, serverTimestamp } from "./
       downloadCard: "Download Entry Card",
       qrHint: "Scan the code to open the invite",
       close: "Close",
+      childrenWelcome: "Children are welcome 🎈",
+      childrenAdultsOnly: "Sorry, this invitation is for adults only",
     },
     fr: {
       rsvpTitle: "Confirmez votre présence",
@@ -119,6 +132,8 @@ import { db, collection, doc, getDoc, setDoc, addDoc, serverTimestamp } from "./
       downloadCard: "Télécharger la carte d'entrée",
       qrHint: "Scannez le code pour ouvrir l'invitation",
       close: "Fermer",
+      childrenWelcome: "Les enfants sont les bienvenus 🎈",
+      childrenAdultsOnly: "Désolé, cette invitation est réservée aux adultes",
     },
   };
 
@@ -186,6 +201,12 @@ import { db, collection, doc, getDoc, setDoc, addDoc, serverTimestamp } from "./
     // تلميح الهاتف
     document.querySelectorAll(".phone-hint").forEach(el => { el.textContent = t("phoneHint"); });
     document.querySelectorAll(".children-hint").forEach(el => { el.textContent = t("childrenHint"); });
+
+    // إعادة تطبيق رسالة سياسة الأطفال باللغة الجديدة (لو مفعّلة)
+    const childrenMsg = document.getElementById("jg-children-msg");
+    if (childrenMsg && window.__jgAllowChildren !== undefined) {
+      childrenMsg.textContent = window.__jgAllowChildren === "yes" ? t("childrenWelcome") : t("childrenAdultsOnly");
+    }
 
     // رسالة النجاح
     const successMsg = document.getElementById("success-msg");
@@ -398,16 +419,79 @@ import { db, collection, doc, getDoc, setDoc, addDoc, serverTimestamp } from "./
       });
     };
     show(".ff-phone", ff.phone !== "off");
-    show(".ff-guests-count", ff.guests_count !== "off");
-    show(".ff-children", ff.children === "on");
     show(".ff-song-request", ff.song_request === "on");
 
-    // إزالة required من الحقول المخفية حتى ما تمنع الإرسال
-    document.querySelectorAll(".ff-phone input, .ff-guests-count select").forEach(el => {
-      el.required = (ff.phone !== "off" && ff.guests_count !== "off");
-      if (el.tagName === "INPUT" && ff.phone === "off") el.required = false;
-      if (el.tagName === "SELECT" && ff.guests_count === "off") el.required = false;
+    // رقم الهاتف: إظهار/إخفاء + إلزامي أو اختياري من لوحة التحكم
+    document.querySelectorAll(".ff-phone input").forEach(el => {
+      el.required = (ff.phone !== "off" && ff.phone_required === "on");
     });
+
+    applyGuestsCount(ff);
+    applyChildrenPolicy(ff);
+  }
+
+  // ===== عدد الضيوف: عدد ثابت أو نطاق (حد أدنى/أقصى) من لوحة التحكم =====
+  function applyGuestsCount(ff) {
+    const wrap = document.querySelector(".ff-guests-count");
+    const select = document.querySelector('select[name="Number_of_Guests"]');
+    if (!wrap) return;
+
+    if (ff.guests_count === "off") {
+      wrap.style.display = "none";
+      if (select) select.required = false;
+      return;
+    }
+
+    if (!select) { wrap.style.display = ""; return; }
+
+    const mode = ff.guests_mode || "range";
+    let hideBecauseSingle = false;
+
+    if (mode === "fixed") {
+      const fixed = parseInt(ff.guests_fixed_count, 10) || 1;
+      select.innerHTML = `<option value="${fixed}" selected>${fixed}</option>`;
+      hideBecauseSingle = fixed <= 1;
+    } else {
+      const min = Math.max(1, parseInt(ff.guests_min, 10) || 1);
+      const max = Math.max(min, parseInt(ff.guests_max, 10) || 4);
+      let opts = "";
+      for (let i = min; i <= Math.min(max, 20); i++) opts += `<option value="${i}">${i}</option>`;
+      select.innerHTML = opts;
+      hideBecauseSingle = (min === 1 && max === 1);
+    }
+
+    // "إخفاء عدد الضيوف إذا كان الحد المسموح به شخصًا واحدًا"
+    wrap.style.display = hideBecauseSingle ? "none" : "";
+    select.required = !hideBecauseSingle;
+  }
+
+  // ===== سياسة حضور الأطفال (نعم/لا) من لوحة التحكم =====
+  function applyChildrenPolicy(ff) {
+    const wrap = document.querySelector(".ff-children");
+    if (!wrap) return;
+
+    let msgEl = document.getElementById("jg-children-msg");
+    const allow = ff.allow_children;
+    window.__jgAllowChildren = allow;
+
+    if (allow === undefined) {
+      // لم تُحدَّد السياسة بعد: نحافظ على السلوك القديم بدون رسالة
+      wrap.style.display = ff.children === "on" ? "" : "none";
+      if (msgEl) msgEl.style.display = "none";
+      return;
+    }
+
+    if (!msgEl) {
+      msgEl = document.createElement("div");
+      msgEl.id = "jg-children-msg";
+      msgEl.className = "cormorant text-brown-soft";
+      msgEl.style.cssText = "text-align:center;font-size:14px;margin:2px 0 14px;";
+      wrap.parentNode.insertBefore(msgEl, wrap);
+    }
+    msgEl.style.display = "";
+    msgEl.textContent = allow === "yes" ? t("childrenWelcome") : t("childrenAdultsOnly");
+    wrap.style.display = allow === "yes" ? "" : "none";
+    wrap.querySelectorAll("input").forEach(el => { el.required = false; });
   }
 
   function restartCountdown(finalDate) {
@@ -459,12 +543,16 @@ import { db, collection, doc, getDoc, setDoc, addDoc, serverTimestamp } from "./
       }
     }
 
-    // قفل تلقائي بعد انتهاء تاريخ المناسبة — منع استقبال ردود جديدة
-    const eventDate = parseArabicDate(data.date);
-    const now = new Date();
-    const eventExpired = eventDate && now > new Date(eventDate.getTime() + 24 * 60 * 60 * 1000);
-    if (eventExpired) {
-      lockRsvpForm();
+    // قفل تلقائي بعد انتهاء تاريخ المناسبة — منع استقبال ردود جديدة (قابل للتحكم من لوحة التحكم)
+    const security = data.security || {};
+    if (security.auto_lock !== "off") {
+      const lockHours = parseInt(security.auto_lock_hours || "24", 10);
+      const eventDate = parseArabicDate(data.date);
+      const now = new Date();
+      const eventExpired = eventDate && now > new Date(eventDate.getTime() + lockHours * 60 * 60 * 1000);
+      if (eventExpired) {
+        lockRsvpForm();
+      }
     }
 
     // الأسماء
@@ -528,12 +616,19 @@ import { db, collection, doc, getDoc, setDoc, addDoc, serverTimestamp } from "./
         const status = /accept/i.test(attendance) ? "yes" : "no";
         const guestsCount = (fd.get("Number_of_Guests") || fd.get("number_of_guests") || "").toString();
 
+        // كود دخول شخصي فريد للضيف — يُستخدم لاحقًا بتطبيق تسجيل الدخول يوم
+        // المناسبة (jamrat-app). يُتاح لبطاقة الدخول عبر window.__jgLastEntryCode
+        // لأن حدث jg:rsvp-success يُطلَق من كود منفصل بكل قالب دعوة.
+        const entryCode = generateEntryCode();
+        window.__jgLastEntryCode = entryCode;
+
         addDoc(collection(db, "responses"), {
           name: guestName,
           phone: phone,
           status: status,
           guests: guestsCount,
           style: slug,
+          entryCode: entryCode,
           createdAt: serverTimestamp(),
         }).catch(() => {});
 
@@ -541,7 +636,7 @@ import { db, collection, doc, getDoc, setDoc, addDoc, serverTimestamp } from "./
         fetch("/.netlify/functions/notify-rsvp", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ guestName, phone, status, guests: guestsCount, style: slug }),
+          body: JSON.stringify({ guestName, phone, status, guests: guestsCount, style: slug, entryCode }),
         }).catch(() => {});
       });
     }

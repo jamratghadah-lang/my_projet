@@ -165,8 +165,7 @@ html[data-mode="dark"] .has-dropdown .dropdown{border-color:rgba(246,236,218,.15
 
 /* -------- الشعار في الهيدر -------- */
 .brand{display:flex;align-items:center;gap:10px;}
-.brand-logo{height:44px;width:auto;display:block;}
-.brand-trademark{height:18px;width:auto;display:block;align-self:flex-start;margin-top:2px;}
+.brand-trademark{height:44px;width:auto;display:block;}
 .brand-en{font-family:'Tajawal',sans-serif;font-weight:700;letter-spacing:.12em;
   font-size:.8rem;color:var(--gold);text-transform:uppercase;}
 
@@ -439,7 +438,7 @@ body[data-page="home"] > .site-footer{position:relative;z-index:1;}
   .nav-toggle{display:block;position:relative;z-index:101;}
   .nav-wrap{flex-wrap:nowrap;}
   .brand{order:1;min-width:0;}
-  .brand-logo{max-width:38vw;height:auto;}
+  .brand-trademark{max-width:38vw;height:auto;}
   #lang-toggle{order:2;flex-shrink:0;}
   #mode-toggle{order:3;flex-shrink:0;}
   .nav-toggle{order:4;flex-shrink:0;}

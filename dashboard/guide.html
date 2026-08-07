@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>دليل الموقع الكامل — جمرة غضى</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+  *{box-sizing:border-box}
+  body{font-family:Tahoma,Arial,sans-serif;background:#111;color:#eee;margin:0;padding:20px;line-height:1.8}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:10px}
+  h1{color:#d4af37;font-size:20px;margin:0}
+  .back{color:#ccc;text-decoration:none;border:1px solid #444;padding:6px 14px;border-radius:6px;font-size:13px}
+  .intro{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:16px 20px;margin-bottom:20px;color:#bbb;font-size:14px}
+  .search-box{width:100%;padding:12px 14px;border-radius:8px;border:1px solid #444;background:#1c1c1c;color:#fff;font-size:14px;margin-bottom:20px}
+  details{background:#1c1c1c;border:1px solid #333;border-radius:10px;margin-bottom:12px;overflow:hidden}
+  summary{padding:16px 20px;cursor:pointer;font-weight:bold;color:#d4af37;font-size:15px;list-style:none;display:flex;align-items:center;gap:10px}
+  summary::-webkit-details-marker{display:none}
+  summary::before{content:"▶";font-size:11px;color:#888;transition:transform .2s}
+  details[open] summary::before{transform:rotate(90deg)}
+  .body-content{padding:0 20px 20px;font-size:14px;color:#ddd}
+  .body-content h4{color:#e9d193;margin:16px 0 8px;font-size:14px}
+  .body-content p{margin:6px 0}
+  .body-content ul{margin:6px 0;padding-inline-start:22px}
+  .body-content li{margin:4px 0}
+  code{background:#2a2a2a;color:#e9d193;padding:2px 6px;border-radius:4px;font-size:12.5px;direction:ltr;display:inline-block}
+  .path{color:#8fbcbb;direction:ltr;display:inline-block}
+  .warn{background:#2a1f0f;border:1px solid #6b4d15;border-radius:8px;padding:10px 14px;color:#e9c877;font-size:13px;margin:10px 0}
+  .ok{background:#0f2a1a;border:1px solid #1f6b3d;border-radius:8px;padding:10px 14px;color:#8fe0a8;font-size:13px;margin:10px 0}
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13px}
+  th,td{padding:8px;text-align:right;border-bottom:1px solid #2a2a2a}
+  th{color:#999;font-weight:normal}
+  .section-label{display:inline-block;background:#2a2a2a;color:#aaa;font-size:11px;padding:2px 8px;border-radius:4px;margin-inline-start:auto}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>📖 دليل الموقع الكامل</h1>
+  <a class="back" href="index.html">← رجوع للوحة</a>
+</div>
+
+<div class="intro">
+  هذي الصفحة مرجع خاص فيه شرح كل جزء بالموقع: وين تتحكمين بكل ميزة، وش تسوي كل صفحة، ووش تحتاجين تضبطينه بـ Netlify عشان كل شي يشتغل. الصفحة مو موجودة بأي قائمة تنقل بالموقع — دخولك لها من هذا الرابط بس.
+</div>
+
+<input type="text" class="search-box" id="searchBox" placeholder="🔍 دوّري عن أي كلمة (مثلاً: أطفال، إيميل، QR، لغة...)">
+
+<details open>
+  <summary>🗺️ الخريطة العامة للموقع</summary>
+  <div class="body-content">
+    <h4>الأقسام الأساسية</h4>
+    <ul>
+      <li><code class="path">/</code> — الصفحة الرئيسية وصفحات الموقع العامة (من نحن، الأقسام، الأسعار، تعليمي)</li>
+      <li><code class="path">/admin</code> — لوحة تحكم المحتوى (Decap CMS) — تتحكمين فيها بنصوص الموقع وكل دعوة على حدة</li>
+      <li><code class="path">/dashboard</code> — لوحة التحكم التشغيلية (هذي اللي تدخلين لها بحساب وكلمة سر) — إدارة المدعوين، التذكيرات، الروابط، التقارير</li>
+      <li><code class="path">/rsvp/&lt;اسم-القالب&gt;.html</code> — صفحات تأكيد الحضور (13 تصميم مختلف: زفاف، مولود، تخرج، مؤتمر...)</li>
+    </ul>
+    <h4>وين تُحفظ البيانات</h4>
+    <ul>
+      <li><b>Git (عبر /admin):</b> النصوص، الصور، إعدادات كل دعوة (تُحفظ كملفات JSON بمستودع GitHub)</li>
+      <li><b>Firebase Firestore:</b> ردود الضيوف الفعلية، أقفال بطاقات الدخول، تعليقات حائط الضيوف، الروابط المخصصة</li>
+    </ul>
+  </div>
+</details>
+
+<details>
+  <summary>🛠️ لوحة تحكم المحتوى — /admin <span class="section-label">Decap CMS</span></summary>
+  <div class="body-content">
+    <p>هذي اللي تعدّلين منها كل نص وصورة وإعداد بالموقع، بدون لمس الكود. تدخلينها من <code class="path">yoursite.netlify.app/admin</code></p>
+
+    <h4>1) الإعدادات العامة</h4>
+    <ul>
+      <li>طريقة الطلب بالأقسام (واتساب فقط / دفع إلكتروني فقط / الاثنين معًا)</li>
+      <li>لو اخترتِ "الاثنين معًا"، يظهر للزائر زرّان: طلب عبر واتساب، وادفعي إلكترونيًا — كلاهما بنفس الوقت بكل باقة وفيديو</li>
+      <li>رقم الواتساب، رابط الدفع، رابط Formspree العام</li>
+      <li><b>التقارير والبريد الإلكتروني:</b> بريد العميلة، وجهة إرسال التقارير (تلقائي / كلاهما / المدير فقط)، وتفعيل كل نوع تقرير (بعد كل رد، يومي، قبل المناسبة بـ24 ساعة)</li>
+    </ul>
+
+    <h4>2) صفحات تأكيد الحضور (13 دعوة)</h4>
+    <p>كل دعوة (زفاف Silver، Gold، مولود، تخرج...) لها إعداداتها المستقلة:</p>
+    <ul>
+      <li><b>رمز الحماية:</b> يُضاف لرابط QR، الصفحة ما تفتح بدونه</li>
+      <li><b>الأسماء، التاريخ، الموقع</b></li>
+      <li><b>نوع فتحة الدعوة:</b> ظرف / باب / فيديو مباشر</li>
+      <li><b>حقول استمارة تأكيد الحضور:</b>
+        <ul>
+          <li>إظهار/إخفاء رقم الهاتف + جعله إلزامي أو اختياري</li>
+          <li>إظهار/إخفاء عدد الضيوف + طريقة تحديده (عدد ثابت أو نطاق حد أدنى/أقصى) — لو صار "شخص واحد" بس، الحقل يختفي تلقائيًا</li>
+          <li>السماح بحضور الأطفال (نعم تظهر ترحيب + حقل الأسماء، لا تظهر رسالة اعتذار وتختفي الحقول)</li>
+          <li>إظهار/إخفاء طلب الأغنية</li>
+          <li>إظهار/إخفاء زر حائط تعليقات الضيوف</li>
+        </ul>
+      </li>
+      <li><b>الأمان والخصوصية:</b>
+        <ul>
+          <li>تقييد بطاقة الدخول لجهاز واحد فقط (تفعيل/تعطيل)</li>
+          <li>القفل التلقائي للدعوة بعد المناسبة (تفعيل/تعطيل + بعد كم ساعة)</li>
+        </ul>
+      </li>
+      <li><b>تصميم النصوص:</b> نوع الخط وحجمه</li>
+      <li>التايم لاين، كلمة الترحيب، صور الدعوة والزخارف</li>
+    </ul>
+
+    <div class="warn">⚠️ لو غيّرتِ رمز الحماية لدعوة، لازم تولّدين رمز QR جديد بنفس الرمز الجديد من صفحة "الدعوات ورموز QR" باللوحة التشغيلية.</div>
+  </div>
+</details>
+
+<details>
+  <summary>📋 إدارة المدعوين — dashboard/guests.html</summary>
+  <div class="body-content">
+    <ul>
+      <li>عدّادات لحظية: مؤكد، معتذر، لم يرد (تتحدث تلقائيًا فور أي رد جديد)</li>
+      <li>بحث بالاسم أو رقم الهاتف</li>
+      <li>فلترة حسب الحالة</li>
+      <li>تصدير القائمة الكاملة لملف Excel أو PDF بضغطة زر (يتولّد بالمتصفح مباشرة)</li>
+    </ul>
+  </div>
+</details>
+
+<details>
+  <summary>📨 تذكير الضيوف — dashboard/reminders.html</summary>
+  <div class="body-content">
+    <p>إرسال تذكير يدوي (واتساب) أو جماعي (SMS) للضيوف المؤكدين قبل المناسبة.</p>
+    <p>التذكير التلقائي عبر SMS قبل 24 ساعة يشتغل من دالة <code>event-reminder</code> بشرط ضبط مزوّد SMS (راجعي قسم "الإعدادات التقنية" بالأسفل).</p>
+  </div>
+</details>
+
+<details>
+  <summary>🔗 الدعوات ورموز QR — dashboard/qrcodes.html</summary>
+  <div class="body-content">
+    <p>تولّدين وتحمّلين رمز QR لأي رابط دعوة. الرمز يشمل رمز الحماية تلقائيًا (لو مفعّل) عشان يفتح الصفحة مباشرة بدون ما يكتب الضيف أي شي.</p>
+  </div>
+</details>
+
+<details>
+  <summary>💌 الروابط المخصصة — dashboard/couples.html</summary>
+  <div class="body-content">
+    <p>تربطين اسم مخصص (مثل <code class="path">jamratghadah.com/sara-ahmed</code>) بأي قالب دعوة، بدل ما يظهر اسم التصميم بالرابط. يُحفظ بمجموعة <code>couples</code> على Firestore.</p>
+  </div>
+</details>
+
+<details>
+  <summary>✉️ التنبيهات والتقارير — dashboard/notifications.html</summary>
+  <div class="body-content">
+    <h4>الأنواع الثلاثة</h4>
+    <ul>
+      <li><b>تنبيه فوري لكل رد:</b> إيميل يوصل لحظة ما يرد أي ضيف</li>
+      <li><b>تقرير يومي:</b> يوصل كل صباح 8 (بتوقيت UTC) بإحصائيات كاملة</li>
+      <li><b>تقرير قبل المناسبة بـ24 ساعة:</b> يوصل تلقائيًا لصاحبة المناسبة/المدير</li>
+    </ul>
+    <p>كل نوع فيه مرفقين حقيقيين: <b>Excel</b> و<b>PDF</b> بكل بيانات المدعوين.</p>
+    <p>وجهة الإرسال (بريد العميلة، المدير، أو الاثنين) تُضبط من <code class="path">/admin</code> → الإعدادات العامة → التقارير والبريد الإلكتروني.</p>
+    <p>فيه زر <b>"إرسال التقرير الآن"</b> بهذي الصفحة لإرسال تقرير فوري وقت ما تحتاجين، بدون انتظار الجدولة التلقائية.</p>
+
+    <h4>كلمات حائط التعليقات (عامة/خاصة)</h4>
+    <p>لما ضيف يكتب كلمة بعد تأكيد حضوره، يختار: <b>عامة</b> (تُنشر بالحائط ويشوفها الجميع) أو <b>خاصة</b> (توصلكِ بالإيميل بس، ما تُحفظ أو تُنشر بأي مكان عام). الحالتين يوصل إيميل فوري بنفس اللحظة لنفس المستلمين المضبوطين بإعدادات التقارير.</p>
+  </div>
+</details>
+
+<details>
+  <summary>🌐 نظام اللغات (عربي / إنجليزي / فرنسي)</summary>
+  <div class="body-content">
+    <p>كل صفحات تأكيد الحضور تدعم 3 لغات، تتبدّل بزر اللغة داخل الصفحة (بيدور بالترتيب: عربي ← إنجليزي ← فرنسي).</p>
+    <ul>
+      <li>الاتجاه (RTL/LTR) يتغيّر تلقائيًا حسب اللغة</li>
+      <li>كل النصوص الثابتة (العناوين، الأزرار، رسائل الأطفال...) مترجمة بالكود</li>
+      <li>النصوص اللي تكتبينها بنفسك بلوحة CMS (الأسماء، كلمة الترحيب...) تظهر بنفس اللغة اللي كتبتيها فيها — النظام ما يترجمها تلقائيًا</li>
+    </ul>
+  </div>
+</details>
+
+<details>
+  <summary>🔒 الأمان — بطاقة الدخول، القفل التلقائي، Firestore</summary>
+  <div class="body-content">
+    <h4>تقييد بطاقة الدخول لجهاز واحد</h4>
+    <p>لو مفعّل لدعوة معيّنة، أول جهاز يفتح فيه الضيف بطاقته يُقفل عليه — أي محاولة فتح من جهاز ثاني تطلع رسالة "البطاقة مفتوحة على جهاز آخر".</p>
+
+    <h4>القفل التلقائي بعد المناسبة</h4>
+    <p>يمنع استقبال ردود جديدة بعد عدد الساعات المحدد من تاريخ المناسبة (افتراضيًا 24 ساعة). يُفحص تلقائيًا كل ما يفتح ضيف صفحة الدعوة.</p>
+
+    <h4>قواعد Firestore</h4>
+    <table>
+      <tr><th>المجموعة</th><th>من يقرأ</th><th>من يكتب</th></tr>
+      <tr><td>responses (ردود الضيوف)</td><td>لوحة التحكم فقط</td><td>الضيوف (إنشاء فقط، ما يعدّلون ولا يمسحون)</td></tr>
+      <tr><td>couples (الروابط المخصصة)</td><td>الجميع</td><td>لوحة التحكم فقط</td></tr>
+      <tr><td>settings</td><td>الجميع</td><td>لوحة التحكم فقط</td></tr>
+      <tr><td>entry_card_locks</td><td>لوحة التحكم فقط</td><td>الجميع (إنشاء/تحديث)</td></tr>
+      <tr><td>guest_wall</td><td>الجميع</td><td>الضيوف (إنشاء)، لوحة التحكم (تعديل/حذف)</td></tr>
+    </table>
+    <p>أي مجموعة غير هذي ممنوعة كليًا (قراءة وكتابة) — قاعدة أمان افتراضية.</p>
+  </div>
+</details>
+
+<details>
+  <summary>⚙️ الإعدادات التقنية المطلوبة (Netlify Environment Variables)</summary>
+  <div class="body-content">
+    <p>هذي تُضاف من Netlify: <code class="path">Site settings → Environment variables</code> — مو من لوحة التحكم، لأسباب أمنية.</p>
+
+    <h4>للإيميلات (التقارير والتنبيهات)</h4>
+    <table>
+      <tr><th>المتغيّر</th><th>الوصف</th></tr>
+      <tr><td><code>NOTIFY_EMAIL_TO</code></td><td>بريد المدير الافتراضي (يُستخدم لو ما فيه بريد عميلة أو لو اخترتِ "المدير فقط")</td></tr>
+      <tr><td><code>SMTP_HOST</code></td><td>خادم الإيميل، مثل <code>smtp.gmail.com</code></td></tr>
+      <tr><td><code>SMTP_PORT</code></td><td>المنفذ (عادة 587)</td></tr>
+      <tr><td><code>SMTP_USER</code></td><td>اسم المستخدم / الإيميل المُرسِل</td></tr>
+      <tr><td><code>SMTP_PASS</code></td><td>كلمة المرور أو App Password</td></tr>
+      <tr><td><code>SMTP_FROM</code></td><td>عنوان المُرسِل الظاهر</td></tr>
+    </table>
+
+    <h4>لقراءة ردود المدعوين بأمان (مطلوب)</h4>
+    <table>
+      <tr><th>المتغيّر</th><th>الوصف</th></tr>
+      <tr><td><code>FIREBASE_SERVICE_ACCOUNT_JSON</code></td><td>محتوى ملف "مفتاح حساب خدمة" كامل (JSON) — يتيح لدوال التقارير (اليومي، قبل المناسبة) قراءة ردود المدعوين بأمان، متوافق مع قواعد Firestore</td></tr>
+    </table>
+    <div class="warn">⚠️ بدون هذا المتغيّر، دوال التقارير (daily-report وevent-reminder) ما تقدر تقرأ الردود وترجع فاشلة بصمت. يتولّد من Firebase Console: Project Settings → Service Accounts → Generate new private key، وتنسخين محتوى الملف كامل كقيمة للمتغيّر.</div>
+
+    <h4>لتذكير الضيوف عبر SMS (اختياري)</h4>
+    <table>
+      <tr><th>المتغيّر</th><th>الوصف</th></tr>
+      <tr><td><code>SMS_PROVIDER</code></td><td><code>msegat</code> أو <code>unifonic</code> أو <code>twilio</code></td></tr>
+      <tr><td>مفاتيح المزوّد المختار</td><td>مثل <code>MSEGAT_USERNAME</code>, <code>MSEGAT_API_KEY</code>, <code>MSEGAT_SENDER_NAME</code> (لكل مزوّد مفاتيحه الخاصة)</td></tr>
+    </table>
+
+    <div class="ok">✓ لو ما ضبطتِ متغيرات SMTP، كل دوال الإيميل ترجع بهدوء بدون إرسال — ما تكسر تجربة الضيف أبدًا.</div>
+  </div>
+</details>
+
+<details>
+  <summary>🔗 الربط مع تطبيق الاستقبال (jamrat-app)</summary>
+  <div class="body-content">
+    <p>الموقع (my_projet) وتطبيق الاستقبال (jamrat-app) مشروعان منفصلان بقواعد بيانات مختلفة (Firestore بالموقع، Netlify Blobs بالتطبيق). الربط بينهم يصير عبر خطوة استيراد بسيطة:</p>
+    <h4>كيف يشتغل</h4>
+    <ul>
+      <li>لما ضيف يؤكد حضوره بالموقع، يتولّد له تلقائيًا <b>كود دخول شخصي فريد</b> (مثل <code>JG-4F7B2K9A</code>) يُحفظ مع رده، ويظهر على بطاقة دخوله برمز QR واحد — نفس الرمز اللي يُمسح عند باب الصالة يوم المناسبة (ما فيه رمزين منفصلين)</li>
+      <li>يوم المناسبة، بتطبيق الاستقبال (checkin.html)، بضغطة "استيراد من الموقع"، تكتبين اسم قالب الدعوة + رمز مناسبة تختارينه + رقم سري + كلمة سر الإرسال — والتطبيق يجيب تلقائيًا كل الردود المؤكدة (نعم للحضور) من الموقع ويجهّزها للتسجيل</li>
+      <li>مسؤول الاستقبال يمسح كود QR الشخصي من بطاقة كل ضيف (بجهاز قراءة باركود أو كتابة الكود يدويًا) لتسجيل دخوله لحظيًا</li>
+    </ul>
+    <div class="warn">⚠️ لازم متغيّر <code>SEND_SECRET</code> يكون مضبوط بإعدادات Netlify حق مشروع <b>التطبيق</b> (jamrat-app)، وتعرفين قيمته وقت الاستيراد.</div>
+    <div class="ok">✓ الاستيراد يحافظ على حالة "وصل" لأي ضيف سجّل دخوله من قبل — تقدرين تعيدين الاستيراد أكثر من مرة (لو تأكدت ردود جديدة) بدون ما تفقدين بيانات الحضور المسجلة.</div>
+  </div>
+</details>
+
+<details>
+  <summary>🧩 الدوال الخلفية (Netlify Functions)</summary>
+  <div class="body-content">
+    <table>
+      <tr><th>الدالة</th><th>متى تشتغل</th><th>الوظيفة</th></tr>
+      <tr><td><code>notify-rsvp</code></td><td>فور كل رد ضيف</td><td>إيميل إشعار فوري</td></tr>
+      <tr><td><code>daily-report</code></td><td>كل يوم 8 صباحًا (UTC)</td><td>تقرير يومي + مرفقات Excel/PDF</td></tr>
+      <tr><td><code>event-reminder</code></td><td>كل ساعة (يفحص المواعيد)</td><td>SMS للضيوف + تقرير إيميل لصاحبة المناسبة قبل 24 ساعة</td></tr>
+      <tr><td><code>send-report-now</code></td><td>عند ضغط الزر بلوحة التنبيهات</td><td>تقرير فوري بالطلب</td></tr>
+      <tr><td><code>couple-router</code></td><td>عند فتح رابط مخصص</td><td>توجيه الرابط لقالب الدعوة الصحيح</td></tr>
+      <tr><td><code>send-sms</code></td><td>يدويًا من صفحة التذكير</td><td>إرسال SMS جماعي</td></tr>
+    </table>
+  </div>
+</details>
+
+<details>
+  <summary>🐛 مشاكل شائعة وحلولها</summary>
+  <div class="body-content">
+    <h4>الإيميلات ما توصل</h4>
+    <p>تأكدي إن متغيرات SMTP الستة مضبوطة صح بـ Netlify، وإن بريد العميلة أو <code>NOTIFY_EMAIL_TO</code> مو فاضي.</p>
+
+    <h4>تعديل سويته من بولت ما ظهر بالموقع</h4>
+    <p>لازم تدفعين (Push) التعديل من بولت لـ GitHub أولًا (أيقونة GitHub بالأعلى)، وبعدها Netlify ينشر تلقائيًا خلال دقيقة أو دقيقتين. لو ما نشر تلقائي، سوّي Deploy يدوي من Netlify مباشرة.</p>
+
+    <h4>حقل جديد ضفته بـ /admin ما يظهر أثره بصفحة الدعوة</h4>
+    <p>تأكدي إنك حفظتِ (Publish) التعديل من CMS، ثم افتحي صفحة الدعوة بنافذة متصفح جديدة (كاش المتصفح أحيانًا يعرض نسخة قديمة).</p>
+  </div>
+</details>
+
+<script>
+document.getElementById("searchBox").addEventListener("input", (e) => {
+  const q = e.target.value.trim().toLowerCase();
+  document.querySelectorAll("details").forEach(d => {
+    const text = d.textContent.toLowerCase();
+    const match = !q || text.includes(q);
+    d.style.display = match ? "" : "none";
+    if (q && match) d.open = true;
+  });
+});
+</script>
+
+<script type="module">
+import { requireLogin } from "../js/firebase-init.js";
+requireLogin(() => {});
+</script>
+
+</body>
+</html>

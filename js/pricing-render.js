@@ -4,17 +4,14 @@
     return (num || "966547266733").toString().replace(/[^\d]/g, "");
   }
 
-  function orderPackage(pkg, settings) {
-    const useMethod = settings.order_method === "payment" && settings.payment_link && settings.payment_link !== "PAYMENT_LINK_PLACEHOLDER"
-      ? "payment"
-      : "whatsapp";
-    if (useMethod === "payment") {
-      window.open(settings.payment_link, "_blank");
-      return;
-    }
+  function orderPackageWhatsapp(pkg, settings) {
     const phone = cleanPhone(settings.whatsapp_number);
     const text = "مرحبا، أبي أطلب الباقة " + pkg.name;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, "_blank");
+  }
+
+  function orderPackagePayment(settings) {
+    window.open(settings.payment_link, "_blank");
   }
 
   function renderPackage(grid, pkg, settings) {
@@ -46,13 +43,46 @@
     });
     card.appendChild(ul);
 
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "btn btn-solid";
-    btn.textContent = "اطلبي هذه الباقة";
-    btn.addEventListener("click", () => orderPackage(pkg, settings));
-    card.appendChild(btn);
+    // إظهار أزرار الطلب حسب طريقة الطلب المفعّلة بلوحة التحكم:
+    // واتساب فقط / دفع فقط / كلاهما معًا
+    const method = settings.order_method || "whatsapp";
+    const hasValidPaymentLink = settings.payment_link && settings.payment_link !== "PAYMENT_LINK_PLACEHOLDER";
+    const showWhatsapp = method === "whatsapp" || method === "both";
+    const showPayment = (method === "payment" || method === "both") && hasValidPaymentLink;
 
+    const btnWrap = document.createElement("div");
+    btnWrap.className = "price-order-btns";
+    btnWrap.style.cssText = "display:flex;flex-direction:column;gap:8px";
+
+    if (showWhatsapp) {
+      const waBtn = document.createElement("button");
+      waBtn.type = "button";
+      waBtn.className = "btn btn-solid";
+      waBtn.textContent = "📱 اطلبي عبر واتساب";
+      waBtn.addEventListener("click", () => orderPackageWhatsapp(pkg, settings));
+      btnWrap.appendChild(waBtn);
+    }
+
+    if (showPayment) {
+      const payBtn = document.createElement("button");
+      payBtn.type = "button";
+      payBtn.className = "btn btn-outline";
+      payBtn.textContent = "💳 ادفعي إلكترونيًا";
+      payBtn.addEventListener("click", () => orderPackagePayment(settings));
+      btnWrap.appendChild(payBtn);
+    }
+
+    // احتياطًا: لو ما توفر أي خيار صالح (مثلاً "دفع" بدون رابط مضبوط)، نرجع لواتساب تلقائيًا
+    if (!showWhatsapp && !showPayment) {
+      const waBtn = document.createElement("button");
+      waBtn.type = "button";
+      waBtn.className = "btn btn-solid";
+      waBtn.textContent = "📱 اطلبي عبر واتساب";
+      waBtn.addEventListener("click", () => orderPackageWhatsapp(pkg, settings));
+      btnWrap.appendChild(waBtn);
+    }
+
+    card.appendChild(btnWrap);
     grid.appendChild(card);
   }
 

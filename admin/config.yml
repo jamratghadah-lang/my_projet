@@ -45,13 +45,31 @@ collections:
         label: "إعدادات الدفع"
         name: "settings"
         fields:
-          - { label: "طريقة الطلب في الأقسام", name: "order_method", widget: "select", default: "whatsapp", hint: "اختاري واتساب لحد ما تخلصين تفعيل الدفع، وبعدها بدّليها لدفع إلكتروني بضغطة وحدة", options: [
-              { label: "طلب عبر واتساب", value: "whatsapp" },
-              { label: "دفع إلكتروني مباشر", value: "payment" }
+          - { label: "طريقة الطلب في الأقسام", name: "order_method", widget: "select", default: "whatsapp", hint: "اختاري واتساب لحد ما تخلصين تفعيل الدفع. لو تبين الاثنين معًا (زر واتساب وزر دفع بنفس الوقت)، اختاري «الاثنين معًا»", options: [
+              { label: "طلب عبر واتساب فقط", value: "whatsapp" },
+              { label: "دفع إلكتروني مباشر فقط", value: "payment" },
+              { label: "الاثنين معًا (واتساب + دفع إلكتروني)", value: "both" }
             ] }
           - { label: "رقم الواتساب (بدون + وبدون مسافات)", name: "whatsapp_number", widget: "string", default: "966547266733", hint: "مثال: 966547266733" }
           - { label: "رابط الدفع الإلكتروني", name: "payment_link", widget: "string", required: false, hint: "يُستخدم فقط إذا اخترتِ (دفع إلكتروني مباشر) بالأعلى" }
           - { label: "رابط Formspree العام (لكل صفحات تأكيد الحضور)", name: "formspree_id", widget: "string", required: false, hint: "مثال: https://formspree.io/f/xxxxxxxx" }
+          - { label: "التقارير والبريد الإلكتروني", name: "reports", widget: "object", required: false, hint: "تتحكمين هنا وين تروح تقارير الحضور بالإيميل", fields: [
+                { label: "البريد الإلكتروني للعميلة/صاحب المناسبة", name: "client_email", widget: "string", required: false, hint: "لو تركتيه فاضي، تروح التقارير للبريد الأساسي (المدير) تلقائيًا" },
+                { label: "وجهة إرسال التقارير", name: "send_to", widget: "select", required: false, default: "auto", options: [
+                    { label: "تلقائي (بريد العميلة إن وُجد، وإلا المدير)", value: "auto" },
+                    { label: "البريدين معًا", value: "both" },
+                    { label: "المدير فقط", value: "admin_only" }
+                  ] },
+                { label: "إرسال تقرير بعد كل رد", name: "on_each_response", widget: "select", required: false, default: "off", options: [
+                    { label: "مفعّل", value: "on" }, { label: "معطّل (الافتراضي)", value: "off" }
+                  ] },
+                { label: "إرسال تقرير يومي", name: "daily", widget: "select", required: false, default: "on", options: [
+                    { label: "مفعّل (الافتراضي)", value: "on" }, { label: "معطّل", value: "off" }
+                  ] },
+                { label: "إرسال تقرير قبل المناسبة بـ24 ساعة", name: "before_event", widget: "select", required: false, default: "on", options: [
+                    { label: "مفعّل (الافتراضي)", value: "on" }, { label: "معطّل", value: "off" }
+                  ] }
+              ] }
 
   - name: "pricing"
     label: "الأسعار والباقات"
@@ -134,13 +152,24 @@ collections:
                     { label: "مفعّل (الافتراضي)", value: "on" },
                     { label: "مخفي", value: "off" }
                   ] },
+                { label: "هل رقم الهاتف إلزامي؟", name: "phone_required", widget: "select", required: false, default: "off", hint: "يعمل فقط إذا كان حقل الهاتف مفعّلًا بالأعلى", options: [
+                    { label: "إلزامي", value: "on" },
+                    { label: "اختياري (الافتراضي)", value: "off" }
+                  ] },
                 { label: "إظهار حقل عدد الضيوف", name: "guests_count", widget: "select", required: false, default: "on", options: [
                     { label: "مفعّل (الافتراضي)", value: "on" },
                     { label: "مخفي", value: "off" }
                   ] },
-                { label: "إظهار خيار حضور الأطفال", name: "children", widget: "select", required: false, default: "off", options: [
-                    { label: "مفعّل", value: "on" },
-                    { label: "مخفي (الافتراضي)", value: "off" }
+                { label: "طريقة تحديد عدد الضيوف", name: "guests_mode", widget: "select", required: false, default: "range", hint: "عدد ثابت: كل ضيف يُحسب بنفس العدد بدون اختيار. نطاق: يختار الضيف من حد أدنى لحد أقصى.", options: [
+                    { label: "نطاق (حد أدنى - حد أقصى)", value: "range" },
+                    { label: "عدد ثابت", value: "fixed" }
+                  ] },
+                { label: "العدد الثابت (لو اخترتِ «عدد ثابت»)", name: "guests_fixed_count", widget: "number", required: false, default: 1, hint: "مثال: 1 يعني الحقل يختفي تلقائيًا لأنه ما فيه خيار" },
+                { label: "الحد الأدنى (لو اخترتِ «نطاق»)", name: "guests_min", widget: "number", required: false, default: 1 },
+                { label: "الحد الأقصى (لو اخترتِ «نطاق»)", name: "guests_max", widget: "number", required: false, default: 4 },
+                { label: "السماح بحضور الأطفال", name: "allow_children", widget: "select", required: false, hint: "نعم: يظهر ترحيب بالأطفال + حقل أسمائهم. لا: تظهر عبارة اعتذار وتختفي حقول الأطفال. اتركيه بدون تحديد لعدم إظهار أي رسالة.", options: [
+                    { label: "نعم، الأطفال مرحّب بهم", value: "yes" },
+                    { label: "لا، الدعوة للبالغين فقط", value: "no" }
                   ] },
                 { label: "إظهار حقل طلب الأغنية", name: "song_request", widget: "select", required: false, default: "off", options: [
                     { label: "مفعّل", value: "on" },
@@ -150,6 +179,17 @@ collections:
                     { label: "مفعّل (الافتراضي)", value: "on" },
                     { label: "مخفي", value: "off" }
                   ] }
+              ] },
+            { label: "الأمان والخصوصية", name: "security", widget: "object", required: false, hint: "إعدادات حماية بطاقة الدخول والدعوة", fields: [
+                { label: "تقييد بطاقة الدخول لجهاز واحد فقط", name: "single_device", widget: "select", required: false, default: "off", hint: "لو مفعّل، بطاقة الدخول ما تفتح إلا من أول جهاز فتحها الضيف", options: [
+                    { label: "مفعّل", value: "on" },
+                    { label: "معطّل (الافتراضي)", value: "off" }
+                  ] },
+                { label: "قفل الدعوة تلقائيًا بعد المناسبة", name: "auto_lock", widget: "select", required: false, default: "on", options: [
+                    { label: "مفعّل (الافتراضي)", value: "on" },
+                    { label: "معطّل", value: "off" }
+                  ] },
+                { label: "القفل بعد كم ساعة من تاريخ المناسبة", name: "auto_lock_hours", widget: "number", required: false, default: 24, hint: "مثال: 24 يعني يُقفل استقبال الردود بعد يوم كامل من تاريخ المناسبة" }
               ] },
             { label: "تصميم النصوص (الخط والحجم)", name: "design", widget: "object", required: false, hint: "يطبَّق على الأسماء والتاريخ والموقع وكلمة الترحيب والتايم لاين", fields: [
                 { label: "نوع الخط", name: "font_family", widget: "select", required: false, options: [

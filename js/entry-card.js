@@ -107,7 +107,7 @@
     document.head.appendChild(s);
   }
 
-  function buildCard(cfg, data, guestName) {
+  function buildCard(cfg, data, guestName, entryCode) {
     const wrap = el("div");
     wrap.id = "jg-ec-wrap";
     wrap.style.position = "relative";
@@ -150,19 +150,29 @@
 
     const actions = el("div");
     actions.id = "jg-ec-actions";
-    // QR code — يرمّز رابط الدعوة الكامل
+    // QR code شخصي واحد — هو نفسه المستخدم لدخول الصالة يوم المناسبة
+    // (يُمسح بجهاز الاستقبال). لو ما فيه entryCode (بيانات قديمة قبل هذي
+    // الميزة)، نرجع لرابط الدعوة كخيار احتياطي بس.
     const qrWrap = el("div", "jg-ec-qr-wrap");
     const qrImg = el("img", "jg-ec-qr");
     qrImg.alt = "QR";
     qrWrap.appendChild(qrImg);
-    qrWrap.appendChild(el("div", "jg-ec-qr-hint", "امسح الرمز للوصول للدعوة"));
+    const qrHintEl = el("div", "jg-ec-qr-hint", entryCode ? "كود دخولك الشخصي — يُمسح عند الباب يوم المناسبة" : "امسح الرمز للوصول للدعوة");
+    qrWrap.appendChild(qrHintEl);
+    if (entryCode) {
+      const codeText = el("div", "", entryCode);
+      codeText.style.cssText = "font-family:monospace;font-size:1.15rem;letter-spacing:.1em;color:#e8c877;font-weight:bold;margin-top:8px";
+      qrWrap.appendChild(codeText);
+    }
     card.appendChild(qrWrap);
 
-    // توليد QR عبر مكتبة qrcode.js
+    // توليد QR عبر مكتبة qrcode.js — يرمّز كود الدخول الشخصي لو متوفر،
+    // وإلا رابط الدعوة (توافق رجعي لبيانات قديمة)
     ensureQRCode(() => {
       const inviteUrl = window.location.href.split("?")[0] + (data.access_code ? "?code=" + encodeURIComponent(data.access_code) : "");
+      const qrValue = entryCode || inviteUrl;
       try {
-        qrImg.src = window.QRCode.toDataURL(inviteUrl, { width: 220, margin: 1, color: { dark: "#3a2a12", light: "#ffffff" } });
+        qrImg.src = window.QRCode.toDataURL(qrValue, { width: 220, margin: 1, color: { dark: "#3a2a12", light: "#ffffff" } });
       } catch (e) {
         qrWrap.style.display = "none";
       }
@@ -269,7 +279,7 @@
     closeBtn.textContent = "×";
     modal.appendChild(closeBtn);
     modal.appendChild(el("div", "jg-wall-title", "تعاليق المدعوين"));
-    modal.appendChild(el("div", "jg-wall-notice", "👁 هذا الحائط عام — كل الضيوف يقدرون يشوفون كل الكلمات المكتوبة هنا."));
+    modal.appendChild(el("div", "jg-wall-notice", "👁 اختاري: كلمة عامة تظهر بالحائط للجميع، أو كلمة خاصة توصل للعروسين بس."));
 
     const listEl = el("div", "jg-wall-list");
     listEl.appendChild(el("div", "jg-wall-empty", "يتم التحميل..."));
@@ -282,9 +292,24 @@
     nameInput.value = guestName || "";
     const msgInput = el("textarea");
     msgInput.placeholder = "اكتبي/اكتب كلمتك للعروسين هنا...";
+
+    // اختيار عام / خاص
+    const visWrap = el("div", "jg-wall-visibility");
+    visWrap.style.cssText = "display:flex;gap:14px;margin:8px 0;font-size:.85rem;color:#d8bd85";
+    const publicId = "jg-wall-vis-public-" + Math.random().toString(36).slice(2, 8);
+    const privateId = "jg-wall-vis-private-" + Math.random().toString(36).slice(2, 8);
+    visWrap.innerHTML = `
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+        <input type="radio" name="jg-wall-vis" id="${publicId}" value="public" checked> عامة (بالحائط)
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+        <input type="radio" name="jg-wall-vis" id="${privateId}" value="private"> خاصة (للعروسين فقط)
+      </label>`;
+
     const submitBtn = el("button", "", "نشر");
     form.appendChild(nameInput);
     form.appendChild(msgInput);
+    form.appendChild(visWrap);
     form.appendChild(submitBtn);
     modal.appendChild(form);
 
@@ -326,8 +351,27 @@
         showToast("اكتبي اسمك وكلمتك أولاً");
         return;
       }
+      const isPrivate = visWrap.querySelector('input[name="jg-wall-vis"]:checked').value === "private";
+
       submitBtn.disabled = true;
-      submitBtn.textContent = "جارِ النشر...";
+      submitBtn.textContent = "جارِ الإرسال...";
+
+      // إرسال إشعار بريدي للعروسين/المدير — يصير دائمًا (خاصة أو عامة)
+      fetch("/.netlify/functions/notify-wall-message", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug, name, message, isPrivate }),
+      }).catch(() => {});
+
+      if (isPrivate) {
+        // خاصة: ما تُحفظ بحائط guest_wall العام، توصل بالإيميل فقط
+        msgInput.value = "";
+        submitBtn.disabled = false;
+        submitBtn.textContent = "نشر";
+        showToast("وصلت كلمتك الخاصة للعروسين، شكرًا لك 🌹");
+        return;
+      }
+
       loadFirebase().then(fb => {
         return fb.addDoc(fb.collection(fb.db, "guest_wall"), {
           slug, name, message, createdAt: fb.serverTimestamp()
@@ -392,8 +436,10 @@
     }
   }
 
-  function showCard(data, guestName, slug) {
-    const cfg = data.entry_card || {};
+  function showCard(data, guestName, slug, entryCode) {
+    // إعدادات الأمان تُقرأ من مفتاح "security" (لوحة التحكم)، مع دعم المفتاح
+    // القديم "entry_card" لأي بيانات محفوظة سابقًا للتوافق الرجعي.
+    const cfg = Object.assign({}, data.entry_card || {}, data.security || {});
     if (cfg.enabled === "off") return;
 
     // احترام إعداد "حائط التعليقات" من لوحة التحكم
@@ -406,13 +452,13 @@
         if (!res.ok && res.reason === "another_device") {
           showDeviceLockedMessage();
         } else {
-          doShowCard(data, guestName, slug, cfg, ff, wallEnabled);
+          doShowCard(data, guestName, slug, cfg, ff, wallEnabled, entryCode);
         }
       });
       return;
     }
 
-    doShowCard(data, guestName, slug, cfg, ff, wallEnabled);
+    doShowCard(data, guestName, slug, cfg, ff, wallEnabled, entryCode);
   }
 
   function showDeviceLockedMessage() {
@@ -431,7 +477,7 @@
     document.body.appendChild(overlay);
   }
 
-  function doShowCard(data, guestName, slug, cfg, ff, wallEnabled) {
+  function doShowCard(data, guestName, slug, cfg, ff, wallEnabled, entryCode) {
 
     let overlay = document.getElementById("jg-ec-overlay");
     if (overlay) overlay.remove();
@@ -439,7 +485,7 @@
     overlay.id = "jg-ec-overlay";
     document.body.appendChild(overlay);
 
-    const { wrap, card, closeBtn, closeBtn2, dlBtn, editBtn, cancelBtn, wallBtn, qrWrap } = buildCard(cfg, data, guestName);
+    const { wrap, card, closeBtn, closeBtn2, dlBtn, editBtn, cancelBtn, wallBtn, qrWrap } = buildCard(cfg, data, guestName, entryCode);
     overlay.appendChild(wrap);
 
     // إخفاء زر حائط التعليقات لو معطّل من لوحة التحكم
@@ -486,9 +532,9 @@
     // ترجمة أزرار البطاقة حسب اللغة الحالية
     const _lang = window.__jgLang || "ar";
     const _T = {
-      ar: { dl: "استلم بطاقة دخولك", edit: "تعديل التأكيد", cancel: "إلغاء الحضور", close: "إغلاق", wall: "أترك كلمة للعروسين", qr: "امسح الرمز للوصول للدعوة" },
-      en: { dl: "Download Entry Card", edit: "Edit RSVP", cancel: "Cancel Attendance", close: "Close", wall: "Leave a message", qr: "Scan the code to open the invite" },
-      fr: { dl: "Télécharger la carte d'entrée", edit: "Modifier la confirmation", cancel: "Annuler la présence", close: "Fermer", wall: "Laisser un message", qr: "Scannez le code pour ouvrir l'invitation" },
+      ar: { dl: "استلم بطاقة دخولك", edit: "تعديل التأكيد", cancel: "إلغاء الحضور", close: "إغلاق", wall: "أترك كلمة للعروسين", qr: "امسح الرمز للوصول للدعوة", qrEntry: "كود دخولك الشخصي — يُمسح عند الباب يوم المناسبة" },
+      en: { dl: "Download Entry Card", edit: "Edit RSVP", cancel: "Cancel Attendance", close: "Close", wall: "Leave a message", qr: "Scan the code to open the invite", qrEntry: "Your personal entry code — scanned at the door on the event day" },
+      fr: { dl: "Télécharger la carte d'entrée", edit: "Modifier la confirmation", cancel: "Annuler la présence", close: "Fermer", wall: "Laisser un message", qr: "Scannez le code pour ouvrir l'invitation", qrEntry: "Votre code d'entrée personnel — scanné à la porte le jour J" },
     };
     const _t = _T[_lang] || _T.ar;
     dlBtn.textContent = _t.dl;
@@ -496,7 +542,7 @@
     cancelBtn.textContent = _t.cancel;
     closeBtn2.textContent = _t.close;
     wallBtn.textContent = _t.wall;
-    qrWrap.querySelector(".jg-ec-qr-hint").textContent = _t.qr;
+    qrWrap.querySelector(".jg-ec-qr-hint").textContent = entryCode ? _t.qrEntry : _t.qr;
 
     dlBtn.addEventListener("click", () => {
       dlBtn.textContent = _lang === "ar" ? "جارِ التجهيز..." : _lang === "fr" ? "Préparation..." : "Preparing...";
@@ -521,9 +567,10 @@
     if (!slug) return;
 
     document.addEventListener("jg:rsvp-success", (ev) => {
+      const entryCode = (ev.detail && ev.detail.entryCode) || window.__jgLastEntryCode || "";
       fetch("../content/rsvp/" + slug + ".json")
         .then(r => r.json())
-        .then(data => showCard(data, (ev.detail && ev.detail.guestName) || "", slug))
+        .then(data => showCard(data, (ev.detail && ev.detail.guestName) || "", slug, entryCode))
         .catch(() => {});
     });
   });

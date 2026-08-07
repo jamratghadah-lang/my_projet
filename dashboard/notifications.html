@@ -100,6 +100,13 @@
 </div>
 
 <div class="card">
+  <h2>📩 إرسال التقرير الآن</h2>
+  <p class="desc">يولّد تقرير Excel وPDF فوري بأحدث الردود، ويرسله لبريد العميلة و/أو المدير حسب إعدادات "التقارير والبريد الإلكتروني" بلوحة تحكم /admin. تأكدي من ضبط بريد العميلة هناك إن رغبتِ إرسال التقرير لها.</p>
+  <button id="sendNowBtn">📤 إرسال التقرير الآن</button>
+  <span id="sendNowStatus"></span>
+</div>
+
+<div class="card">
   <h2>إعدادات التذكير (SMS)</h2>
   <p class="desc">التذكير التلقائي يستخدم نفس مزوّد SMS المُعدّ في صفحة "تذكير الضيوف". تأكدي من اختيار المزوّد وإضافة مفاتيحه في Netlify.</p>
   <div id="smsStatus"><span class="badge-off">غير مُفعّل</span></div>
@@ -223,6 +230,33 @@ document.getElementById("testBtn").addEventListener("click", async () => {
   }
   btn.disabled = false;
   setTimeout(() => (status.textContent = ""), 4000);
+});
+
+document.getElementById("sendNowBtn").addEventListener("click", async () => {
+  const btn = document.getElementById("sendNowBtn");
+  const status = document.getElementById("sendNowStatus");
+  btn.disabled = true;
+  status.textContent = "جارِ توليد التقرير وإرساله...";
+  status.className = "";
+  try {
+    const res = await fetch("/.netlify/functions/send-report-now", { method: "POST" });
+    const data = await res.json();
+    if (data.sent) {
+      status.textContent = `تم الإرسال ✓ (${data.total} مدعو — مؤكد ${data.yes} / معتذر ${data.no} / لم يرد ${data.pending})`;
+      status.className = "ok";
+    } else if (data.reason === "NO_RECIPIENT_CONFIGURED") {
+      status.textContent = "لا يوجد بريد مستلِم — أضيفي بريد العميلة أو NOTIFY_EMAIL_TO";
+      status.className = "err";
+    } else {
+      status.textContent = "تعذّر الإرسال — راجعي بيانات SMTP";
+      status.className = "err";
+    }
+  } catch {
+    status.textContent = "خطأ في الاتصال";
+    status.className = "err";
+  }
+  btn.disabled = false;
+  setTimeout(() => (status.textContent = ""), 6000);
 });
 </script>
 </body>

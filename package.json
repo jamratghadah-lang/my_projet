@@ -4,5 +4,11 @@
   "private": true,
   "scripts": {
     "build": "echo 'Static site - no build step required'"
+  },
+  "dependencies": {
+    "nodemailer": "^6.9.14",
+    "exceljs": "^4.4.0",
+    "pdfkit": "^0.15.0",
+    "firebase-admin": "^12.1.0"
   }
 }

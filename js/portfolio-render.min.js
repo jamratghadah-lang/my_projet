@@ -17,18 +17,15 @@
     return (num || "966547266733").toString().replace(/[^\d]/g, "");
   }
 
-  function orderVideo(v, settings) {
-    const useMethod = settings.order_method === "payment" && settings.payment_link && settings.payment_link !== "PAYMENT_LINK_PLACEHOLDER"
-      ? "payment"
-      : "whatsapp";
-    if (useMethod === "payment") {
-      window.open(settings.payment_link, "_blank");
-      return;
-    }
+  function orderVideoWhatsapp(v, settings) {
     const phone = cleanPhone(settings.whatsapp_number);
     const label = v.title ? `${v.number} (${v.title})` : v.number;
     const text = "مرحبا، أبي أطلب الفيديو رقم " + label;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, "_blank");
+  }
+
+  function orderVideoPayment(settings) {
+    window.open(settings.payment_link, "_blank");
   }
 
   function openVideoModal(url) {
@@ -107,12 +104,43 @@
       meta.appendChild(p);
     }
 
-    const orderBtn = document.createElement("button");
-    orderBtn.type = "button";
-    orderBtn.className = "btn btn-solid vorder";
-    orderBtn.textContent = "اطلبي هذا الفيديو";
-    orderBtn.addEventListener("click", () => orderVideo(v, settings));
-    meta.appendChild(orderBtn);
+    const orderBtnWrap = document.createElement("div");
+    orderBtnWrap.className = "vorder-wrap";
+    orderBtnWrap.style.cssText = "display:flex;flex-direction:column;gap:6px";
+
+    const method = settings.order_method || "whatsapp";
+    const hasValidPaymentLink = settings.payment_link && settings.payment_link !== "PAYMENT_LINK_PLACEHOLDER";
+    const showWhatsapp = method === "whatsapp" || method === "both";
+    const showPayment = (method === "payment" || method === "both") && hasValidPaymentLink;
+
+    if (showWhatsapp) {
+      const waBtn = document.createElement("button");
+      waBtn.type = "button";
+      waBtn.className = "btn btn-solid vorder";
+      waBtn.textContent = "📱 اطلبي عبر واتساب";
+      waBtn.addEventListener("click", () => orderVideoWhatsapp(v, settings));
+      orderBtnWrap.appendChild(waBtn);
+    }
+
+    if (showPayment) {
+      const payBtn = document.createElement("button");
+      payBtn.type = "button";
+      payBtn.className = "btn btn-outline vorder";
+      payBtn.textContent = "💳 ادفعي إلكترونيًا";
+      payBtn.addEventListener("click", () => orderVideoPayment(settings));
+      orderBtnWrap.appendChild(payBtn);
+    }
+
+    if (!showWhatsapp && !showPayment) {
+      const waBtn = document.createElement("button");
+      waBtn.type = "button";
+      waBtn.className = "btn btn-solid vorder";
+      waBtn.textContent = "📱 اطلبي عبر واتساب";
+      waBtn.addEventListener("click", () => orderVideoWhatsapp(v, settings));
+      orderBtnWrap.appendChild(waBtn);
+    }
+
+    meta.appendChild(orderBtnWrap);
 
     card.appendChild(thumb);
     card.appendChild(meta);
