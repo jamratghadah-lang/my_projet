@@ -11,32 +11,25 @@ service cloud.firestore {
     }
 
     // ─── responses: ردود المدعوين ───
-    // الضيوف (anon) يقدرون يضيفون رد جديد فقط، ما يقدرون يقرؤون أو يعدلون ردود غيرهم.
-    // لوحة التحكم (authenticated) تقرأ وتحذف الردود.
     match /responses/{responseId} {
-      // إنشاء رد جديد: مفتوح للجميع (الضيوف ما عندهم حساب)
       allow create: if true;
-      // القراءة والحذف: فقط لوحة التحكم المُسجّلة
       allow read, delete: if isSignedIn();
-      // لا يمكن تعديل رد بعد إرساله
       allow update: if false;
     }
 
     // ─── couples: روابط الدعوات المخصصة ───
     match /couples/{slug} {
-      allow read: if true;  // couple-router يحتاج قراءة عامة
+      allow read: if true;
       allow create, update, delete: if isSignedIn();
     }
 
     // ─── settings: إعدادات لوحة التحكم ───
     match /settings/{docId} {
-      allow read: if true;  // صفحات RSVP تقرأ الإعدادات
+      allow read: if true;
       allow write: if isSignedIn();
     }
 
-    // ─── entry_card_locks: أقفال البطاقة الرقمية (جهاز واحد) ───
-    // إنشاء وتحديث البطاقة: مفتوح للجميع (الضياف ما عندهم حساب)
-    // القراءة والحذف: فقط لوحة التحكم
+    // ─── entry_card_locks: أقفال البطاقة الرقمية ───
     match /entry_card_locks/{slug} {
       allow create, update: if true;
       allow read, delete: if isSignedIn();
@@ -49,7 +42,16 @@ service cloud.firestore {
       allow update, delete: if isSignedIn();
     }
 
-    // ─── deny by default: أي مجموعة أخرى ───
+    // ─── checkins: سجل تسجيل الدخول يوم المناسبة ───
+    // إنشاء: مفتوح (التطبيق يرسل بدون login)
+    // القراءة والحذف: فقط لوحة التحكم المُسجّلة
+    match /checkins/{checkinId} {
+      allow create: if true;
+      allow read, delete: if isSignedIn();
+      allow update: if false;
+    }
+
+    // ─── deny by default ───
     match /{document=**} {
       allow read, write: if false;
     }
