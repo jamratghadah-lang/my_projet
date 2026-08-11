@@ -623,10 +623,15 @@ import { db, collection, doc, getDoc, setDoc, addDoc, serverTimestamp } from "./
         // كود دخول شخصي فريد للضيف — يُستخدم لاحقًا بتطبيق تسجيل الدخول يوم
         // المناسبة (jamrat-app). يُتاح لبطاقة الدخول عبر window.__jgLastEntryCode
         // لأن حدث jg:rsvp-success يُطلَق من كود منفصل بكل قالب دعوة.
-        const entryCode = generateEntryCode();
+        const qs = new URLSearchParams(window.location.search);
+        const inviteEventCode = document.body.dataset.eventCode || qs.get("eid") || "";
+        const inviteGuestCode = document.body.dataset.guestCode || qs.get("g") || "";
+        const entryCode = inviteGuestCode || generateEntryCode();
         window.__jgLastEntryCode = entryCode;
+        window.__jgLastGuestsCount = guestsCount;
+        window.__jgLastEventCode = inviteEventCode;
 
-        addDoc(collection(db, "responses"), {
+        const responseData = {
           name: guestName,
           phone: phone,
           status: status,
@@ -634,14 +639,20 @@ import { db, collection, doc, getDoc, setDoc, addDoc, serverTimestamp } from "./
           style: slug,
           eventSlug: eventSlug,
           entryCode: entryCode,
+          personalCode: inviteGuestCode || entryCode,
+          guestId: inviteGuestCode || entryCode,
+          eventCode: inviteEventCode,
+          companions: Number(guestsCount || 0),
           createdAt: serverTimestamp(),
-        }).catch(() => {});
+        };
+        const responseDocId = inviteEventCode && inviteGuestCode ? `${inviteEventCode}_${inviteGuestCode}` : "";
+        (responseDocId ? setDoc(doc(db, "responses", responseDocId), responseData, { merge: true }) : addDoc(collection(db, "responses"), responseData)).catch(() => {});
 
         // إرسال إشعار بريدي فوري للوحة التحكم
         fetch("/.netlify/functions/notify-rsvp", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ guestName, phone, status, guests: guestsCount, style: slug, eventSlug, entryCode }),
+          body: JSON.stringify({ guestName, phone, status, guests: guestsCount, companions: Number(guestsCount || 0), style: slug, eventSlug, eventCode: inviteEventCode, guestId: inviteGuestCode || entryCode, entryCode }),
         }).catch(() => {});
       });
     }

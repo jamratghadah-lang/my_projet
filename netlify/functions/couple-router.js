@@ -55,8 +55,12 @@ exports.handler = async (event) => {
       return { statusCode: 404, headers: { "Content-Type": "text/html; charset=utf-8" }, body: notFoundPage() };
     }
     const html = await pageRes.text();
+    const params = new URLSearchParams(event.rawQuery || new URLSearchParams(event.queryStringParameters || {}).toString());
+    const eventCode = params.get("eid") || "";
+    const guestCode = params.get("g") || "";
+    const attrs = ` data-couple-slug="${slug}" data-event-code="${eventCode.replace(/&/g,"&amp;").replace(/"/g,"&quot;")}" data-guest-code="${guestCode.replace(/&/g,"&amp;").replace(/"/g,"&quot;")}"`;
     const htmlWithCoupleSlug = html.includes("<body")
-      ? html.replace(/<body(\s|>)/, `<body data-couple-slug="${slug}"$1`)
+      ? html.replace(/<body(\s|>)/, `<body${attrs}$1`)
       : html;
     return { statusCode: 200, headers: { "Content-Type": "text/html; charset=utf-8" }, body: htmlWithCoupleSlug };
   } catch (err) {

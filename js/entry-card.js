@@ -107,7 +107,7 @@
     document.head.appendChild(s);
   }
 
-  function buildCard(cfg, data, guestName, entryCode) {
+  function buildCard(cfg, data, guestName, entryCode, guestCount) {
     const wrap = el("div");
     wrap.id = "jg-ec-wrap";
     wrap.style.position = "relative";
@@ -141,7 +141,7 @@
       card.appendChild(el("div", "jg-ec-guest", guestName));
     }
 
-    const metaLines = [data.names, data.date, data.location].filter(Boolean);
+    const metaLines = [data.names, data.date, data.location, guestCount ? `عدد المرافقين: ${guestCount}` : ""].filter(Boolean);
     if (metaLines.length) {
       const meta = el("div", "jg-ec-meta");
       meta.innerHTML = metaLines.map(t => escapeHtml(t)).join("<br>");
@@ -170,7 +170,8 @@
     // وإلا رابط الدعوة (توافق رجعي لبيانات قديمة)
     ensureQRCode(() => {
       const inviteUrl = window.location.href.split("?")[0] + (data.access_code ? "?code=" + encodeURIComponent(data.access_code) : "");
-      const qrValue = entryCode || inviteUrl;
+      const eventCode = document.body.dataset.eventCode || new URLSearchParams(window.location.search).get("eid") || "";
+      const qrValue = entryCode ? JSON.stringify({eventId:eventCode,entryCode}) : inviteUrl;
       try {
         qrImg.src = window.QRCode.toDataURL(qrValue, { width: 220, margin: 1, color: { dark: "#3a2a12", light: "#ffffff" } });
       } catch (e) {
@@ -485,7 +486,8 @@
     overlay.id = "jg-ec-overlay";
     document.body.appendChild(overlay);
 
-    const { wrap, card, closeBtn, closeBtn2, dlBtn, editBtn, cancelBtn, wallBtn, qrWrap } = buildCard(cfg, data, guestName, entryCode);
+    const guestCount = window.__jgLastGuestsCount || "";
+    const { wrap, card, closeBtn, closeBtn2, dlBtn, editBtn, cancelBtn, wallBtn, qrWrap } = buildCard(cfg, data, guestName, entryCode, guestCount);
     overlay.appendChild(wrap);
 
     // إخفاء زر حائط التعليقات لو معطّل من لوحة التحكم
