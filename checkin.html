@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>تسجيل الحضور — دار جمرة غضى</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+  :root{
+    --brown-dark:#2c2009;
+    --brown:#3a2a12;
+    --brown-mid:#6b4a1e;
+    --gold:#C5A059;
+    --gold-light:#e8cd94;
+    --cream:#FFFBF5;
+    --ok:#2f7d4f;
+    --ok-bg:#e7f5ec;
+    --warn:#a5720f;
+    --warn-bg:#fbf1dd;
+    --err:#a53232;
+    --err-bg:#fbe9e9;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    font-family:"Tajawal","Cairo",system-ui,-apple-system,sans-serif;
+    background:linear-gradient(155deg,var(--brown-dark),var(--brown-mid) 55%,var(--brown-dark));
+    color:var(--cream);
+    min-height:100vh;
+    min-height:100dvh;
+    display:flex;
+    flex-direction:column;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  link[rel="stylesheet"]{}
+  .brand{
+    text-align:center;
+    padding:18px 16px 6px;
+    flex-shrink:0;
+  }
+  .brand .mark{
+    font-size:13px;
+    letter-spacing:.12em;
+    color:var(--gold-light);
+    opacity:.85;
+  }
+  .brand h1{
+    margin:4px 0 0;
+    font-size:19px;
+    font-weight:700;
+    color:var(--cream);
+  }
+
+  /* ===== شاشة كلمة السر ===== */
+  #gate{
+    flex:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+  }
+  #gate .box{
+    width:100%;
+    max-width:360px;
+    background:rgba(255,255,255,.05);
+    border:1px solid rgba(197,160,89,.35);
+    border-radius:20px;
+    padding:28px 22px;
+    text-align:center;
+  }
+  #gate p{
+    color:var(--gold-light);
+    font-size:14px;
+    margin:0 0 18px;
+    line-height:1.7;
+  }
+  input[type="password"], input[type="text"]{
+    width:100%;
+    padding:15px 16px;
+    border-radius:14px;
+    border:2px solid rgba(197,160,89,.5);
+    background:var(--cream);
+    color:var(--brown-dark);
+    font-size:17px;
+    text-align:center;
+    outline:none;
+    font-family:inherit;
+  }
+  input:focus{border-color:var(--gold);}
+  .btn{
+    margin-top:14px;
+    width:100%;
+    padding:15px;
+    border-radius:14px;
+    border:none;
+    background:var(--gold);
+    color:var(--brown-dark);
+    font-size:16px;
+    font-weight:700;
+    font-family:inherit;
+    cursor:pointer;
+  }
+  .btn:active{transform:scale(.98);}
+  .btn.ghost{
+    background:transparent;
+    border:1.5px solid rgba(197,160,89,.5);
+    color:var(--gold-light);
+  }
+  #gateError{
+    color:#ffb4b4;
+    font-size:13px;
+    margin-top:10px;
+    min-height:18px;
+  }
+
+  /* ===== شاشة المسح ===== */
+  #scanScreen{display:none;flex:1;flex-direction:column;}
+  .stats-bar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:2px 18px 14px;
+    font-size:13px;
+    color:var(--gold-light);
+  }
+  .stats-bar b{color:var(--cream);font-size:16px;}
+  #logoutBtn{
+    background:none;border:none;color:var(--gold-light);
+    font-size:13px;text-decoration:underline;font-family:inherit;cursor:pointer;
+  }
+
+  .reader-wrap{
+    position:relative;
+    margin:0 18px;
+    border-radius:22px;
+    overflow:hidden;
+    aspect-ratio:1/1;
+    background:#000;
+    border:2px solid rgba(197,160,89,.4);
+  }
+  #reader{width:100%;height:100%;}
+  #reader video{width:100%!important;height:100%!important;object-fit:cover;}
+  .scan-frame{
+    position:absolute;inset:12%;
+    border:3px solid var(--gold);
+    border-radius:18px;
+    box-shadow:0 0 0 2000px rgba(0,0,0,.28);
+    pointer-events:none;
+  }
+
+  .manual-wrap{
+    padding:20px 18px 8px;
+    text-align:center;
+  }
+  .manual-wrap .hint{
+    font-size:12.5px;
+    color:rgba(255,251,245,.6);
+    margin:10px 0 0;
+  }
+
+  /* ===== نتيجة المسح ===== */
+  #resultOverlay{
+    position:fixed;inset:0;
+    z-index:999;
+    display:none;
+    align-items:center;justify-content:center;
+    padding:24px;
+    background:rgba(20,14,6,.78);
+    backdrop-filter:blur(3px);
+  }
+  #resultCard{
+    width:100%;max-width:380px;
+    border-radius:24px;
+    padding:32px 24px;
+    text-align:center;
+    animation:pop .25s ease;
+  }
+  @keyframes pop{from{transform:scale(.9);opacity:0;}to{transform:scale(1);opacity:1;}}
+  #resultCard.ok{background:var(--ok-bg);color:var(--ok);}
+  #resultCard.warn{background:var(--warn-bg);color:var(--warn);}
+  #resultCard.err{background:var(--err-bg);color:var(--err);}
+  #resultCard .icon{font-size:52px;line-height:1;margin-bottom:10px;}
+  #resultCard .name{font-size:22px;font-weight:800;margin:0 0 4px;color:var(--brown-dark);}
+  #resultCard .msg{font-size:15px;font-weight:600;margin:0 0 14px;}
+  #resultCard .meta{font-size:13px;color:var(--brown-mid);margin:0;}
+  #resultCard .closeHint{
+    margin-top:18px;font-size:12px;opacity:.7;color:var(--brown-mid);
+  }
+
+  .spinner{
+    width:20px;height:20px;border-radius:50%;
+    border:3px solid rgba(60,40,10,.25);
+    border-top-color:var(--brown-dark);
+    display:inline-block;animation:spin .7s linear infinite;
+    vertical-align:middle;margin-inline-end:8px;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+
+<div class="brand">
+  <div class="mark">دار جمرة غضى</div>
+  <h1>تسجيل الحضور</h1>
+</div>
+
+<!-- شاشة كلمة السر -->
+<div id="gate">
+  <div class="box">
+    <p>أدخلي كلمة سر تسجيل الحضور الخاصة بهذه المناسبة (نفس اللي بلوحة التحكم)</p>
+    <input type="password" id="pwInput" placeholder="كلمة السر" autofocus autocomplete="off">
+    <button class="btn" id="pwSubmit">دخول</button>
+    <div id="gateError"></div>
+  </div>
+</div>
+
+<!-- شاشة المسح -->
+<div id="scanScreen">
+  <div class="stats-bar">
+    <span>سُجّل اليوم: <b id="countToday">0</b></span>
+    <button id="logoutBtn">تسجيل خروج</button>
+  </div>
+
+  <div class="reader-wrap">
+    <div id="reader"></div>
+    <div class="scan-frame"></div>
+  </div>
+
+  <div class="manual-wrap">
+    <input type="text" id="manualInput" placeholder="أو اكتبي كود الدخول يدويًا (JG-XXXXXXXX)" autocomplete="off">
+    <p class="hint">وجّهي الكاميرا نحو رمز QR على بطاقة الضيف، أو اكتبي الكود يدويًا واضغطي Enter</p>
+  </div>
+</div>
+
+<!-- نتيجة المسح -->
+<div id="resultOverlay">
+  <div id="resultCard">
+    <div class="icon" id="resultIcon">✅</div>
+    <p class="name" id="resultName">—</p>
+    <p class="msg" id="resultMsg">—</p>
+    <p class="meta" id="resultMeta"></p>
+    <p class="closeHint">يستمر المسح تلقائيًا…</p>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"
+  integrity="sha512-k/KAe4Yff9EUdYI5/IAHlwUswqeipP+Cp5qnrsUjTPCgl51La2/JhyyjNciztD7mWNKLSXci48m7cctATKfLlQ=="
+  crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+<script>
+(function(){
+  // ⚠️ عدّلي هذا الرابط لو دومين موقعك مختلف أو لو الدوال تحت مسار ثاني
+  const CHECKIN_ENDPOINT = "/.netlify/functions/checkin";
+  const STORAGE_KEY = "jg_checkin_password";
+  const COUNT_KEY = "jg_checkin_count_" + new Date().toISOString().slice(0,10);
+
+  const gate = document.getElementById("gate");
+  const scanScreen = document.getElementById("scanScreen");
+  const pwInput = document.getElementById("pwInput");
+  const pwSubmit = document.getElementById("pwSubmit");
+  const gateError = document.getElementById("gateError");
+  const manualInput = document.getElementById("manualInput");
+  const countEl = document.getElementById("countToday");
+  const logoutBtn = document.getElementById("logoutBtn");
+
+  const overlay = document.getElementById("resultOverlay");
+  const resultCard = document.getElementById("resultCard");
+  const resultIcon = document.getElementById("resultIcon");
+  const resultName = document.getElementById("resultName");
+  const resultMsg = document.getElementById("resultMsg");
+  const resultMeta = document.getElementById("resultMeta");
+
+  let html5Qr = null;
+  let isBusy = false;
+  let scannerRunning = false;
+
+  // ===== عداد اليوم (محلي بالجهاز فقط) =====
+  function getCount(){ return parseInt(sessionStorage.getItem(COUNT_KEY) || "0", 10); }
+  function bumpCount(){ const n = getCount()+1; sessionStorage.setItem(COUNT_KEY, String(n)); countEl.textContent = n; }
+  countEl.textContent = getCount();
+
+  // ===== الدخول =====
+  function tryEnter(pw){
+    if(!pw){ gateError.textContent = "اكتبي كلمة السر أولاً"; return; }
+    sessionStorage.setItem(STORAGE_KEY, pw);
+    gateError.textContent = "";
+    gate.style.display = "none";
+    scanScreen.style.display = "flex";
+    startScanner();
+  }
+  pwSubmit.addEventListener("click", () => tryEnter(pwInput.value.trim()));
+  pwInput.addEventListener("keydown", (e) => { if(e.key === "Enter") tryEnter(pwInput.value.trim()); });
+
+  logoutBtn.addEventListener("click", () => {
+    sessionStorage.removeItem(STORAGE_KEY);
+    stopScanner();
+    scanScreen.style.display = "none";
+    gate.style.display = "flex";
+    pwInput.value = "";
+    pwInput.focus();
+  });
+
+  // دخول تلقائي لو كلمة السر محفوظة بهالجلسة
+  const savedPw = sessionStorage.getItem(STORAGE_KEY);
+  if(savedPw){ tryEnter(savedPw); }
+
+  // ===== استخراج entryCode من نص QR =====
+  // بطاقة الضيف تشفّر QR كـ JSON: {"eventId":"...","entryCode":"JG-XXXXXXXX"}
+  // بعض الأكواد القديمة قد تكون كتحقّق نصي مباشر أو رابط دعوة عادي.
+  function extractEntryCode(rawText){
+    const text = (rawText || "").trim();
+    // 1) محاولة JSON
+    try{
+      const parsed = JSON.parse(text);
+      if(parsed && typeof parsed.entryCode === "string") return parsed.entryCode;
+    }catch(e){ /* مو JSON، نكمل */ }
+    // 2) نص مباشر يطابق صيغة الكود
+    const match = text.match(/JG-[A-Z2-9]{8}/i);
+    if(match) return match[0];
+    return null;
+  }
+
+  // ===== إرسال الكود للسيرفر =====
+  async function submitCode(entryCode){
+    if(isBusy) return;
+    const code = (entryCode || "").trim().toUpperCase();
+    if(!/^JG-[A-Z2-9]{8}$/.test(code)){
+      showResult("err", "❌", "كود غير صالح", "الصيغة المتوقعة: JG-XXXXXXXX", "");
+      return;
+    }
+    isBusy = true;
+    showBusy();
+    const pw = sessionStorage.getItem(STORAGE_KEY) || "";
+    try{
+      const res = await fetch(CHECKIN_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ entryCode: code, checkinPassword: pw }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if(res.status === 401){
+        showResult("err", "🔒", "كلمة السر غير صحيحة", "سجّلي خروج وأعيدي إدخالها", "");
+        return;
+      }
+      if(res.status === 404){
+        showResult("err", "❓", "كود الدخول غير موجود", "تأكدي من الرمز أو راجعي القائمة", "");
+        return;
+      }
+      if(!res.ok && !data.alreadyCheckedIn){
+        showResult("err", "⚠️", "تعذر تسجيل الدخول", data.error || "حاولي مرة أخرى", "");
+        return;
+      }
+
+      if(data.alreadyCheckedIn){
+        const t = data.checkedInAt ? new Date(data.checkedInAt).toLocaleTimeString("ar-SA", {hour:"2-digit", minute:"2-digit"}) : "";
+        showResult("warn", "🔁", data.name || "—", "سجّل دخوله مسبقاً" + (t ? " — الساعة " + t : ""), (data.companions ? `عدد المرافقين: ${data.companions}` : ""));
+        return;
+      }
+
+      bumpCount();
+      showResult("ok", "✅", data.name || "—", "تم تسجيل الدخول بنجاح", (data.companions ? `عدد المرافقين: ${data.companions}` : ""));
+    }catch(err){
+      showResult("err", "📡", "تعذر الاتصال", "تأكدي من اتصال الإنترنت وحاولي مرة أخرى", "");
+    }
+  }
+
+  function showBusy(){
+    overlay.style.display = "flex";
+    resultCard.className = "";
+    resultIcon.innerHTML = '<span class="spinner"></span>';
+    resultName.textContent = "جارِ التحقق…";
+    resultMsg.textContent = "";
+    resultMeta.textContent = "";
+  }
+
+  function showResult(kind, icon, name, msg, meta){
+    overlay.style.display = "flex";
+    resultCard.className = kind;
+    resultIcon.textContent = icon;
+    resultName.textContent = name;
+    resultMsg.textContent = msg;
+    resultMeta.textContent = meta || "";
+    setTimeout(() => {
+      overlay.style.display = "none";
+      isBusy = false;
+      manualInput.value = "";
+      manualInput.focus();
+    }, kind === "ok" ? 1800 : 2600);
+  }
+
+  // ===== الإدخال اليدوي (يشتغل أيضًا مع جهاز قراءة باركود خارجي) =====
+  manualInput.addEventListener("keydown", (e) => {
+    if(e.key === "Enter"){
+      const val = manualInput.value.trim();
+      if(val) submitCode(val);
+    }
+  });
+
+  // ===== الكاميرا =====
+  function startScanner(){
+    if(scannerRunning || typeof Html5Qrcode === "undefined") return;
+    html5Qr = new Html5Qrcode("reader", { verbose: false });
+    Html5Qrcode.getCameras().then(devices => {
+      if(!devices || !devices.length){
+        document.getElementById("reader").innerHTML =
+          '<p style="color:#fff;text-align:center;padding:20px;font-size:13px;">ما قدرنا نوصل للكاميرا — استخدمي الإدخال اليدوي بالأسفل</p>';
+        return;
+      }
+      html5Qr.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 230, height: 230 }, aspectRatio: 1.0 },
+        (decodedText) => {
+          if(isBusy) return;
+          const code = extractEntryCode(decodedText);
+          if(code) submitCode(code);
+        },
+        () => { /* تجاهل أخطاء الإطارات الفارغة أثناء المسح المستمر */ }
+      ).then(() => { scannerRunning = true; })
+        .catch(() => {
+          document.getElementById("reader").innerHTML =
+            '<p style="color:#fff;text-align:center;padding:20px;font-size:13px;">تم رفض إذن الكاميرا — فعّليه من إعدادات المتصفح، أو استخدمي الإدخال اليدوي</p>';
+        });
+    }).catch(() => {
+      document.getElementById("reader").innerHTML =
+        '<p style="color:#fff;text-align:center;padding:20px;font-size:13px;">ما قدرنا نوصل للكاميرا — استخدمي الإدخال اليدوي بالأسفل</p>';
+    });
+  }
+
+  function stopScanner(){
+    if(html5Qr && scannerRunning){
+      html5Qr.stop().then(() => html5Qr.clear()).catch(() => {});
+      scannerRunning = false;
+    }
+  }
+})();
+</script>
+</body>
+</html>

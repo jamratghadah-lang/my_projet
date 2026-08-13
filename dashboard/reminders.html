@@ -75,7 +75,7 @@
 
 <script type="module">
 import {
-  db, requireLogin,
+  auth, db, requireLogin,
   collection, getDocs, doc, getDoc, setDoc, query, orderBy,
 } from "../js/firebase-init.js";
 
@@ -158,12 +158,21 @@ function renderGuests() {
   const mode = document.querySelector('input[name="mode"]:checked')?.value || "whatsapp";
   const template = document.getElementById("template").value;
 
+  // هروب HTML لاسم ورقم الضيف لمنع XSS — بيانات الضيوف قابلة للكتابة من أي
+  // زائر عبر نموذج RSVP (Firestore rules: allow create: if true)، فلازم
+  // نعاملها كمدخلات غير موثوقة قبل حقنها بـ innerHTML.
+  const esc = (s) => {
+    const d = document.createElement("div");
+    d.textContent = String(s == null ? "" : s);
+    return d.innerHTML;
+  };
+
   wrap.innerHTML = `<ul class="guest-list">` + guests.map((g) => {
     const msg = template.replace(/\{name\}/g, g.name);
-    const waLink = `https://wa.me/${g.phone}?text=${encodeURIComponent(msg)}`;
+    const waLink = `https://wa.me/${encodeURIComponent(g.phone)}?text=${encodeURIComponent(msg)}`;
     return `<li>
-      <span class="who">${g.name} <span class="badge">${g.phone}</span></span>
-      ${mode === "whatsapp" ? `<a class="wa-btn" target="_blank" href="${waLink}">إرسال واتساب</a>` : ""}
+      <span class="who">${esc(g.name)} <span class="badge">${esc(g.phone)}</span></span>
+      ${mode === "whatsapp" ? `<a class="wa-btn" target="_blank" rel="noopener noreferrer" href="${esc(waLink)}">إرسال واتساب</a>` : ""}
     </li>`;
   }).join("") + `</ul>`;
 }
@@ -179,13 +188,17 @@ document.getElementById("sendSmsBtn").addEventListener("click", async () => {
   btn.disabled = true;
   status.textContent = "جارِ الإرسال...";
   try {
+    // التوكن مطلوب الآن لأن دالة send-sms تتحقق من تسجيل الدخول
+    const idToken = await auth.currentUser.getIdToken();
     const res = await fetch("/.netlify/functions/send-sms", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${idToken}` },
       body: JSON.stringify({ guests, message: template }),
     });
     const data = await res.json();
-    if (!res.ok) {
+    if (res.status === 401) {
+      status.textContent = "انتهت الجلسة — سجّلي دخول من جديد";
+    } else if (!res.ok) {
       status.textContent = data.error || "المزوّد غير مفعّل بعد — أضيفي مفاتيح API في Netlify";
     } else {
       status.textContent = `تم الإرسال لـ ${data.sent} ضيف ✓`;

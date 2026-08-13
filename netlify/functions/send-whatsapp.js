@@ -3,15 +3,28 @@
 // يُستدعى من لوحة التحكم أو من التطبيق لإرسال رسائل واتساب عبر
 // WhatsApp Business API (الرسمي من Meta).
 //
+// ⚠️ يتطلب تسجيل دخول: يقرأ Authorization: Bearer <Firebase ID Token> ويتحقق
+// منه بصلاحية إدارية، عشان محد يقدر يستخدم هذا الرابط للإرسال العشوائي
+// أو استنزاف رصيد واتساب التجاري.
+//
 // متغيرات البيئة المطلوبة في Netlify:
 //   WHATSAPP_PHONE_ID    — رقم هاتف الحساب التجاري (مثال: 966500000000)
 //   WHATSAPP_TOKEN       — رمز الوصول الدائم (Permanent Access Token)
+//   FIREBASE_SERVICE_ACCOUNT_JSON — مفتاح خدمة Firebase (للتحقق من التوكن)
 //
 // ملاحظة: الرمز يتجدد كل 90 يوم — لازم تحدثه من Meta Business Suite.
+
+const { verifyAuth } = require("./_auth");
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
+  }
+
+  // التحقق من صلاحية المستخدم قبل أي معالجة
+  const uid = await verifyAuth(event);
+  if (!uid) {
+    return { statusCode: 401, body: JSON.stringify({ error: "غير مصرح — سجّلي دخول بلوحة التحكم أولاً" }) };
   }
 
   let payload;

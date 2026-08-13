@@ -134,19 +134,29 @@ async function loadList() {
     const snap = await getDocs(collection(db, "couples"));
     if (snap.empty) { listWrap.innerHTML = '<li class="empty">ما فيه روابط مخصصة بعد.</li>'; return; }
     listWrap.innerHTML = "";
+    // هروب HTML لمنع XSS من قيم قد تُحقن بمسار الإدارة (template/slug)
+    const esc = (s) => {
+      const d = document.createElement("div");
+      d.textContent = String(s == null ? "" : s);
+      return d.innerHTML;
+    };
     snap.forEach((d) => {
       const data = d.data();
+      const slugEsc = esc(d.id);
+      const tplEsc = esc(data.template || "");
+      // نتحقق أن الرابط آمن (https/http) قبل حقنه في href لتفادي javascript: URLs
       const url = `${SITE_ORIGIN}/${d.id}`;
+      const safeUrl = /^https?:\/\//.test(url) ? url : "#";
       const li = document.createElement("li");
       li.innerHTML = `
         <div class="who">
-          <span class="slug">/${d.id}</span>
-          <span class="tpl">${data.template || ""}</span>
+          <span class="slug">/${slugEsc}</span>
+          <span class="tpl">${tplEsc}</span>
         </div>
         <div class="row-actions">
-          <a class="open-btn" href="${url}" target="_blank">فتح ↗</a>
-          <button class="copy-btn" data-url="${url}">نسخ الرابط</button>
-          <button class="del-btn" data-id="${d.id}">حذف</button>
+          <a class="open-btn" href="${esc(safeUrl)}" target="_blank" rel="noopener noreferrer">فتح ↗</a>
+          <button class="copy-btn" data-url="${esc(safeUrl)}">نسخ الرابط</button>
+          <button class="del-btn" data-id="${slugEsc}">حذف</button>
         </div>`;
       listWrap.appendChild(li);
     });

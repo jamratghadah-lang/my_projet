@@ -15,6 +15,14 @@ for = "/*"
 [headers.values]
 X-Frame-Options = "SAMEORIGIN"
 X-Content-Type-Options = "nosniff"
+Referrer-Policy = "strict-origin-when-cross-origin"
+Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://identity.netlify.com https://unpkg.com https://scripts.sirv.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; media-src 'self' https:; connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.google.com https://formspree.io https://api.netlify.com https://*.sirv.com https://auth.decapbridge.com https://gateway.decapbridge.com; frame-src https://www.google.com https://identity.netlify.com; base-uri 'self'; object-src 'none'"
+
+[[headers]]
+for = "/rsvp/*"
+
+[headers.values]
+X-Robots-Tag = "noindex, nofollow"
 
 [[redirects]]
 from = "/admin"

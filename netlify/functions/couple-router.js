@@ -12,8 +12,10 @@
 //
 // إدارة الروابط (إضافة/حذف) تصير من dashboard/couples.html
 
-const FIREBASE_API_KEY = "AIzaSyAAYOne0CTht9906nStecbqCHkb_CY6glw";
-const PROJECT_ID = "jamrat-ghadah";
+// مفتاح Firebase API آمن للنشر (هو مفتاح عميل عام من الأساس، ليس سرّاً)، لكن
+// نفضّل قراءته من متغيّر البيئة لو ضُبط، لتفادي تكراره بمصادر متعددة.
+const FIREBASE_API_KEY = process.env.FIREBASE_API_KEY || "AIzaSyAAYOne0CTht9906nStecbqCHkb_CY6glw";
+const PROJECT_ID = process.env.FIREBASE_PROJECT_ID || "jamrat-ghadah";
 
 function notFoundPage() {
   return (
@@ -58,7 +60,15 @@ exports.handler = async (event) => {
     const params = new URLSearchParams(event.rawQuery || new URLSearchParams(event.queryStringParameters || {}).toString());
     const eventCode = params.get("eid") || "";
     const guestCode = params.get("g") || "";
-    const attrs = ` data-couple-slug="${slug}" data-event-code="${eventCode.replace(/&/g,"&amp;").replace(/"/g,"&quot;")}" data-guest-code="${guestCode.replace(/&/g,"&amp;").replace(/"/g,"&quot;")}"`;
+    // هروب كامل للقيم قبل حقنها بسمات HTML لمنع XSS حتى لو افترضنا تلاعب
+    // بمحتوىFirestore. نوفر هنا هروب &, <, >, ", ' كاملة.
+    const escAttr = (s) => String(s == null ? "" : s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+    const attrs = ` data-couple-slug="${escAttr(slug)}" data-event-code="${escAttr(eventCode)}" data-guest-code="${escAttr(guestCode)}"`;
     const htmlWithCoupleSlug = html.includes("<body")
       ? html.replace(/<body(\s|>)/, `<body${attrs}$1`)
       : html;

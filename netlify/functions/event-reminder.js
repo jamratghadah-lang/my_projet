@@ -13,8 +13,10 @@
 
 const { resolveRecipients, fetchResponses, buildExcelBuffer, buildPdfBuffer, sendReportEmail, getAdminDb } = require("./_report-lib");
 
-const FIREBASE_API_KEY = "AIzaSyAAYOne0CTht9906nStecbqCHkb_CY6glw";
-const PROJECT_ID = "jamrat-ghadah";
+// مفتاح Firebase API آمن للنشر (هو مفتاح عميل عام من الأساس، ليس سرّاً)، لكن
+// نفضّل قراءته من متغيّر البيئة لو ضُبط، لتفادي تكراره بمصادر متعددة.
+const FIREBASE_API_KEY = process.env.FIREBASE_API_KEY || "AIzaSyAAYOne0CTht9906nStecbqCHkb_CY6glw";
+const PROJECT_ID = process.env.FIREBASE_PROJECT_ID || "jamrat-ghadah";
 
 exports.handler = async () => {
   const provider = process.env.SMS_PROVIDER;
@@ -47,7 +49,11 @@ exports.handler = async () => {
     const eventHost = process.env.URL || process.env.DEPLOY_URL || "https://jamratghadah.com";
 
     for (const couple of couples) {
-      const slug = couple.name;
+      // couple.name من Firestore REST API يكون المسار الكامل:
+      //   projects/{projectId}/databases/(default)/documents/couples/{slug}
+      // نوخذ آخر جزء منه كـ slug نظيف للعرض بالتقارير.
+      const fullName = couple.name || "";
+      const slug = fullName.split("/").pop() || fullName;
       const template = couple.fields?.template?.stringValue;
       if (!template) continue;
 

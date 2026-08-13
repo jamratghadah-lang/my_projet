@@ -115,7 +115,7 @@
 
 <script type="module">
 import {
-  db, requireLogin,
+  auth, db, requireLogin,
   doc, getDoc, setDoc,
 } from "../js/firebase-init.js";
 
@@ -140,7 +140,7 @@ async function loadSettings() {
     const provider = remData.smsProvider || "";
     document.getElementById("smsProviderName").textContent = provider || "لم يتم الاختيار";
     document.getElementById("smsStatus").innerHTML = provider
-      ? `<span class="badge-on">مُفعّل — ${provider}</span>`
+      ? `<span class="badge-on">مُفعّل — ${escapeHtml(provider)}</span>`
       : `<span class="badge-off">غير مُفعّل</span>`;
     updateBadge("badgeReminder", !!provider);
   } catch {}
@@ -171,6 +171,13 @@ function updateBadge(id, on) {
   if (!el) return;
   el.className = on ? "badge-on" : "badge-off";
   el.textContent = on ? "مُفعّل" : "غير مُفعّل";
+}
+
+// هروب HTML بسيط لمنع XSS عند حقن قيم إدارية بـ innerHTML
+function escapeHtml(s) {
+  const d = document.createElement("div");
+  d.textContent = String(s == null ? "" : s);
+  return d.innerHTML;
 }
 
 document.getElementById("saveBtn").addEventListener("click", async () => {
@@ -239,9 +246,17 @@ document.getElementById("sendNowBtn").addEventListener("click", async () => {
   status.textContent = "جارِ توليد التقرير وإرساله...";
   status.className = "";
   try {
-    const res = await fetch("/.netlify/functions/send-report-now", { method: "POST" });
+    // التوكن مطلوب الآن لأن دالة send-report-now تتحقق من تسجيل الدخول
+    const idToken = await auth.currentUser.getIdToken();
+    const res = await fetch("/.netlify/functions/send-report-now", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${idToken}` },
+    });
     const data = await res.json();
-    if (data.sent) {
+    if (res.status === 401) {
+      status.textContent = "انتهت الجلسة — سجّلي دخول من جديد";
+      status.className = "err";
+    } else if (data.sent) {
       status.textContent = `تم الإرسال ✓ (${data.total} مدعو — مؤكد ${data.yes} / معتذر ${data.no} / لم يرد ${data.pending})`;
       status.className = "ok";
     } else if (data.reason === "NO_RECIPIENT_CONFIGURED") {

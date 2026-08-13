@@ -10,8 +10,10 @@
 //   4) buildPdfBuffer()     — تولّد ملف PDF حقيقي من الردود.
 //   5) sendReportEmail()    — ترسل الإيميل مرفقًا فيه الملفين عبر nodemailer.
 
-const FIREBASE_API_KEY = "AIzaSyAAYOne0CTht9906nStecbqCHkb_CY6glw";
-const PROJECT_ID = "jamrat-ghadah";
+// ملاحظة: PROJECT_ID يُقرأ من متغيّر البيئة FIREBASE_PROJECT_ID إن وُجد،
+// وإلا نستخدم القيمة الافتراضية. لا حاجة لمفتاح Firebase API هنا لأن
+// الـ Admin SDK يربط مباشرة بصلاحية حساب الخدمة دون المرور عبر REST API.
+const PROJECT_ID = process.env.FIREBASE_PROJECT_ID || "jamrat-ghadah";
 
 // ===== 0) اتصال Firestore بصلاحية إدارية (Admin) =====
 // قواعد أمان Firestore تشترط تسجيل دخول لقراءة "responses" (allow read: if

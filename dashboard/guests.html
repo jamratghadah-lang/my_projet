@@ -15,45 +15,80 @@
   .card h2{font-size:15px;color:#d4af37;margin-top:0}
 
   /* ===== Stats ===== */
-  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:18px}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:18px}
   .stat{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:16px;text-align:center;position:relative;overflow:hidden}
   .stat::before{content:"";position:absolute;top:0;right:0;width:4px;height:100%}
   .stat.total::before{background:#d4af37}
   .stat.yes::before{background:#4caf50}
   .stat.no::before{background:#e07a5f}
   .stat.pending::before{background:#888}
-  .stat .num{font-size:32px;font-weight:bold;line-height:1}
+  .stat.archived::before{background:#7a5fd4}
+  .stat .num{font-size:30px;font-weight:bold;line-height:1}
   .stat.total .num{color:#d4af37}
   .stat.yes .num{color:#4caf50}
   .stat.no .num{color:#e07a5f}
   .stat.pending .num{color:#aaa}
-  .stat .label{font-size:12px;color:#999;margin-top:6px}
+  .stat.archived .num{color:#9d85e8}
+  .stat .label{font-size:11px;color:#999;margin-top:6px}
 
   /* ===== Toolbar ===== */
-  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
-  .search-wrap{flex:1;min-width:200px;position:relative}
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+  .search-wrap{flex:1;min-width:180px;position:relative}
   .search-wrap input{width:100%;padding:10px 36px 10px 12px;border-radius:8px;border:1px solid #444;background:#222;color:#fff;font-family:inherit;font-size:14px}
   .search-wrap .icon{position:absolute;right:10px;top:50%;transform:translateY(-50%);color:#888;font-size:16px;pointer-events:none}
   select{padding:10px 12px;border-radius:8px;border:1px solid #444;background:#222;color:#fff;font-family:inherit;font-size:14px;cursor:pointer}
-  .export-btns{display:flex;gap:8px}
-  .export-btns button{padding:10px 16px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:6px}
+  .btn{padding:10px 16px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;font-size:13px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-family:inherit}
+  .btn-gold{background:#d4af37;color:#111}
+  .btn-outline{background:transparent;border:1px solid #555;color:#ddd}
   .btn-excel{background:#1d6f42;color:#fff}
   .btn-pdf{background:#c0392b;color:#fff}
-  .export-btns button:disabled{opacity:.5;cursor:default}
+  .btn-danger{background:#c0392b;color:#fff}
+  .btn-purple{background:#5d43b0;color:#fff}
+  .btn:disabled{opacity:.45;cursor:default}
+  .btn-sm{padding:6px 10px;font-size:12px;border-radius:6px}
+  .toolbar2{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;padding-top:10px;border-top:1px solid #2a2a2a}
+  .toggle-archive{display:flex;align-items:center;gap:6px;font-size:13px;color:#aaa;margin-inline-start:auto}
 
   /* ===== Table ===== */
   .table-wrap{overflow-x:auto}
   table{width:100%;border-collapse:collapse;font-size:13px}
   thead th{text-align:right;padding:10px 8px;border-bottom:2px solid #333;color:#d4af37;white-space:nowrap}
-  tbody td{padding:10px 8px;border-bottom:1px solid #2a2a2a}
+  tbody td{padding:10px 8px;border-bottom:1px solid #2a2a2a;white-space:nowrap}
   tbody tr:hover{background:#222}
+  tbody tr.archived-row{opacity:.55}
   .badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:bold;white-space:nowrap}
   .badge.yes{background:rgba(76,175,80,.15);color:#4caf50;border:1px solid rgba(76,175,80,.3)}
   .badge.no{background:rgba(224,122,95,.15);color:#e07a5f;border:1px solid rgba(224,122,95,.3)}
   .badge.pending{background:rgba(170,170,170,.15);color:#aaa;border:1px solid rgba(170,170,170,.3)}
+  .badge.manual{background:rgba(93,67,176,.18);color:#9d85e8;border:1px solid rgba(93,67,176,.35);margin-inline-start:4px}
   .empty{color:#777;text-align:center;padding:30px;font-size:14px}
   .count-hint{font-size:12px;color:#888;margin-top:8px}
-  @media(max-width:600px){.stat .num{font-size:24px}.export-btns{width:100%;justify-content:center}}
+  .row-actions{display:flex;gap:6px}
+  @media(max-width:600px){.stat .num{font-size:22px}}
+
+  /* ===== Modal ===== */
+  .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:999;align-items:center;justify-content:center;padding:16px}
+  .modal-bg.open{display:flex}
+  .modal{background:#1c1c1c;border:1px solid #333;border-radius:14px;padding:22px;width:100%;max-width:440px;max-height:88vh;overflow-y:auto}
+  .modal h3{margin:0 0 16px;color:#d4af37;font-size:16px}
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:12.5px;color:#aaa;margin-bottom:5px}
+  .field input, .field select, .field textarea{
+    width:100%;padding:10px 12px;border-radius:8px;border:1px solid #444;background:#222;color:#fff;
+    font-family:inherit;font-size:14px;
+  }
+  .field textarea{min-height:100px;resize:vertical}
+  .field .hint{font-size:11.5px;color:#777;margin-top:4px}
+  .radio-row{display:flex;gap:14px;margin-top:4px;flex-wrap:wrap}
+  .radio-row label{display:flex;align-items:center;gap:6px;font-size:13px;color:#ddd;cursor:pointer}
+  .modal-actions{display:flex;gap:10px;margin-top:18px}
+  .modal-actions .btn{flex:1;justify-content:center}
+  .msg-status{font-size:13px;margin-top:10px;min-height:18px}
+  .msg-status.err{color:#e07a5f}
+  .msg-status.ok{color:#4caf50}
+  .import-preview{max-height:160px;overflow-y:auto;background:#161616;border:1px solid #333;border-radius:8px;padding:8px 10px;font-size:12px;color:#aaa;margin-top:10px}
+  .send-results{max-height:180px;overflow-y:auto;font-size:12px;margin-top:10px;background:#161616;border:1px solid #333;border-radius:8px;padding:8px 10px}
+  .send-results div{padding:3px 0;border-bottom:1px solid #262626}
 </style>
 </head>
 <body>
@@ -69,10 +104,12 @@
   <div class="stat yes"><div class="num" id="statYes">0</div><div class="label">مؤكد الحضور</div></div>
   <div class="stat no"><div class="num" id="statNo">0</div><div class="label">معتذر</div></div>
   <div class="stat pending"><div class="num" id="statPending">0</div><div class="label">لم يرد</div></div>
+  <div class="stat archived"><div class="num" id="statArchived">0</div><div class="label">مؤرشف</div></div>
 </div>
 
 <div class="card">
   <h2>قائمة المدعوين</h2>
+
   <div class="toolbar">
     <div class="search-wrap">
       <input type="text" id="searchInput" placeholder="بحث بالاسم أو رقم الهاتف...">
@@ -84,31 +121,128 @@
       <option value="no">معتذر</option>
       <option value="pending">لم يرد</option>
     </select>
-    <div class="export-btns">
-      <button class="btn-excel" id="exportExcel">📊 Excel</button>
-      <button class="btn-pdf" id="exportPdf">📄 PDF</button>
-    </div>
+    <button class="btn btn-excel" id="exportExcel">📊 Excel</button>
+    <button class="btn btn-pdf" id="exportPdf">📄 PDF</button>
+  </div>
+
+  <div class="toolbar2">
+    <button class="btn btn-gold" id="openAddModal">➕ إضافة ضيف</button>
+    <button class="btn btn-outline" id="openImportModal">📥 استيراد قائمة</button>
+    <button class="btn btn-purple" id="openSendModal" disabled>✉️ إرسال جماعي (<span id="selCount">0</span>)</button>
+    <label class="toggle-archive">
+      <input type="checkbox" id="showArchived"> إظهار المؤرشفين
+    </label>
   </div>
 
   <div class="table-wrap">
     <table id="guestTable">
       <thead>
         <tr>
+          <th><input type="checkbox" id="selectAll"></th>
           <th>#</th>
           <th>الاسم</th>
           <th>الهاتف</th>
+          <th>البريد</th>
           <th>الحالة</th>
           <th>عدد الضيوف</th>
           <th>القالب</th>
           <th>التاريخ</th>
+          <th>إجراءات</th>
         </tr>
       </thead>
       <tbody id="guestBody">
-        <tr><td colspan="7" class="empty">جارِ التحميل...</td></tr>
+        <tr><td colspan="10" class="empty">جارِ التحميل...</td></tr>
       </tbody>
     </table>
   </div>
   <div class="count-hint" id="countHint"></div>
+</div>
+
+<!-- ===== نافذة إضافة ضيف ===== -->
+<div class="modal-bg" id="addModalBg">
+  <div class="modal">
+    <h3>➕ إضافة ضيف يدويًا</h3>
+    <div class="field"><label>الاسم *</label><input type="text" id="addName" placeholder="اسم الضيف"></div>
+    <div class="field"><label>رقم الجوال (بصيغة دولية بدون +، مثال 9665xxxxxxxx)</label><input type="text" id="addPhone" placeholder="9665xxxxxxxx" dir="ltr"></div>
+    <div class="field"><label>البريد الإلكتروني (اختياري)</label><input type="email" id="addEmail" placeholder="name@example.com" dir="ltr"></div>
+    <div class="field"><label>عدد المرافقين</label><input type="number" id="addGuests" value="1" min="0"></div>
+    <div class="field">
+      <label>الحالة</label>
+      <select id="addStatus">
+        <option value="yes">مؤكد الحضور</option>
+        <option value="pending" selected>لم يرد</option>
+        <option value="no">معتذر</option>
+      </select>
+    </div>
+    <div class="msg-status" id="addStatusMsg"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="addCancel">إلغاء</button>
+      <button class="btn btn-gold" id="addSave">حفظ</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== نافذة استيراد قائمة ===== -->
+<div class="modal-bg" id="importModalBg">
+  <div class="modal">
+    <h3>📥 استيراد قائمة ضيوف (CSV)</h3>
+    <div class="field">
+      <label>ملف CSV — أعمدة: الاسم, الهاتف, البريد (اختياري), عدد_المرافقين</label>
+      <input type="file" id="importFile" accept=".csv">
+      <div class="hint">أول سطر بالملف لازم يكون عناوين الأعمدة. البريد وعدد المرافقين اختياريين.</div>
+    </div>
+    <div class="import-preview" id="importPreview" style="display:none"></div>
+    <div class="msg-status" id="importStatusMsg"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="importCancel">إلغاء</button>
+      <button class="btn btn-gold" id="importConfirm" disabled>استيراد</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== نافذة الإرسال الجماعي ===== -->
+<div class="modal-bg" id="sendModalBg">
+  <div class="modal">
+    <h3>✉️ إرسال جماعي إلى <span id="sendCountLabel">0</span> ضيف</h3>
+    <div class="field">
+      <label>القناة</label>
+      <div class="radio-row">
+        <label><input type="radio" name="channel" value="whatsapp" checked> واتساب</label>
+        <label><input type="radio" name="channel" value="email"> إيميل</label>
+        <label><input type="radio" name="channel" value="both"> الاثنين</label>
+      </div>
+    </div>
+    <div class="field">
+      <label>عنوان الإيميل (يُستخدم فقط لو القناة تتضمن إيميل)</label>
+      <input type="text" id="sendSubject" value="دار جمرة غضى">
+    </div>
+    <div class="field">
+      <label>محتوى الرسالة (اختاري وحدة أو أكثر — تقدرين تجمعين بينهم)</label>
+      <div class="radio-row">
+        <label><input type="checkbox" id="ctText" checked> نص</label>
+        <label><input type="checkbox" id="ctImage"> صورة / بطاقة</label>
+        <label><input type="checkbox" id="ctVideo"> فيديو</label>
+      </div>
+    </div>
+    <div class="field" id="imageUrlField" style="display:none">
+      <label>رابط الصورة/البطاقة (من Cloudinary)</label>
+      <input type="text" id="sendImageUrl" placeholder="https://res.cloudinary.com/...">
+    </div>
+    <div class="field" id="videoUrlField" style="display:none">
+      <label>رابط الفيديو (من Cloudinary)</label>
+      <input type="text" id="sendVideoUrl" placeholder="https://res.cloudinary.com/...">
+    </div>
+    <div class="field">
+      <label>نص الرسالة (استخدمي {name} ليتم استبدالها باسم كل ضيف)</label>
+      <textarea id="sendMessage" placeholder="مرحباً {name}، ..."></textarea>
+    </div>
+    <div class="msg-status" id="sendStatusMsg"></div>
+    <div class="send-results" id="sendResults" style="display:none"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="sendCancel">إلغاء</button>
+      <button class="btn btn-purple" id="sendConfirm">إرسال</button>
+    </div>
+  </div>
 </div>
 
 <!-- ===== Libraries for export ===== -->
@@ -118,12 +252,23 @@
 
 <script type="module">
 import {
-  db, requireLogin,
+  db, auth, requireLogin,
   collection, query, orderBy, onSnapshot,
+  doc, addDoc, updateDoc, deleteDoc, serverTimestamp,
 } from "../js/firebase-init.js";
 
 let allGuests = [];
 let unsub = null;
+let selectedIds = new Set();
+
+// نفس دالة توليد الكود المستخدمة بنماذج RSVP بالموقع (js/rsvp-live.js)
+// عشان أي ضيف نضيفه يدويًا يشتغل بنفس نظام QR وتشيك-إن الموجود.
+function generateEntryCode() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "JG-";
+  for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
 
 requireLogin(() => {
   const q = query(collection(db, "responses"), orderBy("createdAt", "desc"));
@@ -138,40 +283,49 @@ requireLogin(() => {
         id: d.id,
         name: r.name || "—",
         phone: r.phone || "—",
+        email: r.email || "",
         status,
         guests: r.guests || "—",
         style: r.style || "—",
+        archived: !!r.archived,
+        manual: r.source === "manual",
         date: r.createdAt ? new Date(r.createdAt.toMillis ? r.createdAt.toMillis() : r.createdAt).toLocaleString("ar-SA") : "—",
       });
     });
     updateStats();
     renderTable();
-  }, (err) => {
-    document.getElementById("guestBody").innerHTML = '<tr><td colspan="7" class="empty">تعذّر تحميل البيانات</td></tr>';
+  }, () => {
+    document.getElementById("guestBody").innerHTML = '<tr><td colspan="10" class="empty">تعذّر تحميل البيانات</td></tr>';
   });
 });
 
 // ===== Stats =====
 function updateStats() {
-  const total = allGuests.length;
-  const yes = allGuests.filter(g => g.status === "yes").length;
-  const no = allGuests.filter(g => g.status === "no").length;
-  const pending = allGuests.filter(g => g.status === "pending").length;
-  document.getElementById("statTotal").textContent = total;
-  document.getElementById("statYes").textContent = yes;
-  document.getElementById("statNo").textContent = no;
-  document.getElementById("statPending").textContent = pending;
+  const visible = allGuests.filter(g => !g.archived);
+  document.getElementById("statTotal").textContent = visible.length;
+  document.getElementById("statYes").textContent = visible.filter(g => g.status === "yes").length;
+  document.getElementById("statNo").textContent = visible.filter(g => g.status === "no").length;
+  document.getElementById("statPending").textContent = visible.filter(g => g.status === "pending").length;
+  document.getElementById("statArchived").textContent = allGuests.filter(g => g.archived).length;
 }
 
 // ===== Filter + Search =====
 function getFiltered() {
   const q = document.getElementById("searchInput").value.trim().toLowerCase();
   const filter = document.getElementById("filterStatus").value;
+  const showArchived = document.getElementById("showArchived").checked;
   return allGuests.filter(g => {
+    if (!showArchived && g.archived) return false;
     if (filter !== "all" && g.status !== filter) return false;
     if (q && !g.name.toLowerCase().includes(q) && !String(g.phone).toLowerCase().includes(q)) return false;
     return true;
   });
+}
+
+function escapeHtml(s) {
+  const d = document.createElement("div");
+  d.textContent = String(s);
+  return d.innerHTML;
 }
 
 // ===== Render Table =====
@@ -180,8 +334,12 @@ function renderTable() {
   const list = getFiltered();
   const hint = document.getElementById("countHint");
 
+  // نظّفي التحديد من أي ضيف ما عاد ظاهر بالقائمة الحالية
+  selectedIds = new Set([...selectedIds].filter(id => list.some(g => g.id === id)));
+  updateSendButton();
+
   if (!list.length) {
-    body.innerHTML = '<tr><td colspan="7" class="empty">لا يوجد مدعوين مطابقين</td></tr>';
+    body.innerHTML = '<tr><td colspan="10" class="empty">لا يوجد مدعوين مطابقين</td></tr>';
     hint.textContent = "";
     return;
   }
@@ -194,45 +352,86 @@ function renderTable() {
 
   body.innerHTML = list.map((g, i) => {
     const s = statusMap[g.status] || statusMap.pending;
-    return `<tr>
+    const checked = selectedIds.has(g.id) ? "checked" : "";
+    return `<tr class="${g.archived ? "archived-row" : ""}" data-id="${g.id}">
+      <td><input type="checkbox" class="rowSel" data-id="${g.id}" ${checked}></td>
       <td>${i + 1}</td>
-      <td>${escapeHtml(g.name)}</td>
+      <td>${escapeHtml(g.name)}${g.manual ? '<span class="badge manual">يدوي</span>' : ""}</td>
       <td dir="ltr" style="text-align:right">${escapeHtml(g.phone)}</td>
+      <td dir="ltr" style="text-align:right">${escapeHtml(g.email || "—")}</td>
       <td><span class="badge ${s.cls}">${s.text}</span></td>
       <td>${escapeHtml(String(g.guests))}</td>
       <td>${escapeHtml(g.style)}</td>
       <td>${escapeHtml(g.date)}</td>
+      <td class="row-actions">
+        <button class="btn btn-sm btn-outline archiveBtn" data-id="${g.id}" data-archived="${g.archived}">${g.archived ? "↩️ استرجاع" : "📦 أرشفة"}</button>
+        <button class="btn btn-sm btn-danger deleteBtn" data-id="${g.id}">🗑</button>
+      </td>
     </tr>`;
   }).join("");
 
   hint.textContent = `عرض ${list.length} من أصل ${allGuests.length} مدعو`;
+
+  // ربط أحداث الصفوف (تُعاد كل رندر لأن الـ HTML يتبنى من جديد)
+  body.querySelectorAll(".rowSel").forEach(cb => {
+    cb.addEventListener("change", () => {
+      if (cb.checked) selectedIds.add(cb.dataset.id); else selectedIds.delete(cb.dataset.id);
+      updateSendButton();
+    });
+  });
+  body.querySelectorAll(".archiveBtn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const isArchived = btn.dataset.archived === "true";
+      btn.disabled = true;
+      try {
+        await updateDoc(doc(db, "responses", btn.dataset.id), { archived: !isArchived });
+      } catch (e) {
+        alert("تعذّرت الأرشفة — تأكدي إن قواعد Firestore محدّثة (allow update: if isSignedIn())");
+      }
+      btn.disabled = false;
+    });
+  });
+  body.querySelectorAll(".deleteBtn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      if (!confirm("تأكيد حذف هذا الضيف نهائيًا؟ ما فيه تراجع.")) return;
+      btn.disabled = true;
+      try {
+        await deleteDoc(doc(db, "responses", btn.dataset.id));
+      } catch (e) {
+        alert("تعذّر الحذف");
+      }
+      btn.disabled = false;
+    });
+  });
 }
 
-function escapeHtml(s) {
-  const d = document.createElement("div");
-  d.textContent = String(s);
-  return d.innerHTML;
+function updateSendButton() {
+  document.getElementById("selCount").textContent = selectedIds.size;
+  document.getElementById("openSendModal").disabled = selectedIds.size === 0;
 }
 
-// ===== Event listeners =====
 document.getElementById("searchInput").addEventListener("input", renderTable);
 document.getElementById("filterStatus").addEventListener("change", renderTable);
+document.getElementById("showArchived").addEventListener("change", renderTable);
+document.getElementById("selectAll").addEventListener("change", (e) => {
+  const list = getFiltered();
+  if (e.target.checked) list.forEach(g => selectedIds.add(g.id));
+  else list.forEach(g => selectedIds.delete(g.id));
+  renderTable();
+});
 
 // ===== Export to Excel =====
 document.getElementById("exportExcel").addEventListener("click", () => {
   const list = getFiltered();
   if (!list.length) return;
   const rows = list.map((g, i) => ({
-    "#": i + 1,
-    "الاسم": g.name,
-    "الهاتف": g.phone,
+    "#": i + 1, "الاسم": g.name, "الهاتف": g.phone, "البريد": g.email || "—",
     "الحالة": g.status === "yes" ? "مؤكد الحضور" : g.status === "no" ? "معتذر" : "لم يرد",
-    "عدد الضيوف": g.guests,
-    "القالب": g.style,
-    "التاريخ": g.date,
+    "عدد الضيوف": g.guests, "القالب": g.style, "التاريخ": g.date,
+    "مؤرشف": g.archived ? "نعم" : "لا",
   }));
   const ws = XLSX.utils.json_to_sheet(rows);
-  ws["!cols"] = [{ wch: 5 }, { wch: 25 }, { wch: 18 }, { wch: 14 }, { wch: 12 }, { wch: 18 }, { wch: 22 }];
+  ws["!cols"] = [{ wch: 5 }, { wch: 25 }, { wch: 18 }, { wch: 22 }, { wch: 14 }, { wch: 12 }, { wch: 18 }, { wch: 22 }, { wch: 9 }];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "المدعوين");
   XLSX.writeFile(wb, "قائمة-المدعوين.xlsx");
@@ -243,31 +442,209 @@ document.getElementById("exportPdf").addEventListener("click", () => {
   const list = getFiltered();
   if (!list.length) return;
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
-
-  doc.setFontSize(16);
-  doc.text("Guest List — قائمة المدعوين", 40, 35);
-
+  const docPdf = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+  docPdf.setFontSize(16);
+  docPdf.text("Guest List — قائمة المدعوين", 40, 35);
   const body = list.map((g, i) => [
-    String(i + 1),
-    g.name,
-    g.phone,
+    String(i + 1), g.name, g.phone, g.email || "—",
     g.status === "yes" ? "Confirmed" : g.status === "no" ? "Declined" : "No Response",
-    String(g.guests),
-    g.style,
-    g.date,
+    String(g.guests), g.style, g.date,
   ]);
-
-  doc.autoTable({
-    head: [["#", "Name", "Phone", "Status", "Guests", "Template", "Date"]],
-    body,
-    startY: 50,
-    styles: { fontSize: 9, cellPadding: 4 },
+  docPdf.autoTable({
+    head: [["#", "Name", "Phone", "Email", "Status", "Guests", "Template", "Date"]],
+    body, startY: 50, styles: { fontSize: 9, cellPadding: 4 },
     headStyles: { fillColor: [212, 175, 55], textColor: 255 },
     alternateRowStyles: { fillColor: [245, 245, 245] },
   });
+  docPdf.save("قائمة-المدعوين.pdf");
+});
 
-  doc.save("قائمة-المدعوين.pdf");
+// ===================== نافذة إضافة ضيف =====================
+const addModalBg = document.getElementById("addModalBg");
+document.getElementById("openAddModal").addEventListener("click", () => {
+  ["addName","addPhone","addEmail"].forEach(id => document.getElementById(id).value = "");
+  document.getElementById("addGuests").value = 1;
+  document.getElementById("addStatus").value = "pending";
+  document.getElementById("addStatusMsg").textContent = "";
+  addModalBg.classList.add("open");
+});
+document.getElementById("addCancel").addEventListener("click", () => addModalBg.classList.remove("open"));
+document.getElementById("addSave").addEventListener("click", async () => {
+  const name = document.getElementById("addName").value.trim().slice(0, 180);
+  const phone = document.getElementById("addPhone").value.trim().slice(0, 30);
+  const email = document.getElementById("addEmail").value.trim().slice(0, 200);
+  const guests = parseInt(document.getElementById("addGuests").value || "0", 10);
+  const status = document.getElementById("addStatus").value;
+  const msgEl = document.getElementById("addStatusMsg");
+  if (!name) { msgEl.textContent = "الاسم مطلوب"; msgEl.className = "msg-status err"; return; }
+
+  const btn = document.getElementById("addSave");
+  btn.disabled = true;
+  try {
+    await addDoc(collection(db, "responses"), {
+      name, phone: phone || "", email: email || "", guests, status,
+      style: "manual", source: "manual", archived: false,
+      entryCode: generateEntryCode(),
+      createdAt: serverTimestamp(),
+    });
+    msgEl.textContent = "تمت الإضافة ✅"; msgEl.className = "msg-status ok";
+    setTimeout(() => addModalBg.classList.remove("open"), 600);
+  } catch (e) {
+    msgEl.textContent = "تعذّرت الإضافة"; msgEl.className = "msg-status err";
+  }
+  btn.disabled = false;
+});
+
+// ===================== نافذة الاستيراد =====================
+const importModalBg = document.getElementById("importModalBg");
+let importRows = [];
+
+document.getElementById("openImportModal").addEventListener("click", () => {
+  importRows = [];
+  document.getElementById("importFile").value = "";
+  document.getElementById("importPreview").style.display = "none";
+  document.getElementById("importStatusMsg").textContent = "";
+  document.getElementById("importConfirm").disabled = true;
+  importModalBg.classList.add("open");
+});
+document.getElementById("importCancel").addEventListener("click", () => importModalBg.classList.remove("open"));
+
+// محلّل CSV بسيط (يدعم فواصل عادية واقتباسات بسيطة)
+function parseCsv(text) {
+  const lines = text.split(/\r?\n/).filter(l => l.trim().length);
+  if (!lines.length) return [];
+  const headers = lines[0].split(",").map(h => h.trim().replace(/^"|"$/g, ""));
+  return lines.slice(1).map(line => {
+    const cells = line.split(",").map(c => c.trim().replace(/^"|"$/g, ""));
+    const obj = {};
+    headers.forEach((h, i) => obj[h] = cells[i] || "");
+    return obj;
+  });
+}
+
+document.getElementById("importFile").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  const msgEl = document.getElementById("importStatusMsg");
+  msgEl.textContent = "";
+  if (!file) return;
+  const text = await file.text();
+  const parsed = parseCsv(text);
+  importRows = parsed.map(r => ({
+    name: r["الاسم"] || r["name"] || "",
+    phone: r["الهاتف"] || r["phone"] || "",
+    email: r["البريد"] || r["email"] || "",
+    guests: parseInt(r["عدد_المرافقين"] || r["guests"] || "0", 10) || 0,
+  })).filter(r => r.name);
+
+  const preview = document.getElementById("importPreview");
+  if (!importRows.length) {
+    preview.style.display = "none";
+    msgEl.textContent = "ما لقينا أي صف صالح (تأكدي من عمود \"الاسم\")";
+    msgEl.className = "msg-status err";
+    document.getElementById("importConfirm").disabled = true;
+    return;
+  }
+  preview.style.display = "block";
+  preview.innerHTML = importRows.slice(0, 8).map(r => `• ${escapeHtml(r.name)} — ${escapeHtml(r.phone || "—")}`).join("<br>") +
+    (importRows.length > 8 ? `<br>… و${importRows.length - 8} صف إضافي` : "");
+  msgEl.textContent = `جاهز لاستيراد ${importRows.length} ضيف`;
+  msgEl.className = "msg-status ok";
+  document.getElementById("importConfirm").disabled = false;
+});
+
+document.getElementById("importConfirm").addEventListener("click", async () => {
+  const msgEl = document.getElementById("importStatusMsg");
+  const btn = document.getElementById("importConfirm");
+  btn.disabled = true;
+  let done = 0, failed = 0;
+  for (const r of importRows) {
+    try {
+      await addDoc(collection(db, "responses"), {
+        name: String(r.name).slice(0, 180), phone: String(r.phone || "").slice(0, 30), email: String(r.email || "").slice(0, 200),
+        guests: r.guests || 0, status: "pending",
+        style: "manual", source: "manual", archived: false,
+        entryCode: generateEntryCode(),
+        createdAt: serverTimestamp(),
+      });
+      done++;
+    } catch { failed++; }
+  }
+  msgEl.textContent = `تم استيراد ${done} ضيف${failed ? ` — فشل ${failed}` : ""} ✅`;
+  msgEl.className = "msg-status ok";
+  setTimeout(() => importModalBg.classList.remove("open"), 1200);
+});
+
+// ===================== نافذة الإرسال الجماعي =====================
+const sendModalBg = document.getElementById("sendModalBg");
+document.getElementById("openSendModal").addEventListener("click", () => {
+  document.getElementById("sendCountLabel").textContent = selectedIds.size;
+  document.getElementById("sendMessage").value = "";
+  document.getElementById("sendImageUrl").value = "";
+  document.getElementById("sendVideoUrl").value = "";
+  document.getElementById("ctText").checked = true;
+  document.getElementById("ctImage").checked = false;
+  document.getElementById("ctVideo").checked = false;
+  document.getElementById("imageUrlField").style.display = "none";
+  document.getElementById("videoUrlField").style.display = "none";
+  document.getElementById("sendStatusMsg").textContent = "";
+  document.getElementById("sendResults").style.display = "none";
+  sendModalBg.classList.add("open");
+});
+document.getElementById("sendCancel").addEventListener("click", () => sendModalBg.classList.remove("open"));
+document.getElementById("ctImage").addEventListener("change", (e) => {
+  document.getElementById("imageUrlField").style.display = e.target.checked ? "block" : "none";
+});
+document.getElementById("ctVideo").addEventListener("change", (e) => {
+  document.getElementById("videoUrlField").style.display = e.target.checked ? "block" : "none";
+});
+
+document.getElementById("sendConfirm").addEventListener("click", async () => {
+  const msgEl = document.getElementById("sendStatusMsg");
+  const message = document.getElementById("sendMessage").value.trim();
+  const subject = document.getElementById("sendSubject").value.trim();
+  const channel = document.querySelector('input[name="channel"]:checked').value;
+  const imageUrl = document.getElementById("sendImageUrl").value.trim();
+  const videoUrl = document.getElementById("sendVideoUrl").value.trim();
+  const contentTypes = [];
+  if (document.getElementById("ctText").checked) contentTypes.push("text");
+  if (document.getElementById("ctImage").checked) contentTypes.push("image");
+  if (document.getElementById("ctVideo").checked) contentTypes.push("video");
+
+  if (contentTypes.includes("image") && !imageUrl) { msgEl.textContent = "حطي رابط الصورة/البطاقة"; msgEl.className = "msg-status err"; return; }
+  if (contentTypes.includes("video") && !videoUrl) { msgEl.textContent = "حطي رابط الفيديو"; msgEl.className = "msg-status err"; return; }
+  const hasMedia = (contentTypes.includes("image") && imageUrl) || (contentTypes.includes("video") && videoUrl);
+  if (!message && !hasMedia) { msgEl.textContent = "اكتبي نص، أو حطي رابط صورة/فيديو على الأقل"; msgEl.className = "msg-status err"; return; }
+
+  const btn = document.getElementById("sendConfirm");
+  btn.disabled = true;
+  msgEl.textContent = "جارِ الإرسال…"; msgEl.className = "msg-status";
+
+  try {
+    const idToken = await auth.currentUser.getIdToken();
+    const res = await fetch("/.netlify/functions/send-bulk", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${idToken}` },
+      body: JSON.stringify({ guestIds: [...selectedIds], channel, message, subject, contentTypes, imageUrl, videoUrl }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      msgEl.textContent = data.error || "تعذّر الإرسال"; msgEl.className = "msg-status err";
+    } else {
+      msgEl.textContent = `تم: ${data.sent} نجح، ${data.failed} فشل من أصل ${data.total}`;
+      msgEl.className = "msg-status ok";
+      const box = document.getElementById("sendResults");
+      box.style.display = "block";
+      box.innerHTML = data.results.map(r => {
+        const parts = [];
+        if (r.whatsapp) parts.push(`واتساب: ${r.whatsapp.ok ? "✅" : "❌ " + (r.whatsapp.error || "")}`);
+        if (r.email) parts.push(`إيميل: ${r.email.ok ? "✅" : "❌ " + (r.email.error || "")}`);
+        return `<div>${escapeHtml(r.name)} — ${parts.join(" | ")}</div>`;
+      }).join("");
+    }
+  } catch (e) {
+    msgEl.textContent = "تعذّر الاتصال بالسيرفر"; msgEl.className = "msg-status err";
+  }
+  btn.disabled = false;
 });
 
 // ===== Cleanup =====

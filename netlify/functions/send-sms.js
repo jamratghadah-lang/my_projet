@@ -2,6 +2,10 @@
 // إرسال SMS جماعي للضيوف. يقرأ بيانات الاتصال بالمزوّد من متغيرات البيئة في Netlify
 // (Site settings → Environment variables) — لا يوجد أي مفتاح مكتوب هنا في الكود.
 //
+// ⚠️ يتطلب تسجيل دخول: يقرأ Authorization: Bearer <Firebase ID Token> ويتحقق
+// منه بصلاحية إدارية، عشان محد يقدر يستخدم هذا الرابط للإرسال العشوائي
+// أو استنزاف رصيد SMS.
+//
 // اختاري مزوّد واحد وحطي متغيراته في Netlify، والباقي سيبيه فاضي:
 //
 // Msegat:
@@ -20,10 +24,21 @@
 //   TWILIO_ACCOUNT_SID
 //   TWILIO_AUTH_TOKEN
 //   TWILIO_FROM_NUMBER
+//
+// مطلوب أيضًا للتحقق من التوكن:
+//   FIREBASE_SERVICE_ACCOUNT_JSON
+
+const { verifyAuth } = require("./_auth");
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
+  }
+
+  // التحقق من صلاحية المستخدم قبل أي معالجة
+  const uid = await verifyAuth(event);
+  if (!uid) {
+    return { statusCode: 401, body: JSON.stringify({ error: "غير مصرح — سجّلي دخول بلوحة التحكم أولاً" }) };
   }
 
   let payload;
@@ -37,6 +52,14 @@ exports.handler = async (event) => {
   // guests: [{ name, phone }]  — phone بصيغة دولية مثل 9665xxxxxxxx
   if (!Array.isArray(guests) || !guests.length || !message) {
     return { statusCode: 400, body: "guests[] و message مطلوبين" };
+  }
+
+  // حماية إضافية: حد أقصى لعدد المستلمين وحجم الرسالة لمنع الاستنزاف
+  if (guests.length > 500) {
+    return { statusCode: 400, body: JSON.stringify({ error: "حد أقصى 500 ضيف لكل طلب إرسال" }) };
+  }
+  if (String(message).length > 1000) {
+    return { statusCode: 400, body: JSON.stringify({ error: "نص الرسالة أطول من 1000 حرف" }) };
   }
 
   const provider = process.env.SMS_PROVIDER; // "msegat" | "unifonic" | "twilio"

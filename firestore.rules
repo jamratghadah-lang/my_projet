@@ -12,9 +12,19 @@ service cloud.firestore {
 
     // ─── responses: ردود المدعوين ───
     match /responses/{responseId} {
-      allow create: if true;
+      allow create: if true
+        && request.resource.data.keys().hasOnly([
+             "name","phone","status","guests","style","eventSlug","entryCode",
+             "personalCode","guestId","eventCode","companions","createdAt",
+             "email","source","archived"
+           ])
+        && request.resource.data.name is string && request.resource.data.name.size() < 200
+        && request.resource.data.status in ["yes", "no", "pending"]
+        && request.resource.data.size() < 30;
       allow read, delete: if isSignedIn();
-      allow update: if false;
+      // مسموح فقط للوحة التحكم (المالكة)، عشان تفعّل ميزة الأرشفة بدون فتح
+      // التعديل لأي زائر غير مسجل دخول.
+      allow update: if isSignedIn();
     }
 
     // ─── couples: روابط الدعوات المخصصة ───
@@ -31,7 +41,15 @@ service cloud.firestore {
 
     // ─── entry_card_locks: أقفال البطاقة الرقمية ───
     match /entry_card_locks/{slug} {
-      allow create, update: if true;
+      // أول ضيف يطالب بالقفل لهالبطاقة
+      allow create: if request.resource.data.keys().hasOnly(["slug","guestName","deviceId","claimedAt"])
+        && request.resource.data.deviceId is string
+        && request.resource.data.deviceId.size() > 0
+        && request.resource.data.deviceId.size() < 100;
+      // تحديث القفل مسموح فقط لنفس الجهاز اللي أخذه أول مرة (يمنع أي جهاز
+      // ثاني من "سرقة" القفل عبر الكتابة المباشرة على القاعدة)
+      allow update: if request.resource.data.keys().hasOnly(["slug","guestName","deviceId","claimedAt"])
+        && request.resource.data.deviceId == resource.data.deviceId;
       allow read, delete: if isSignedIn();
     }
 

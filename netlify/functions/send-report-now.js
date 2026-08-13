@@ -4,12 +4,23 @@
 // يولّد تقرير Excel وPDF فوري بأحدث بيانات الردود، ويرسله للمستلمين
 // المحددين بإعدادات لوحة التحكم (content/settings.json → reports)،
 // بصرف النظر عن جدولة الإرسال التلقائي.
+//
+// ⚠️ يتطلب تسجيل دخول: يقرأ Authorization: Bearer <Firebase ID Token> ويتحقق
+// منه بصلاحية إدارية، عشان محد يقدر يستخدم هذا الرابط لاستنزاف حصة الإيميل
+// أو استراق بيانات المدعوين.
 
 const { resolveRecipients, fetchResponses, buildExcelBuffer, buildPdfBuffer, sendReportEmail } = require("./_report-lib");
+const { verifyAuth } = require("./_auth");
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
+  }
+
+  // التحقق من صلاحية المستخدم قبل أي معالجة
+  const uid = await verifyAuth(event);
+  if (!uid) {
+    return { statusCode: 401, body: JSON.stringify({ error: "غير مصرح — سجّلي دخول بلوحة التحكم أولاً" }) };
   }
 
   try {

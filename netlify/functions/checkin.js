@@ -15,10 +15,18 @@
 //   FIREBASE_SERVICE_ACCOUNT_JSON — مفتاح خدمة Firebase (موجود مسبقاً)
 
 const { getAdminDb, escapeHtml } = require("./_report-lib");
+const { safeEqual } = require("./_auth");
+const { checkRateLimit } = require("./_rate-limit");
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
+  }
+
+  // حماية إضافية من محاولات تخمين كلمة سر Check-in (brute force)
+  const rl = await checkRateLimit(() => getAdminDb(), event, "checkin", { max: 20, windowSeconds: 60 });
+  if (!rl.allowed) {
+    return { statusCode: 429, body: JSON.stringify({ error: "too many requests" }) };
   }
 
   let payload;
@@ -31,11 +39,13 @@ exports.handler = async (event) => {
   const { entryCode, checkinPassword } = payload;
 
   // ===== 1) التحقق من كلمة السر =====
+  // ملاحظة: كلمة السر هنا تحمي تسجيل الدخول يوم المناسبة فقط (تطبيق الاستقبال)،
+  // مو بديل عن مصادقة Firebase. نستخدم مقارنة بزمن ثابت لمنع هجمات التوقيت.
   const configuredPassword = process.env.CHECKIN_PASSWORD || "";
   if (!configuredPassword) {
     return { statusCode: 503, body: JSON.stringify({ error: "كلمة سر Check-in غير مضبوطة بعد — أضيفي CHECKIN_PASSWORD في إعدادات Netlify" }) };
   }
-  if (!checkinPassword || checkinPassword !== configuredPassword) {
+  if (!checkinPassword || !safeEqual(checkinPassword, configuredPassword)) {
     return { statusCode: 401, body: JSON.stringify({ error: "كلمة سر غير صحيحة" }) };
   }
 

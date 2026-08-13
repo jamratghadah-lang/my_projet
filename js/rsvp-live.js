@@ -7,7 +7,7 @@
 // يُحمَّل كـ type="module" عشان نقدر نستورد Firestore ونربط تأكيدات الحضور
 // بقاعدة البيانات اللي تقرأ منها أداة "تذكير الضيوف" بلوحة التحكم.
 
-import { db, collection, doc, getDoc, setDoc, addDoc, serverTimestamp } from "./firebase-init.js";
+import { db, doc, getDoc, setDoc, serverTimestamp } from "./firebase-init.js";
 
 (function () {
   // كود دخول فريد لكل ضيف (مثال: JG-4F7B2K9A) — يُستخدم يوم المناسبة لتسجيل
@@ -296,14 +296,20 @@ import { db, collection, doc, getDoc, setDoc, addDoc, serverTimestamp } from "./
     const hasRealTime = items.some(it => it.time && it.time.trim());
     if (!hasRealTime) return;
     root.querySelectorAll(".event-row").forEach(el => el.remove());
+    // هروب بسيط لمنع حقن HTML من بيانات JSON حتى لو كانت تُدار من CMS
+    const esc = (s) => {
+      const d = document.createElement("div");
+      d.textContent = String(s == null ? "" : s);
+      return d.innerHTML;
+    };
     items.forEach(it => {
       if (!it.event && !it.time) return;
       const row = document.createElement("div");
       row.className = "event-row";
       row.innerHTML =
-        '<div class="event-time">' + (it.time || "") + '</div>' +
+        '<div class="event-time">' + esc(it.time || "") + '</div>' +
         '<div class="event-dot"></div>' +
-        '<div class="event-name">' + (it.event || "") + '</div>';
+        '<div class="event-name">' + esc(it.event || "") + '</div>';
       root.appendChild(row);
     });
   }
@@ -615,10 +621,13 @@ import { db, collection, doc, getDoc, setDoc, addDoc, serverTimestamp } from "./
       form.addEventListener("submit", () => {
         const fd = new FormData(form);
         const attendance = fd.get("Attendance") || fd.get("attendance") || "";
-        const guestName = (fd.get("Guest_Name") || fd.get("guest_name") || "").toString();
-        const phone = (fd.get("Phone_Number") || fd.get("phone_number") || "").toString();
+        // قصّ الأسماء/الهواتف لتفادي فشل إنشاء المستند بقواعد Firestore
+        // (firestore.rules تشترط name.size() < 200). أي اسم أطول من 180 حرف
+        // يُقصّ بأمان بدل ما يفشل الرد بصمت.
+        const guestName = (fd.get("Guest_Name") || fd.get("guest_name") || "").toString().slice(0, 180);
+        const phone = (fd.get("Phone_Number") || fd.get("phone_number") || "").toString().slice(0, 30);
         const status = /accept/i.test(attendance) ? "yes" : "no";
-        const guestsCount = (fd.get("Number_of_Guests") || fd.get("number_of_guests") || "").toString();
+        const guestsCount = (fd.get("Number_of_Guests") || fd.get("number_of_guests") || "").toString().slice(0, 10);
 
         // كود دخول شخصي فريد للضيف — يُستخدم لاحقًا بتطبيق تسجيل الدخول يوم
         // المناسبة (jamrat-app). يُتاح لبطاقة الدخول عبر window.__jgLastEntryCode
@@ -626,7 +635,24 @@ import { db, collection, doc, getDoc, setDoc, addDoc, serverTimestamp } from "./
         const qs = new URLSearchParams(window.location.search);
         const inviteEventCode = document.body.dataset.eventCode || qs.get("eid") || "";
         const inviteGuestCode = document.body.dataset.guestCode || qs.get("g") || "";
-        const entryCode = inviteGuestCode || generateEntryCode();
+
+        // منع إنشاء مستندات مكررة عند إعادة الإرسال (مثلاً لو فشل Formspree أول
+        // مرة وأعاد الضيف المحاولة): نحفظ entryCode المحلّي لكل (slug) في
+        // localStorage، ونعيد استخدامه لو وُجد. لو الدعوة جاية برمز ضيف خاص
+        // (g/eid من الرابط) نفضّله دائمًا لأنه المعرّف الرسمي للضيف.
+        let entryCode;
+        if (inviteGuestCode) {
+          entryCode = inviteGuestCode;
+        } else {
+          const lsKey = `jg-entry-code-${slug}`;
+          const stored = localStorage.getItem(lsKey);
+          if (stored && /^JG-[A-Z2-9]{8}$/i.test(stored)) {
+            entryCode = stored;
+          } else {
+            entryCode = generateEntryCode();
+            try { localStorage.setItem(lsKey, entryCode); } catch {}
+          }
+        }
         window.__jgLastEntryCode = entryCode;
         window.__jgLastGuestsCount = guestsCount;
         window.__jgLastEventCode = inviteEventCode;
@@ -645,8 +671,15 @@ import { db, collection, doc, getDoc, setDoc, addDoc, serverTimestamp } from "./
           companions: Number(guestsCount || 0),
           createdAt: serverTimestamp(),
         };
-        const responseDocId = inviteEventCode && inviteGuestCode ? `${inviteEventCode}_${inviteGuestCode}` : "";
-        (responseDocId ? setDoc(doc(db, "responses", responseDocId), responseData, { merge: true }) : addDoc(collection(db, "responses"), responseData)).catch(() => {});
+
+        // نحدد معرّف مستند ثابت لتفادي التكرار:
+        //  - لو فيه رمز مناسبة ورمز ضيف من الرابط، نستخدم `${eid}_${g}`.
+        //  - وإلا نستخدم entryCode نفسه (محفوظ محليًا لكل جهاز/ضيف).
+        //  - كلا المسارين يستخدم setDoc+merge ليحدّث المستند الحالي بدل إنشاء واحد جديد.
+        const responseDocId = inviteEventCode && inviteGuestCode
+          ? `${inviteEventCode}_${inviteGuestCode}`
+          : entryCode;
+        setDoc(doc(db, "responses", responseDocId), responseData, { merge: true }).catch(() => {});
 
         // إرسال إشعار بريدي فوري للوحة التحكم
         fetch("/.netlify/functions/notify-rsvp", {
