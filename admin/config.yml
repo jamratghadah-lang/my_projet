@@ -1,0 +1,257 @@
+# Use DecapBridge PKCE auth (required)
+backend:
+  name: git-gateway
+  repo: jamratghadah-lang/my_projet
+  branch: main
+  auth_type: pkce
+  base_url: https://auth.decapbridge.com
+  auth_endpoint: /sites/bb710d8a-7140-4012-9dae-afa254937a2d/pkce
+  auth_token_endpoint: /sites/bb710d8a-7140-4012-9dae-afa254937a2d/token
+  gateway_url: https://gateway.decapbridge.com
+
+  # See who did what (optional)
+  commit_messages:
+    create: Create {{collection}} "{{slug}}" - {{author-name}} <{{author-login}}> via DecapBridge
+    update: Update {{collection}} "{{slug}}" - {{author-name}} <{{author-login}}> via DecapBridge
+    delete: Delete {{collection}} "{{slug}}" - {{author-name}} <{{author-login}}> via DecapBridge
+    uploadMedia: Upload "{{path}}" - {{author-name}} <{{author-login}}> via DecapBridge
+    deleteMedia: Delete "{{path}}" - {{author-name}} <{{author-login}}> via DecapBridge
+    openAuthoring: Message {{message}} - {{author-name}} <{{author-login}}> via DecapBridge
+
+# Enable PKCE fields (optional, recommended)
+auth:
+  email_claim: email
+  first_name_claim: first_name
+  last_name_claim: last_name
+  avatar_url_claim: avatar_url
+
+# Better Decap + Bridge logo (optional)
+logo_url: https://decapbridge.com/decapcms-with-bridge.svg
+
+# Add site links in Decap CMS (optional)
+site_url: https://jamratghadah.com
+
+media_folder: "images/uploads"
+public_folder: "/images/uploads"
+
+locale: "ar"
+
+collections:
+
+  - name: "settings"
+    label: "الإعدادات العامة"
+    files:
+      - file: "content/settings.json"
+        label: "إعدادات الدفع"
+        name: "settings"
+        fields:
+          - { label: "طريقة الطلب في الأقسام", name: "order_method", widget: "select", default: "whatsapp", hint: "اختاري واتساب لحد ما تخلصين تفعيل الدفع. لو تبين الاثنين معًا (زر واتساب وزر دفع بنفس الوقت)، اختاري «الاثنين معًا»", options: [
+              { label: "طلب عبر واتساب فقط", value: "whatsapp" },
+              { label: "دفع إلكتروني مباشر فقط", value: "payment" },
+              { label: "الاثنين معًا (واتساب + دفع إلكتروني)", value: "both" }
+            ] }
+          - { label: "رقم الواتساب (بدون + وبدون مسافات)", name: "whatsapp_number", widget: "string", default: "966547266733", hint: "مثال: 966547266733" }
+          - { label: "رابط الدفع الإلكتروني", name: "payment_link", widget: "string", required: false, hint: "يُستخدم فقط إذا اخترتِ (دفع إلكتروني مباشر) بالأعلى" }
+          - { label: "التقارير والبريد الإلكتروني", name: "reports", widget: "object", required: false, hint: "تتحكمين هنا وين تروح تقارير الحضور بالإيميل", fields: [
+                { label: "البريد الإلكتروني للعميلة/صاحب المناسبة", name: "client_email", widget: "string", required: false, hint: "لو تركتيه فاضي، تروح التقارير للبريد الأساسي (المدير) تلقائيًا" },
+                { label: "وجهة إرسال التقارير", name: "send_to", widget: "select", required: false, default: "auto", options: [
+                    { label: "تلقائي (بريد العميلة إن وُجد، وإلا المدير)", value: "auto" },
+                    { label: "البريدين معًا", value: "both" },
+                    { label: "المدير فقط", value: "admin_only" }
+                  ] },
+                { label: "إرسال تقرير بعد كل رد", name: "on_each_response", widget: "select", required: false, default: "off", options: [
+                    { label: "مفعّل", value: "on" }, { label: "معطّل (الافتراضي)", value: "off" }
+                  ] },
+                { label: "إرسال تقرير يومي", name: "daily", widget: "select", required: false, default: "on", options: [
+                    { label: "مفعّل (الافتراضي)", value: "on" }, { label: "معطّل", value: "off" }
+                  ] },
+                { label: "إرسال تقرير قبل المناسبة بـ24 ساعة", name: "before_event", widget: "select", required: false, default: "on", options: [
+                    { label: "مفعّل (الافتراضي)", value: "on" }, { label: "معطّل", value: "off" }
+                  ] }
+              ] }
+
+  - name: "pricing"
+    label: "الأسعار والباقات"
+    files:
+      - file: "content/pricing.json"
+        label: "باقات الأسعار"
+        name: "pricing"
+        fields:
+          - { label: "مقدمة الصفحة", name: "intro", widget: "text", required: false }
+          - { label: "الباقات (اسحبي لتغيير الترتيب)", name: "packages", widget: "list", fields: [
+                { label: "اسم الباقة", name: "name", widget: "string" },
+                { label: "السعر", name: "price", widget: "string", hint: "مثال: من 280 ريال" },
+                { label: "شارة مميزة (اختياري)", name: "badge", widget: "string", required: false, hint: "مثال: الأكثر طلبًا — اتركيه فاضي لعدم إظهار شارة" },
+                { label: "المميزات", name: "features", widget: "list", field: { label: "ميزة", name: "item", widget: "string" } }
+              ] }
+
+  - name: "learn"
+    label: "تعليمي وآراء العملاء"
+    files:
+      - file: "content/learn-videos.json"
+        label: "الفيديوهات التعليمية"
+        name: "learn_videos"
+        fields:
+          - { label: "مقدمة الصفحة", name: "intro", widget: "text", required: false }
+          - { label: "الفيديوهات (اسحبي لتغيير الترتيب)", name: "videos", widget: "list", fields: [
+                { label: "عنوان الفيديو", name: "title", widget: "string" },
+                { label: "صورة مصغّرة (thumbnail)", name: "thumbnail_url", widget: "image", required: false },
+                { label: "ملف الفيديو", name: "video_url", widget: "file", required: false }
+              ] }
+      - file: "content/testimonials.json"
+        label: "آراء العملاء"
+        name: "testimonials"
+        fields:
+          - { label: "مقدمة الصفحة", name: "intro", widget: "text", required: false }
+          - { label: "الآراء (اسحبي لتغيير الترتيب)", name: "reviews", widget: "list", fields: [
+                { label: "اسم العميل", name: "name", widget: "string" },
+                { label: "نوع المناسبة", name: "occasion", widget: "string", required: false },
+                { label: "التقييم (من 1 إلى 5)", name: "rating", widget: "number", default: 5, min: 1, max: 5, value_type: "int" },
+                { label: "نص الرأي", name: "text", widget: "text" },
+                { label: "صورة العميل (اختياري)", name: "photo_url", widget: "image", required: false }
+              ] }
+
+  - name: "rsvp"
+    label: "صفحات تأكيد الحضور (13)"
+    files:
+      - { file: "content/rsvp/wedding-silver.json", label: "زفاف - Silver", name: "wedding_silver", media_folder: "/images/uploads/rsvp/wedding-silver", public_folder: "/images/uploads/rsvp/wedding-silver", fields: &rsvp_fields [
+            { label: "الأسماء", name: "names", widget: "string", required: false },
+            { label: "التاريخ", name: "date", widget: "string", required: false, hint: "مثال: 12 / 10 / 2026" },
+            { label: "الموقع", name: "location", widget: "string", required: false },
+            { label: "نوع الفتحة", name: "envelope_type", widget: "select", required: false, default: "envelope", options: [
+                { label: "ظرف", value: "envelope" },
+                { label: "باب", value: "door" },
+                { label: "فيديو مباشر", value: "video_direct" }
+              ] },
+            { label: "صورة الظرف / الباب", name: "envelope_image", widget: "image", required: false, hint: "تُستخدم إذا كان نوع الفتحة ظرف أو باب" },
+            { label: "حركة فتح الظرف/الباب", name: "envelope_animation", widget: "select", required: false, default: "fade", hint: "اختاري نوع الحركة اللي تناسب الصورة اللي رفعتيها", options: [
+                { label: "تلاشي بسيط (الافتراضي)", value: "fade" },
+                { label: "فتح الغطاء لفوق (يناسب الظرف)", value: "flap" },
+                { label: "فتح لنصين (يناسب الباب)", value: "split" }
+              ] },
+            { label: "فيديو الافتتاح / الخلفية", name: "intro_video", widget: "file", required: false, hint: "يُستخدم إذا كان نوع الفتحة فيديو مباشر، أو كفيديو خلفية" },
+            { label: "صور الدعوة", name: "gallery", widget: "list", required: false, field: { label: "صورة", name: "image", widget: "image" } },
+            { label: "صور الزخارف", name: "decorations", widget: "list", required: false, field: { label: "زخرفة", name: "image", widget: "image" } },
+            { label: "التايم لاين", name: "timeline", widget: "list", required: false,
+              default: [
+                { time: "", event: "موعد الزفة" },
+                { time: "", event: "موعد الاستقبال" },
+                { time: "", event: "موعد العشاء" },
+                { time: "", event: "موعد دخول العروس" }
+              ],
+              fields: [
+                { label: "الوقت", name: "time", widget: "string", required: false },
+                { label: "الحدث", name: "event", widget: "string", required: false }
+              ] },
+            { label: "كلمة ترحيبية (من الزوجين / صاحب المناسبة)", name: "welcome_message", widget: "text", required: false, hint: "تظهر أعلى صفحة تأكيد الحضور، تقدرين تكتبينها بأي شكل تحبين" },
+            { label: "حقول استمارة تأكيد الحضور (إظهار/إخفاء)", name: "form_fields", widget: "object", required: false, hint: "تحكمين من هنا في أي الحقول تظهر للضيوف بنموذج تأكيد الحضور", fields: [
+                { label: "إظهار حقل رقم الهاتف", name: "phone", widget: "select", required: false, default: "on", options: [
+                    { label: "مفعّل (الافتراضي)", value: "on" },
+                    { label: "مخفي", value: "off" }
+                  ] },
+                { label: "هل رقم الهاتف إلزامي؟", name: "phone_required", widget: "select", required: false, default: "off", hint: "يعمل فقط إذا كان حقل الهاتف مفعّلًا بالأعلى", options: [
+                    { label: "إلزامي", value: "on" },
+                    { label: "اختياري (الافتراضي)", value: "off" }
+                  ] },
+                { label: "إظهار حقل عدد الضيوف", name: "guests_count", widget: "select", required: false, default: "on", options: [
+                    { label: "مفعّل (الافتراضي)", value: "on" },
+                    { label: "مخفي", value: "off" }
+                  ] },
+                { label: "طريقة تحديد عدد الضيوف", name: "guests_mode", widget: "select", required: false, default: "range", hint: "عدد ثابت: كل ضيف يُحسب بنفس العدد بدون اختيار. نطاق: يختار الضيف من حد أدنى لحد أقصى.", options: [
+                    { label: "نطاق (حد أدنى - حد أقصى)", value: "range" },
+                    { label: "عدد ثابت", value: "fixed" }
+                  ] },
+                { label: "العدد الثابت (لو اخترتِ «عدد ثابت»)", name: "guests_fixed_count", widget: "number", required: false, default: 1, hint: "مثال: 1 يعني الحقل يختفي تلقائيًا لأنه ما فيه خيار" },
+                { label: "الحد الأدنى (لو اخترتِ «نطاق»)", name: "guests_min", widget: "number", required: false, default: 1 },
+                { label: "الحد الأقصى (لو اخترتِ «نطاق»)", name: "guests_max", widget: "number", required: false, default: 4 },
+                { label: "السماح بحضور الأطفال", name: "allow_children", widget: "select", required: false, hint: "نعم: يظهر ترحيب بالأطفال + حقل أسمائهم. لا: تظهر عبارة اعتذار وتختفي حقول الأطفال. اتركيه بدون تحديد لعدم إظهار أي رسالة.", options: [
+                    { label: "نعم، الأطفال مرحّب بهم", value: "yes" },
+                    { label: "لا، الدعوة للبالغين فقط", value: "no" }
+                  ] },
+                { label: "إظهار حقل طلب الأغنية", name: "song_request", widget: "select", required: false, default: "off", options: [
+                    { label: "مفعّل", value: "on" },
+                    { label: "مخفي (الافتراضي)", value: "off" }
+                  ] },
+                { label: "إظهار زر حائط تعليقات الضيوف", name: "guest_wall", widget: "select", required: false, default: "on", options: [
+                    { label: "مفعّل (الافتراضي)", value: "on" },
+                    { label: "مخفي", value: "off" }
+                  ] }
+              ] },
+            { label: "الأمان والخصوصية", name: "security", widget: "object", required: false, hint: "إعدادات حماية بطاقة الدخول والدعوة", fields: [
+                { label: "تقييد بطاقة الدخول لجهاز واحد فقط", name: "single_device", widget: "select", required: false, default: "off", hint: "لو مفعّل، بطاقة الدخول ما تفتح إلا من أول جهاز فتحها الضيف", options: [
+                    { label: "مفعّل", value: "on" },
+                    { label: "معطّل (الافتراضي)", value: "off" }
+                  ] },
+                { label: "قفل الدعوة تلقائيًا بعد المناسبة", name: "auto_lock", widget: "select", required: false, default: "on", options: [
+                    { label: "مفعّل (الافتراضي)", value: "on" },
+                    { label: "معطّل", value: "off" }
+                  ] },
+                { label: "القفل بعد كم ساعة من تاريخ المناسبة", name: "auto_lock_hours", widget: "number", required: false, default: 24, hint: "مثال: 24 يعني يُقفل استقبال الردود بعد يوم كامل من تاريخ المناسبة" }
+              ] },
+            { label: "تصميم النصوص (الخط والحجم)", name: "design", widget: "object", required: false, hint: "يطبَّق على الأسماء والتاريخ والموقع وكلمة الترحيب والتايم لاين", fields: [
+                { label: "نوع الخط", name: "font_family", widget: "select", required: false, options: [
+                    { label: "Aref Ruqaa (خط ديواني فخم)", value: "Aref Ruqaa" },
+                    { label: "Amiri (خط نسخ كلاسيكي)", value: "Amiri" },
+                    { label: "Cairo", value: "Cairo" },
+                    { label: "Tajawal", value: "Tajawal" },
+                    { label: "Reem Kufi (كوفي هندسي)", value: "Reem Kufi" },
+                    { label: "Lalezar (عريض جريء)", value: "Lalezar" },
+                    { label: "Rakkas (خط زخرفي)", value: "Rakkas" },
+                    { label: "Markazi Text", value: "Markazi Text" }
+                  ] },
+                { label: "حجم الخط", name: "font_scale", widget: "select", required: false, default: "medium", options: [
+                    { label: "صغير", value: "small" },
+                    { label: "متوسط (الحجم الأصلي)", value: "medium" },
+                    { label: "كبير", value: "large" },
+                    { label: "كبير جدًا", value: "xlarge" }
+                  ] }
+              ] },
+            { label: "التأثيرات البصرية والصوتية", name: "effects", widget: "object", required: false, fields: [
+                { label: "توهّج الماوس (اللمعة اللي تتبع الماوس/الإصبع)", name: "mouse_glow", widget: "select", required: false, default: "on", options: [
+                    { label: "شغّال (الافتراضي)", value: "on" },
+                    { label: "متوقف", value: "off" }
+                  ] },
+                { label: "درجة ضبابية الكروت الزجاجية", name: "blur", widget: "select", required: false, default: "medium", options: [
+                    { label: "بدون ضبابية", value: "none" },
+                    { label: "خفيفة", value: "light" },
+                    { label: "متوسطة (الافتراضي)", value: "medium" },
+                    { label: "قوية", value: "heavy" }
+                  ] },
+                { label: "موسيقى خلفية مخصصة (تطغى على موسيقى التصميم الافتراضية)", name: "music_url", widget: "file", required: false },
+                { label: "تشغيل الموسيقى تلقائي عند فتح الدعوة", name: "autoplay_music", widget: "select", required: false, default: "on", options: [
+                    { label: "شغّال تلقائي (الافتراضي)", value: "on" },
+                    { label: "متوقف — الضيف يشغّلها يدوي من زر الصوت", value: "off" }
+                  ] }
+              ] }
+          ] }
+      - { file: "content/rsvp/wedding-royal.json", label: "زفاف - Royal", name: "wedding_royal", media_folder: "/images/uploads/rsvp/wedding-royal", public_folder: "/images/uploads/rsvp/wedding-royal", fields: *rsvp_fields }
+      - { file: "content/rsvp/wedding-classic.json", label: "زفاف - Classic", name: "wedding_classic", media_folder: "/images/uploads/rsvp/wedding-classic", public_folder: "/images/uploads/rsvp/wedding-classic", fields: *rsvp_fields }
+      - { file: "content/rsvp/wedding-modern.json", label: "زفاف - Modern", name: "wedding_modern", media_folder: "/images/uploads/rsvp/wedding-modern", public_folder: "/images/uploads/rsvp/wedding-modern", fields: *rsvp_fields }
+      - { file: "content/rsvp/wedding-vip.json", label: "زفاف - VIP", name: "wedding_vip", media_folder: "/images/uploads/rsvp/wedding-vip", public_folder: "/images/uploads/rsvp/wedding-vip", fields: *rsvp_fields }
+      - { file: "content/rsvp/wedding-gold.json", label: "زفاف - Golden Royal", name: "wedding_gold", media_folder: "/images/uploads/rsvp/wedding-gold", public_folder: "/images/uploads/rsvp/wedding-gold", fields: *rsvp_fields }
+      - { file: "content/rsvp/wedding-pink.json", label: "زفاف - Rose", name: "wedding_pink", media_folder: "/images/uploads/rsvp/wedding-pink", public_folder: "/images/uploads/rsvp/wedding-pink", fields: *rsvp_fields }
+      - { file: "content/rsvp/baby-boy.json", label: "مولود", name: "baby_boy", media_folder: "/images/uploads/rsvp/baby-boy", public_folder: "/images/uploads/rsvp/baby-boy", fields: *rsvp_fields }
+      - { file: "content/rsvp/baby-girl.json", label: "مولودة", name: "baby_girl", media_folder: "/images/uploads/rsvp/baby-girl", public_folder: "/images/uploads/rsvp/baby-girl", fields: *rsvp_fields }
+      - { file: "content/rsvp/graduation-luxury.json", label: "تخرج - Luxury", name: "graduation_luxury", media_folder: "/images/uploads/rsvp/graduation-luxury", public_folder: "/images/uploads/rsvp/graduation-luxury", fields: *rsvp_fields }
+      - { file: "content/rsvp/graduation-classic.json", label: "تخرج - Classic", name: "graduation_classic", media_folder: "/images/uploads/rsvp/graduation-classic", public_folder: "/images/uploads/rsvp/graduation-classic", fields: *rsvp_fields }
+      - { file: "content/rsvp/corporate.json", label: "شركات ومؤسسات", name: "rsvp_corporate", media_folder: "/images/uploads/rsvp/corporate", public_folder: "/images/uploads/rsvp/corporate", fields: *rsvp_fields }
+      - { file: "content/rsvp/conference.json", label: "مؤتمرات وجمعيات", name: "rsvp_conference", media_folder: "/images/uploads/rsvp/conference", public_folder: "/images/uploads/rsvp/conference", fields: *rsvp_fields }
+
+  - name: "portfolio"
+    label: "فيديوهات الأقسام"
+    files:
+      - { file: "content/portfolio/wedding.json", label: "الزفاف والخطوبة", name: "portfolio_wedding", fields: &portfolio_fields [
+            { label: "الفيديوهات (اسحبي أي فيديو من المقبض لتغيير ترتيب ظهوره)", name: "videos", widget: "list", fields: [
+                { label: "رقم الفيديو", name: "number", widget: "string" },
+                { label: "عنوان (اختياري)", name: "title", widget: "string", required: false },
+                { label: "السعر (اختياري، مثال: 150 ريال)", name: "price", widget: "string", required: false },
+                { label: "صورة مصغّرة (رابط Cloudinary)", name: "thumbnail_url", widget: "string", required: false },
+                { label: "رابط الفيديو (Cloudinary)", name: "video_url", widget: "string", required: false }
+              ] }
+          ] }
+      - { file: "content/portfolio/births.json", label: "المواليد", name: "portfolio_births", fields: *portfolio_fields }
+      - { file: "content/portfolio/graduation.json", label: "التخرج", name: "portfolio_graduation", fields: *portfolio_fields }
+      - { file: "content/portfolio/religious-national.json", label: "الأعياد الدينية والوطنية", name: "portfolio_religious", fields: *portfolio_fields }
+      - { file: "content/portfolio/corporate.json", label: "المناسبات الرسمية", name: "portfolio_corporate", fields: *portfolio_fields }
+      - { file: "content/portfolio/ads-openings.json", label: "الإعلانات والافتتاح", name: "portfolio_ads", fields: *portfolio_fields }
+      - { file: "content/portfolio/other.json", label: "باقي المناسبات", name: "portfolio_other", fields: *portfolio_fields }
