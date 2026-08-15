@@ -7,17 +7,16 @@
 // يُحمَّل كـ type="module" عشان نقدر نستورد Firestore ونربط تأكيدات الحضور
 // بقاعدة البيانات اللي تقرأ منها أداة "تذكير الضيوف" بلوحة التحكم.
 
-import { db, doc, getDoc, setDoc, serverTimestamp } from "./firebase-init.js";
-
 (function () {
-  // كود دخول فريد لكل ضيف (مثال: JG-4F7B2K9A) — يُستخدم يوم المناسبة لتسجيل
-  // الدخول عبر تطبيق الاستقبال (jamrat-app)، منفصل عن رابط الدعوة نفسه.
-  function generateEntryCode() {
-    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // بدون أحرف/أرقام متشابهة (O/0, I/1)
-    let code = "JG-";
-    for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
-    return code;
+  // هروب بسيط لمنع حقن HTML من بيانات JSON / إدخال المستخدم
+  function esc(s) {
+    const d = document.createElement("div");
+    d.textContent = String(s == null ? "" : s);
+    return d.innerHTML
+      .replace(/'/g, "&#39;")
+      .replace(/\\/g, "&#92;");
   }
+
 
   const FONT_MAP = {
     "Aref Ruqaa": "'Aref Ruqaa', serif",
@@ -263,10 +262,13 @@ import { db, doc, getDoc, setDoc, serverTimestamp } from "./firebase-init.js";
     notice.style.cssText =
       "background:rgba(212,175,55,.1);border:1px solid rgba(212,175,55,.3);border-radius:10px;" +
       "padding:20px;text-align:center;color:#d4af37;font-family:'Tajawal',sans-serif;margin:16px 0";
-    notice.innerHTML =
-      '<div style="font-size:2rem;margin-bottom:10px">📅</div>' +
-      '<p style="margin:0;font-size:1rem;line-height:1.7;color:#cbbfa8">انتهت مدة استقبال الردود لهذه المناسبة. ' +
-      'شكرًا لكل من أكّد حضوره!</p>';
+    const icon = document.createElement("div");
+    icon.textContent = "📅";
+    icon.style.cssText = "font-size:2rem;margin-bottom:10px";
+    const msg = document.createElement("p");
+    msg.textContent = "انتهت مدة استقبال الردود لهذه المناسبة. شكرًا لكل من أكّد حضوره!";
+    msg.style.cssText = "margin:0;font-size:1rem;line-height:1.7;color:#cbbfa8";
+    notice.append(icon, msg);
     form.style.display = "none";
     form.parentNode.insertBefore(notice, form);
     form.querySelectorAll("input, button, select, textarea").forEach(el => el.disabled = true);
@@ -285,7 +287,7 @@ import { db, doc, getDoc, setDoc, serverTimestamp } from "./firebase-init.js";
     if (!container || !names) return;
     const parts = String(names).split(/&|و(?=\s)/).map(s => s.trim()).filter(Boolean);
     if (parts.length >= 2) {
-      container.innerHTML = parts[0] + "<span>&amp;</span>" + parts.slice(1).join(" ");
+      container.innerHTML = esc(parts[0]) + "<span>&amp;</span>" + parts.slice(1).map(p => esc(p)).join(" ");
     } else {
       container.textContent = names;
     }
@@ -296,12 +298,7 @@ import { db, doc, getDoc, setDoc, serverTimestamp } from "./firebase-init.js";
     const hasRealTime = items.some(it => it.time && it.time.trim());
     if (!hasRealTime) return;
     root.querySelectorAll(".event-row").forEach(el => el.remove());
-    // هروب بسيط لمنع حقن HTML من بيانات JSON حتى لو كانت تُدار من CMS
-    const esc = (s) => {
-      const d = document.createElement("div");
-      d.textContent = String(s == null ? "" : s);
-      return d.innerHTML;
-    };
+    // esc() is already defined at the IIFE scope above
     items.forEach(it => {
       if (!it.event && !it.time) return;
       const row = document.createElement("div");
@@ -455,14 +452,16 @@ import { db, doc, getDoc, setDoc, serverTimestamp } from "./firebase-init.js";
 
     if (mode === "fixed") {
       const fixed = parseInt(ff.guests_fixed_count, 10) || 1;
-      select.innerHTML = `<option value="${fixed}" selected>${fixed}</option>`;
+      select.replaceChildren(new Option(String(fixed), String(fixed), true, true));
       hideBecauseSingle = fixed <= 1;
     } else {
       const min = Math.max(1, parseInt(ff.guests_min, 10) || 1);
       const max = Math.max(min, parseInt(ff.guests_max, 10) || 4);
-      let opts = "";
-      for (let i = min; i <= Math.min(max, 20); i++) opts += `<option value="${i}">${i}</option>`;
-      select.innerHTML = opts;
+      const fragment = document.createDocumentFragment();
+      for (let i = min; i <= Math.min(max, 20); i++) {
+        fragment.appendChild(new Option(String(i), String(i)));
+      }
+      select.replaceChildren(fragment);
       hideBecauseSingle = (min === 1 && max === 1);
     }
 
@@ -538,20 +537,28 @@ import { db, doc, getDoc, setDoc, serverTimestamp } from "./firebase-init.js";
 
     let data = {}, settings = {};
     try {
+      const qs = new URLSearchParams(window.location.search);
+      const inviteCode = qs.get("code") || "";
+      const inviteEid = qs.get("eid") || document.body.dataset.eventCode || "";
+      const inviteG = qs.get("g") || document.body.dataset.guestCode || "";
+      const inviteUrl = `/.netlify/functions/invitation-data?slug=${encodeURIComponent(slug)}${inviteCode ? `&code=${encodeURIComponent(inviteCode)}` : ""}${inviteEid ? `&eid=${encodeURIComponent(inviteEid)}` : ""}${inviteG ? `&g=${encodeURIComponent(inviteG)}` : ""}`;
       [data, settings] = await Promise.all([
-        fetch("../content/rsvp/" + slug + ".json").then(r => r.ok ? r.json() : {}).catch(() => ({})),
+        fetch(inviteUrl, { cache: "no-store" }).then(async r => {
+          if (!r.ok) throw new Error(r.status === 403 ? "INVITATION_PROTECTED" : "INVITATION_LOAD_FAILED");
+          return r.json();
+        }),
         fetch("../content/settings.json").then(r => r.ok ? r.json() : {}).catch(() => ({})),
       ]);
-    } catch (e) { return; }
-
-    // بوابة الحماية
-    if (data.access_code && String(data.access_code).trim()) {
-      const urlCode = new URLSearchParams(window.location.search).get("code");
-      if (urlCode !== String(data.access_code).trim()) {
-        showAccessDenied();
-        return;
-      }
+      window.__jgRsvpToken = data.rsvp_token || "";
+      try { delete data.rsvp_token; } catch {}
+    } catch (e) {
+      if (e && e.message === "INVITATION_PROTECTED") showAccessDenied();
+      return;
     }
+
+    // بوابة الحماية تُنفّذ الآن server-side داخل invitation-data function.
+    // إذا رفض الخادم الطلب، لا نعرض أي بيانات الدعوة.
+
 
     // قفل تلقائي بعد انتهاء تاريخ المناسبة — منع استقبال ردود جديدة (قابل للتحكم من لوحة التحكم)
     const security = data.security || {};
@@ -612,81 +619,65 @@ import { db, doc, getDoc, setDoc, serverTimestamp } from "./firebase-init.js";
       if (seal) seal.src = data.seal_image;
     }
 
-    // نموذج تأكيد الحضور
+    // نموذج تأكيد الحضور — الإرسال يتم حصريًا عبر Netlify Function.
+    // لا نرسل أسماء/هواتف الضيوف إلى Formspree.
     const form = document.getElementById("rsvpForm");
-    const endpoint = data.formspree_override || settings.formspree_id;
-    if (form && endpoint) form.action = endpoint;
-
     if (form) {
-      form.addEventListener("submit", () => {
+      form.removeAttribute("action");
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
         const fd = new FormData(form);
         const attendance = fd.get("Attendance") || fd.get("attendance") || "";
-        // قصّ الأسماء/الهواتف لتفادي فشل إنشاء المستند بقواعد Firestore
-        // (firestore.rules تشترط name.size() < 200). أي اسم أطول من 180 حرف
-        // يُقصّ بأمان بدل ما يفشل الرد بصمت.
         const guestName = (fd.get("Guest_Name") || fd.get("guest_name") || "").toString().slice(0, 180);
         const phone = (fd.get("Phone_Number") || fd.get("phone_number") || "").toString().slice(0, 30);
         const status = /accept/i.test(attendance) ? "yes" : "no";
         const guestsCount = (fd.get("Number_of_Guests") || fd.get("number_of_guests") || "").toString().slice(0, 10);
-
-        // كود دخول شخصي فريد للضيف — يُستخدم لاحقًا بتطبيق تسجيل الدخول يوم
-        // المناسبة (jamrat-app). يُتاح لبطاقة الدخول عبر window.__jgLastEntryCode
-        // لأن حدث jg:rsvp-success يُطلَق من كود منفصل بكل قالب دعوة.
         const qs = new URLSearchParams(window.location.search);
         const inviteEventCode = document.body.dataset.eventCode || qs.get("eid") || "";
         const inviteGuestCode = document.body.dataset.guestCode || qs.get("g") || "";
-
-        // منع إنشاء مستندات مكررة عند إعادة الإرسال (مثلاً لو فشل Formspree أول
-        // مرة وأعاد الضيف المحاولة): نحفظ entryCode المحلّي لكل (slug) في
-        // localStorage، ونعيد استخدامه لو وُجد. لو الدعوة جاية برمز ضيف خاص
-        // (g/eid من الرابط) نفضّله دائمًا لأنه المعرّف الرسمي للضيف.
-        let entryCode;
-        if (inviteGuestCode) {
-          entryCode = inviteGuestCode;
-        } else {
-          const lsKey = `jg-entry-code-${slug}`;
-          const stored = localStorage.getItem(lsKey);
-          if (stored && /^JG-[A-Z2-9]{8}$/i.test(stored)) {
-            entryCode = stored;
-          } else {
-            entryCode = generateEntryCode();
-            try { localStorage.setItem(lsKey, entryCode); } catch {}
-          }
-        }
-        window.__jgLastEntryCode = entryCode;
-        window.__jgLastGuestsCount = guestsCount;
         window.__jgLastEventCode = inviteEventCode;
-
-        const responseData = {
-          name: guestName,
-          phone: phone,
-          status: status,
-          guests: guestsCount,
-          style: slug,
-          eventSlug: eventSlug,
-          entryCode: entryCode,
-          personalCode: inviteGuestCode || entryCode,
-          guestId: inviteGuestCode || entryCode,
-          eventCode: inviteEventCode,
-          companions: Number(guestsCount || 0),
-          createdAt: serverTimestamp(),
-        };
-
-        // نحدد معرّف مستند ثابت لتفادي التكرار:
-        //  - لو فيه رمز مناسبة ورمز ضيف من الرابط، نستخدم `${eid}_${g}`.
-        //  - وإلا نستخدم entryCode نفسه (محفوظ محليًا لكل جهاز/ضيف).
-        //  - كلا المسارين يستخدم setDoc+merge ليحدّث المستند الحالي بدل إنشاء واحد جديد.
-        const responseDocId = inviteEventCode && inviteGuestCode
-          ? `${inviteEventCode}_${inviteGuestCode}`
-          : entryCode;
-        setDoc(doc(db, "responses", responseDocId), responseData, { merge: true }).catch(() => {});
-
-        // إرسال إشعار بريدي فوري للوحة التحكم
-        fetch("/.netlify/functions/notify-rsvp", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ guestName, phone, status, guests: guestsCount, companions: Number(guestsCount || 0), style: slug, eventSlug, eventCode: inviteEventCode, guestId: inviteGuestCode || entryCode, entryCode }),
-        }).catch(() => {});
+        const responseDocId = inviteEventCode && inviteGuestCode ? `${inviteEventCode}_${inviteGuestCode}` : "";
+        const submitBtn = form.querySelector(".submit-btn");
+        const original = submitBtn ? submitBtn.textContent : "";
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.dataset.sending = "1"; submitBtn.textContent = t("sending"); }
+        try {
+          const response = await fetch("/.netlify/functions/submit-rsvp", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              token: window.__jgRsvpToken,
+              name: guestName, phone, status, guests: guestsCount,
+              companions: Number(guestsCount || 0), style: slug,
+              eventSlug, eventCode: inviteEventCode,
+              guestId: inviteGuestCode
+            })
+          });
+          const result = await response.json().catch(() => ({}));
+          if (!response.ok || !result.entryCode) throw new Error("RSVP_SUBMIT_FAILED");
+          const serverEntryCode = result.entryCode;
+          window.__jgLastEntryCode = serverEntryCode;
+          document.getElementById("rsvp-form-container").style.display = "none";
+          document.getElementById("success-msg").style.display = "block";
+          document.dispatchEvent(new CustomEvent("jg:rsvp-success", {
+            detail: { guestName, entryCode: serverEntryCode, eventCode: inviteEventCode, responseId: responseDocId }
+          }));
+          form.reset();
+          // Notification is best-effort and separately rate-limited server-side.
+          fetch("/.netlify/functions/notify-rsvp", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              guestName, phone, status, guests: guestsCount,
+              companions: Number(guestsCount || 0), style: slug,
+              eventSlug, eventCode: inviteEventCode,
+              guestId: inviteGuestCode, entryCode: serverEntryCode,
+              responseId: responseDocId, token: window.__jgRsvpToken
+            })
+          }).catch(() => {});
+        } catch (error) {
+          alert("تعذر إرسال تأكيد الحضور. حاول مرة أخرى.");
+          if (submitBtn) { submitBtn.disabled = false; delete submitBtn.dataset.sending; submitBtn.textContent = original || t("submit"); }
+        }
       });
     }
 
