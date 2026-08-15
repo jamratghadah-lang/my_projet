@@ -12,7 +12,15 @@ function applyMode(mode) {
   const btn = document.getElementById("mode-toggle");
   if (btn) btn.textContent = mode === "dark" ? "☀️" : "🌙";
   document.querySelectorAll(".site-bg-video video").forEach(v => {
-    v.classList.toggle("is-active", v.dataset.mode === mode);
+    const active = v.dataset.mode === mode;
+    v.classList.toggle("is-active", active);
+    if (active) {
+      if (v.preload === "none") v.preload = "auto";
+      if (v.readyState === 0) v.load();
+      v.play().catch(() => {});
+    } else {
+      v.pause();
+    }
   });
 }
 
