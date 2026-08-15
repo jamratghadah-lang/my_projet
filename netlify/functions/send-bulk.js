@@ -1,54 +1,90 @@
 // netlify/functions/send-bulk.js
 //
-// إرسال جماعي حقيقي لمجموعة ضيوف مختارين من لوحة التحكم (dashboard/guests.html)،
-// مع اختيار القناة: واتساب فقط / إيميل فقط / الاثنين معًا.
-// + دعم إرفاق فيديو و/أو صورة (بطاقة) مع النص، أو أي مزيج بينهم — وليس نص فقط.
+// Bulk send to selected guests from the dashboard (dashboard/guests.html),
+// with channel selection: WhatsApp only / email only / both.
+// + support for attaching video and/or image (card) with text.
 //
-// ⚠️ يتطلب تسجيل دخول: يقرأ Authorization: Bearer <Firebase ID Token> ويتحقق
-// منه بصلاحية إدارية، عشان محد يقدر يستخدم هذا الرابط للإرسال العشوائي.
+// ⚠️ Requires admin authentication (Firebase ID Token with admin/super_admin role).
 //
-// متغيرات البيئة المطلوبة (نفسها المستخدمة بدوال ثانية بهذا المشروع):
-//   WHATSAPP_PHONE_ID, WHATSAPP_TOKEN   — لقناة واتساب (نفس send-whatsapp.js)
-//   SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM  — لقناة الإيميل
+// Environment variables required (same as other functions in this project):
+//   WHATSAPP_PHONE_ID, WHATSAPP_TOKEN   — for WhatsApp channel
+//   SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM  — for email channel
 //
-// ملاحظة مهمة: نموذج RSVP الحالي بالموقع ما يجمع بريد إلكتروني من الضيف —
-// بس رقم جوال. يعني قناة "إيميل" حاليًا تشتغل فقط للضيوف اللي عندهم بريد
-// مسجّل يدويًا (عبر "إضافة ضيف" أو "استيراد قائمة" بحقل البريد الاختياري).
-//
-// ===== كيف تشتغل الوسائط (فيديو/صورة) =====
-// الفيديو والصورة يُرسلوا عن طريق رابط مباشر (مثلاً رابط Cloudinary) —
-// مو رفع ملف مباشر من المتصفح. لازم ترفعي الفيديو/البطاقة على Cloudinary
-// أولاً (زي ما تسوين بباقي المشروع) وتلصقين الرابط بلوحة التحكم.
-//
-// payload.contentTypes: مصفوفة من ["text","image","video"] — تقدرين تختارين
-// وحدة أو أكثر بنفس الحملة (مثلاً فيديو + نص كابشن، أو صورة بس، أو الثلاثة).
-// - لو فيديو مختار وفيه videoUrl: يترسل كرسالة فيديو (واتساب) / رابط بالإيميل.
-// - لو صورة مختارة وفيه imageUrl: تترسل كرسالة صورة (واتساب) / صورة مرفقة بالإيميل.
-// - النص (caption) ينحط على الصورة لو موجودة، وإلا على الفيديو، وإلا رسالة نص مستقلة.
-// - لو ما اخترتي شي غير "نص"، أو ما وفرتي روابط، يرجع يشتغل بالطريقة القديمة (نص فقط).
+// Media (video/image) is sent via direct URL (e.g. Cloudinary link) —
+// not uploaded directly from the browser.
 
+const crypto = require("crypto");
 const { getAdminDb } = require("./_report-lib");
+const { requireAdmin } = require("./_auth");
+
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "";
+const MAX_RECIPIENTS = 500;
+
+function corsHeaders(event) {
+  const origin = event.headers.origin || "";
+  const headers = {
+    "Content-Type": "application/json",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+  };
+  if (ALLOWED_ORIGIN && origin === ALLOWED_ORIGIN) {
+    headers["Access-Control-Allow-Origin"] = ALLOWED_ORIGIN;
+  } else {
+    headers["Access-Control-Allow-Origin"] = "null";
+  }
+  return headers;
+}
+
+// Rate limiting: persistent (Firestore-backed) — survives cold starts,
+// unlike an in-memory Map which resets whenever the function container recycles.
+const { checkRateLimit } = require("./_rate-limit");
+const RATE_LIMIT_WINDOW_SECONDS = 5 * 60;
+const RATE_LIMIT_MAX = 10;
 
 function buildMessage(template, name) {
   return String(template || "").replaceAll("{name}", name || "");
 }
 
-async function verifyAuth(event) {
-  const header = event.headers.authorization || event.headers.Authorization || "";
-  const token = header.startsWith("Bearer ") ? header.slice(7) : null;
-  if (!token) return null;
+
+
+function makeEmailActionToken(guestId, email, eventId, status) {
+  const secret = process.env.EMAIL_RSVP_SECRET || process.env.CRON_SECRET || "";
+  if (!secret) return "";
+  const payload = Buffer.from(JSON.stringify({ guestId, email, eventId, status, exp: Date.now() + 7*24*60*60*1000 })).toString("base64url");
+  const sig = crypto.createHmac("sha256", secret).update(payload).digest("base64url");
+  return payload + "." + sig;
+}
+
+function sanitizeInviteSettings(raw) {
+  const x = raw && typeof raw === "object" ? raw : {};
+  const safeUrl = (v) => (typeof v === "string" && v.startsWith("https://") ? v.slice(0, 1000) : "");
+  const fonts = ["Tahoma", "Arial", "Georgia", "Trebuchet MS"];
+  return {
+    videoUrl: safeUrl(x.videoUrl),
+    emailBgUrl: safeUrl(x.emailBgUrl),
+    emailFont: fonts.includes(x.emailFont) ? x.emailFont : "Tahoma",
+    emailHeadline: String(x.emailHeadline || "دعوة خاصة إليك 🤍").slice(0, 120),
+    emailButtonText: String(x.emailButtonText || "مشاهدة الدعوة 🎥").slice(0, 60),
+    emailBody: String(x.emailBody || "يسعدنا دعوتك لمشاركتنا مناسبتنا 🤍").slice(0, 1000),
+  };
+}
+
+async function getGuestEventSettings(db, guestData) {
+  const eventId = guestData.eventId || guestData.eventCode || guestData.eventSlug;
+  if (!eventId) return {};
   try {
-    const admin = require("firebase-admin");
-    if (!admin.apps.length) {
-      const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-      if (!raw) return null;
-      admin.initializeApp({ credential: admin.credential.cert(JSON.parse(raw)) });
-    }
-    const decoded = await admin.auth().verifyIdToken(token);
-    return decoded.uid;
+    const snap = await db.collection("events").doc(String(eventId)).get();
+    if (!snap.exists) return {};
+    return sanitizeInviteSettings(snap.data().invitationDelivery);
   } catch {
-    return null;
+    return {};
   }
+}
+
+/** Validate that a URL starts with https:// */
+function isValidHttpsUrl(url) {
+  if (!url || typeof url !== "string") return false;
+  return url.startsWith("https://");
 }
 
 async function waRequest(phoneId, token, body) {
@@ -66,8 +102,6 @@ async function waRequest(phoneId, token, body) {
   }
 }
 
-// يرسل رسالة واحدة أو أكثر (نص/صورة/فيديو) حسب المحتوى المطلوب، ويرجّع
-// نتيجة إجمالية بالإضافة لتفاصيل كل جزء تم إرساله.
 async function sendOneWhatsApp(phone, { message, contentTypes, imageUrl, videoUrl }) {
   const phoneId = process.env.WHATSAPP_PHONE_ID || "";
   const token = process.env.WHATSAPP_TOKEN || "";
@@ -79,13 +113,11 @@ async function sendOneWhatsApp(phone, { message, contentTypes, imageUrl, videoUr
   const wantVideo = contentTypes.includes("video") && !!videoUrl;
   const wantText = contentTypes.includes("text") && !!message;
 
-  // ولا وسائط مختارة/متوفرة → نفس السلوك القديم بالضبط (نص فقط)
   if (!wantImage && !wantVideo) {
     return waRequest(phoneId, token, { messaging_product: "whatsapp", to, type: "text", text: { body: message } });
   }
 
   const steps = [];
-  // الكابشن (النص) ينحط على أول وسائط متوفرة بس، عشان ما يتكرر النص مرتين
   let captionUsed = false;
 
   if (wantVideo) {
@@ -104,7 +136,6 @@ async function sendOneWhatsApp(phone, { message, contentTypes, imageUrl, videoUr
       image: { link: imageUrl, ...(caption ? { caption } : {}) },
     }));
   }
-  // لو فيه نص ما انحط كابشن على ولا وسائط (نادر: يعني الاتنين محتاجين كابشن)
   if (wantText && !captionUsed) {
     steps.push(waRequest(phoneId, token, { messaging_product: "whatsapp", to, type: "text", text: { body: message } }));
   }
@@ -115,34 +146,39 @@ async function sendOneWhatsApp(phone, { message, contentTypes, imageUrl, videoUr
   return { ok: false, error: failed.map((r) => r.error).join(" | ") };
 }
 
-async function sendOneEmail(email, subject, { message, contentTypes, imageUrl, videoUrl }) {
+async function sendOneEmail(email, subject, { message, contentTypes, imageUrl, videoUrl, emailBgUrl, emailFont, emailHeadline, emailButtonText, emailBody, confirmUrl, declineUrl }) {
   if (!email) return { ok: false, error: "لا يوجد بريد إلكتروني لهذا الضيف" };
   const { sendReportEmail } = require("./_report-lib");
+  const esc = (v) => String(v || "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
 
   const wantImage = contentTypes.includes("image") && !!imageUrl;
   const wantVideo = contentTypes.includes("video") && !!videoUrl;
+  const headline = esc(emailHeadline || subject || "دعوة خاصة إليك 🤍");
+  const bodyText = esc(emailBody || message || "يسعدنا دعوتك لمشاركتنا مناسبتنا 🤍");
+  const buttonText = esc(emailButtonText || "مشاهدة الدعوة 🎥");
+  const font = ["Tahoma","Arial","Georgia","Trebuchet MS"].includes(emailFont) ? emailFont : "Tahoma";
 
-  let html = String(message || "").replaceAll("\n", "<br/>");
-  const attachments = [];
+  let media = "";
+  if (wantImage) media += `<img src="${esc(imageUrl)}" alt="بطاقة الدعوة" style="max-width:100%;border-radius:14px;display:block;margin:18px auto" />`;
+  if (wantVideo) media += `<a href="${esc(videoUrl)}" style="display:inline-block;padding:13px 24px;background:#C5A059;color:#2c2009;border-radius:999px;text-decoration:none;font-weight:bold">${buttonText}</a>`;
+  const actionButtons = (confirmUrl || declineUrl) ? `<div style="margin-top:28px">
+    ${confirmUrl ? `<a href="${esc(confirmUrl)}" style="display:inline-block;margin:5px;padding:12px 22px;background:#2e7d32;color:#fff;border-radius:999px;text-decoration:none;font-weight:bold">✓ تأكيد الحضور</a>` : ""}
+    ${declineUrl ? `<a href="${esc(declineUrl)}" style="display:inline-block;margin:5px;padding:12px 22px;background:#8b4b3f;color:#fff;border-radius:999px;text-decoration:none;font-weight:bold">✕ أعتذر</a>` : ""}
+  </div>` : "";
 
-  if (wantImage) {
-    html += `<br/><br/><img src="${imageUrl}" alt="بطاقة الدعوة" style="max-width:100%;border-radius:8px" />`;
-    // مرفق حقيقي بالإضافة للمعاينة بالمتن — nodemailer يجيب الملف من الرابط تلقائيًا
-    attachments.push({ filename: "بطاقة-الدعوة.jpg", path: imageUrl });
-  }
-  if (wantVideo) {
-    // الفيديوهات ما تُرفق بالإيميل (حجمها كبير) — يترسل رابط مباشر بدل كذا
-    html += `<br/><br/><a href="${videoUrl}" style="display:inline-block;padding:10px 18px;background:#C5A059;color:#2c2009;border-radius:8px;text-decoration:none;font-weight:bold">🎬 شاهدوا الفيديو من هنا</a>`;
-  }
+  const bg = emailBgUrl ? `background-image:url('${esc(emailBgUrl)}');background-size:cover;background-position:center;` : "";
+  const html = `<!doctype html><html dir="rtl"><body style="margin:0;background:#f4f1ea;padding:24px;font-family:${font},Arial,sans-serif">
+  <div style="max-width:620px;margin:0 auto;${bg}background-color:#fff;border-radius:22px;overflow:hidden">
+    <div style="background:rgba(20,20,20,.78);padding:42px 28px;text-align:center;color:#fff">
+      <div style="font-size:28px;font-weight:bold;margin-bottom:16px">${headline}</div>
+      <div style="font-size:16px;line-height:2">${bodyText}</div>
+      <div style="margin-top:24px">${media}${actionButtons}</div>
+      <div style="font-size:12px;opacity:.7;margin-top:22px">هذه الدعوة مخصصة لك</div>
+    </div>
+  </div></body></html>`;
 
   try {
-    const result = await sendReportEmail({
-      to: [email],
-      subject,
-      text: message,
-      html,
-      attachments,
-    });
+    const result = await sendReportEmail({ to: [email], subject: subject || headline, text: message || emailBody || "", html });
     if (!result.sent) return { ok: false, error: result.reason || "الإيميل غير مضبوط (SMTP)" };
     return { ok: true };
   } catch (err) {
@@ -151,39 +187,70 @@ async function sendOneEmail(email, subject, { message, contentTypes, imageUrl, v
 }
 
 exports.handler = async (event) => {
-  if (event.httpMethod !== "POST") {
-    return { statusCode: 405, body: "Method Not Allowed" };
+  const headers = corsHeaders(event);
+
+  if (event.httpMethod === "OPTIONS") {
+    return { statusCode: 204, headers, body: "" };
   }
 
-  const uid = await verifyAuth(event);
-  if (!uid) {
-    return { statusCode: 401, body: JSON.stringify({ error: "غير مصرح — سجّلي دخول بلوحة التحكم أولاً" }) };
+  if (event.httpMethod !== "POST") {
+    return { statusCode: 405, headers, body: JSON.stringify({ error: "Method Not Allowed" }) };
+  }
+
+  // Verify admin privileges
+  const adminUser = await requireAdmin(event);
+  if (!adminUser) {
+    return { statusCode: 403, headers, body: JSON.stringify({ error: "غير مصرح — صلاحية إدارية مطلوبة" }) };
+  }
+
+  const { uid } = adminUser;
+
+  // Rate limiting — persistent per-admin bucket, survives cold starts
+  const rl = await checkRateLimit(() => getAdminDb(), event, `send-bulk_${uid}`, {
+    max: RATE_LIMIT_MAX,
+    windowSeconds: RATE_LIMIT_WINDOW_SECONDS,
+  });
+  if (!rl.allowed) {
+    return { statusCode: 429, headers, body: JSON.stringify({ error: "طلبات كثيرة جدًا — حاولي بعد 5 دقائق" }) };
   }
 
   let payload;
   try {
     payload = JSON.parse(event.body || "{}");
   } catch {
-    return { statusCode: 400, body: JSON.stringify({ error: "Invalid JSON" }) };
+    return { statusCode: 400, headers, body: JSON.stringify({ error: "Invalid JSON" }) };
   }
 
   const { guestIds, channel, message, subject, imageUrl, videoUrl } = payload;
-  // توافق مع الإصدار القديم: لو contentTypes ما انبعتت، اعتبريها "نص" بس
   const contentTypes = Array.isArray(payload.contentTypes) && payload.contentTypes.length
     ? payload.contentTypes
     : ["text"];
 
-  if (!Array.isArray(guestIds) || !guestIds.length) {
-    return { statusCode: 400, body: JSON.stringify({ error: "لازم تختارين ضيف واحد على الأقل" }) };
+  // Validate URL inputs — must be HTTPS
+  if (imageUrl && !isValidHttpsUrl(imageUrl)) {
+    return { statusCode: 400, headers, body: JSON.stringify({ error: "رابط الصورة يجب أن يبدأ بـ https://" }) };
   }
+  if (videoUrl && !isValidHttpsUrl(videoUrl)) {
+    return { statusCode: 400, headers, body: JSON.stringify({ error: "رابط الفيديو يجب أن يبدأ بـ https://" }) };
+  }
+
+  if (!Array.isArray(guestIds) || !guestIds.length) {
+    return { statusCode: 400, headers, body: JSON.stringify({ error: "لازم تختارين ضيف واحد على الأقل" }) };
+  }
+
+  // Max recipients limit
+  if (guestIds.length > MAX_RECIPIENTS) {
+    return { statusCode: 400, headers, body: JSON.stringify({ error: `الحد الأقصى ${MAX_RECIPIENTS} ضيف لكل حملة` }) };
+  }
+
   const hasMedia = (contentTypes.includes("image") && imageUrl) || (contentTypes.includes("video") && videoUrl);
   if (!hasMedia && (!message || !message.trim())) {
-    return { statusCode: 400, body: JSON.stringify({ error: "لازم نص رسالة، أو رابط صورة/فيديو على الأقل" }) };
+    return { statusCode: 400, headers, body: JSON.stringify({ error: "لازم نص رسالة، أو رابط صورة/فيديو على الأقل" }) };
   }
   const useWhatsApp = channel === "whatsapp" || channel === "both";
   const useEmail = channel === "email" || channel === "both";
   if (!useWhatsApp && !useEmail) {
-    return { statusCode: 400, body: JSON.stringify({ error: "اختاري قناة الإرسال" }) };
+    return { statusCode: 400, headers, body: JSON.stringify({ error: "اختاري قناة الإرسال" }) };
   }
 
   const db = getAdminDb();
@@ -204,15 +271,39 @@ exports.handler = async (event) => {
     }
 
     const name = guestData.name || "ضيف";
-    const personalized = buildMessage(message, name);
-    const mediaOpts = { message: personalized, contentTypes, imageUrl, videoUrl };
+    const eventSettings = await getGuestEventSettings(db, guestData);
+    const effectiveVideoUrl = videoUrl || eventSettings.videoUrl || "";
+    const effectiveImageUrl = imageUrl || "";
+    const effectiveMessage = message || eventSettings.emailBody || "";
+    const personalized = buildMessage(effectiveMessage, name);
+    const effectiveSubject = subject || eventSettings.emailHeadline || "دعوة خاصة إليك 🤍";
+    const effectiveContentTypes = Array.isArray(payload.contentTypes) && payload.contentTypes.length
+      ? contentTypes
+      : (effectiveVideoUrl ? ["video", "text"] : ["text"]);
+    const siteBase = process.env.URL || process.env.DEPLOY_URL || "https://jamratghadah.com";
+    const eventKey = guestData.eventId || guestData.eventCode || guestData.eventSlug || "";
+    const confirmToken = makeEmailActionToken(id, guestData.email || "", eventKey, "yes");
+    const declineToken = makeEmailActionToken(id, guestData.email || "", eventKey, "no");
+    const mediaOpts = {
+      message: personalized,
+      contentTypes: effectiveContentTypes,
+      imageUrl: effectiveImageUrl,
+      videoUrl: effectiveVideoUrl,
+      emailBgUrl: eventSettings.emailBgUrl,
+      emailFont: eventSettings.emailFont,
+      emailHeadline: eventSettings.emailHeadline,
+      emailButtonText: eventSettings.emailButtonText,
+      emailBody: eventSettings.emailBody,
+      confirmUrl: confirmToken ? `${siteBase}/.netlify/functions/email-rsvp-action?token=${encodeURIComponent(confirmToken)}` : "",
+      declineUrl: declineToken ? `${siteBase}/.netlify/functions/email-rsvp-action?token=${encodeURIComponent(declineToken)}` : "",
+    };
     const perGuest = { id, name, whatsapp: null, email: null };
 
     if (useWhatsApp) {
       perGuest.whatsapp = await sendOneWhatsApp(guestData.phone, mediaOpts);
     }
     if (useEmail) {
-      perGuest.email = await sendOneEmail(guestData.email, subject || "دار جمرة غضى", mediaOpts);
+      perGuest.email = await sendOneEmail(guestData.email, effectiveSubject, mediaOpts);
     }
 
     const attempted = [perGuest.whatsapp, perGuest.email].filter(Boolean);
@@ -225,6 +316,7 @@ exports.handler = async (event) => {
 
   return {
     statusCode: 200,
+    headers,
     body: JSON.stringify({ sent, failed, total: results.length, results }),
   };
 };

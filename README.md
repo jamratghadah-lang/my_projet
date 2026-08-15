@@ -56,7 +56,6 @@
 index.html            الرئيسية
 about.html             من نحن
 contact.html          اتصل بنا
-rsvp.html             صفحة تأكيد الحضور (تجمع الـ13)
 rsvp/*.html            الصفحات الـ13 (كل صفحة فيها noindex لأنها خاصة بعميل)
 categories/*.html      صفحات الأقسام السبعة (بورتفوليو + طلب فيديو)
 content/               ملفات JSON اللي تديرها لوحة التحكم
@@ -65,3 +64,24 @@ dashboard/             لوحة تذكير الضيوف وQR (محمية بتس�
 css/ , js/ , partials/ التصميم والسكربتات المشتركة (استخدمي دائمًا style.min.css بعد أي تعديل)
 sitemap.xml, robots.txt تحكم في فهرسة جوجل — حدّثي الدومين فيهم بعد ربط دومينك الخاص
 ```
+
+**ملاحظة:** صفحة تجميع الـ13 (rsvp.html) تم إخفاؤها — الزوار ما يقدرون يتصفحون القوالب. كل ضيف يفتح دعوته برابطه المباشر فقط (المُرسل عبر QR كود أو رابط مخصص).
+
+
+## v10.15 QR Controls
+- Event `qrOverride`: `auto | on | off`.
+- Effective QR follows package `qrEnabled` unless event override is set.
+- WhatsApp RSVP confirmation sends a personal QR image when QR is enabled.
+
+
+## v10.17 — WhatsApp + Email Invitation Delivery
+- Event-level `invitationDelivery`: videoUrl, emailBgUrl, emailFont, emailHeadline, emailButtonText, emailBody.
+- Bulk invitation sending automatically uses the selected guest's event delivery settings when media/message are not manually overridden.
+- Email invitations include secure RSVP links; configure `EMAIL_RSVP_SECRET` (falls back to CRON_SECRET) for confirmation buttons.
+- Website RSVP pages are intentionally unchanged.
+- WhatsApp sends the invitation video as media; interactive WhatsApp buttons require Meta template/session policy and are not forced by this release.
+
+
+## v10.18 fix
+- WhatsApp `resend_invitation` now sends the configured invitation video as WhatsApp video media instead of a text URL.
+- Existing RSVP/website pages are unchanged.

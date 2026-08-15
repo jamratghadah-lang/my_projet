@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+
+<html dir="rtl" lang="ar">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>أرشيف المناسبات — لوحة تحكم جمرة غضى</title>
+<meta content="noindex, nofollow" name="robots"/>
+<style>
+  *{box-sizing:border-box}
+  body{font-family:Tahoma,Arial,sans-serif;background:#111;color:#eee;margin:0;padding:20px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px}
+  h1{color:#d4af37;font-size:20px;margin:0}
+  a.back{color:#aaa;text-decoration:none;font-size:14px}
+  .card{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:18px;margin-bottom:18px}
+  .card h2{font-size:15px;color:#d4af37;margin-top:0}
+
+  /* ===== Stats ===== */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px}
+  .stat{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:16px;text-align:center;position:relative;overflow:hidden}
+  .stat::before{content:"";position:absolute;top:0;right:0;width:4px;height:100%}
+  .stat.gold::before{background:#d4af37}
+  .stat.blue::before{background:#5d7fd4}
+  .stat .num{font-size:30px;font-weight:bold;line-height:1}
+  .stat.gold .num{color:#d4af37}
+  .stat.blue .num{color:#6ea8fe}
+  .stat .label{font-size:11px;color:#999;margin-top:6px}
+
+  /* ===== Toolbar ===== */
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+  .toolbar2{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;padding-top:10px;border-top:1px solid #2a2a2a}
+  .search-wrap{flex:1;min-width:180px;position:relative}
+  .search-wrap input{width:100%;padding:10px 36px 10px 12px;border-radius:8px;border:1px solid #444;background:#222;color:#fff;font-family:inherit;font-size:14px}
+  .search-wrap .icon{position:absolute;right:10px;top:50%;transform:translateY(-50%);color:#888;font-size:16px;pointer-events:none}
+  select{padding:10px 12px;border-radius:8px;border:1px solid #444;background:#222;color:#fff;font-family:inherit;font-size:14px;cursor:pointer}
+  input[type="month"]{padding:10px 12px;border-radius:8px;border:1px solid #444;background:#222;color:#fff;font-family:inherit;font-size:14px;cursor:pointer}
+  input[type="month"]::-webkit-calendar-picker-indicator{filter:invert(0.7)}
+  .btn{padding:10px 16px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;font-size:13px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-family:inherit}
+  .btn-gold{background:#d4af37;color:#111}
+  .btn-outline{background:transparent;border:1px solid #555;color:#ddd}
+  .btn-blue{background:#3a6fa0;color:#fff}
+  .btn:disabled{opacity:.45;cursor:default}
+  .btn-sm{padding:6px 10px;font-size:12px;border-radius:6px}
+  .row-actions{display:flex;gap:6px}
+
+  /* ===== Table ===== */
+  .table-wrap{overflow-x:auto;max-height:600px;overflow-y:auto}
+  .table-wrap::-webkit-scrollbar{width:6px;height:6px}
+  .table-wrap::-webkit-scrollbar-track{background:#1c1c1c}
+  .table-wrap::-webkit-scrollbar-thumb{background:#444;border-radius:3px}
+  .table-wrap::-webkit-scrollbar-thumb:hover{background:#555}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  thead th{text-align:right;padding:10px 8px;border-bottom:2px solid #333;color:#d4af37;white-space:nowrap;position:sticky;top:0;background:#1c1c1c;z-index:2}
+  tbody td{padding:10px 8px;border-bottom:1px solid #2a2a2a;white-space:nowrap}
+  tbody tr:hover{background:#222}
+  .badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:bold;white-space:nowrap;display:inline-block}
+  .badge.wedding{background:rgba(212,175,55,.15);color:#d4af37;border:1px solid rgba(212,175,55,.3)}
+  .badge.honour{background:rgba(76,175,80,.15);color:#4caf50;border:1px solid rgba(76,175,80,.3)}
+  .badge.council{background:rgba(33,150,243,.15);color:#2196f3;border:1px solid rgba(33,150,243,.3)}
+  .badge.other{background:rgba(170,170,170,.15);color:#aaa;border:1px solid rgba(170,170,170,.3)}
+  .empty{color:#777;text-align:center;padding:40px;font-size:14px}
+  .count-hint{font-size:12px;color:#888;margin-top:8px}
+  @media(max-width:600px){.stat .num{font-size:22px}}
+
+  /* ===== Modal ===== */
+  .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:999;align-items:center;justify-content:center;padding:16px}
+  .modal-bg.open{display:flex}
+  .modal{background:#1c1c1c;border:1px solid #333;border-radius:14px;padding:22px;width:100%;max-width:560px;max-height:88vh;overflow-y:auto}
+  .modal h3{margin:0 0 16px;color:#d4af37;font-size:16px}
+  .modal::-webkit-scrollbar{width:6px}
+  .modal::-webkit-scrollbar-track{background:#1c1c1c}
+  .modal::-webkit-scrollbar-thumb{background:#444;border-radius:3px}
+  .modal-close{float:left;background:none;border:none;color:#888;font-size:22px;cursor:pointer;padding:0;line-height:1}
+  .modal-close:hover{color:#fff}
+
+  /* ===== Detail Sections ===== */
+  .detail-section{background:#222;border:1px solid #333;border-radius:10px;padding:16px;margin-bottom:14px}
+  .detail-section h4{font-size:13px;color:#d4af37;margin:0 0 12px;padding-bottom:6px;border-bottom:1px solid #2a2a2a}
+  .detail-row{display:flex;justify-content:space-between;padding:6px 0;font-size:13px}
+  .detail-row .lbl{color:#999}
+  .detail-row .val{color:#eee;font-weight:bold}
+
+  /* Summary grid */
+  .summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:10px;margin-bottom:12px}
+  .summary-item{background:#2a2a2a;border-radius:8px;padding:12px;text-align:center}
+  .summary-item .val{font-size:22px;font-weight:bold;color:#d4af37}
+  .summary-item .lbl{font-size:11px;color:#999;margin-top:4px}
+
+  /* Rate bar */
+  .rate-bar{height:10px;background:#333;border-radius:5px;overflow:hidden;margin-top:8px}
+  .rate-bar .fill{height:100%;border-radius:5px;transition:width .3s}
+
+  /* Checklist */
+  .checklist{list-style:none;padding:0;margin:0}
+  .checklist li{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #2a2a2a;font-size:13px}
+  .checklist li:last-child{border-bottom:none}
+  .checklist li.done{color:#666;text-decoration:line-through}
+  .checklist li .check-icon{flex-shrink:0;font-size:14px}
+
+  /* Budget table */
+  .budget-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+  .budget-table th{text-align:right;padding:6px 8px;border-bottom:1px solid #444;color:#d4af37;font-size:11px}
+  .budget-table td{padding:6px 8px;border-bottom:1px solid #2a2a2a}
+  .variance-pos{color:#4caf50}
+  .variance-neg{color:#e07a5f}
+
+  /* Loading spinner */
+  .spinner{display:inline-block;width:18px;height:18px;border:2px solid #444;border-top-color:#d4af37;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle}
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="topbar">
+<h1>📁 أرشيف المناسبات</h1>
+<a class="back" href="index.html">← رجوع للوحة</a>
+</div>
+<!-- Stats -->
+<div class="stats">
+<div class="stat gold">
+<div class="num" id="statTotal">0</div>
+<div class="label">إجمالي المناسبات المؤرشفة</div>
+</div>
+<div class="stat blue">
+<div class="num" id="statMonth">0</div>
+<div class="label">مغلقة هذا الشهر</div>
+</div>
+</div>
+<!-- Filters -->
+<div class="card">
+<h2>بحث وفلترة</h2>
+<div class="toolbar">
+<div class="search-wrap">
+<input id="searchInput" placeholder="بحث باسم المناسبة..." type="text"/>
+<span class="icon">🔍</span>
+</div>
+<select id="filterType">
+<option value="all">كل الأنواع</option>
+<option value="زواج">زواج</option>
+<option value="تكريم">تكريم</option>
+<option value="مجلس">مجلس</option>
+<option value="أخرى">أخرى</option>
+</select>
+</div>
+<div class="toolbar2">
+<label for="monthFrom" style="font-size:12px;color:#999">من شهر:</label>
+<input id="monthFrom" type="month"/>
+<label for="monthTo" style="font-size:12px;color:#999">إلى:</label>
+<input id="monthTo" type="month"/>
+<button class="btn btn-outline btn-sm" id="resetFilters">إعادة تعيين</button>
+</div>
+</div>
+<!-- Table -->
+<div class="card">
+<h2>المناسبات المغلقة</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>اسم المناسبة</th>
+<th>النوع</th>
+<th>تاريخ الإغلاق</th>
+<th>عدد المدعوين</th>
+<th>الحاضرون</th>
+<th>الإجراءات</th>
+</tr>
+</thead>
+<tbody id="tableBody">
+<tr><td colspan="6"><div class="empty"><span class="spinner"></span> جارِ التحميل...</div></td></tr>
+</tbody>
+</table>
+</div>
+<div class="count-hint" id="countHint"></div>
+</div>
+<!-- Detail Modal -->
+<div class="modal-bg" id="detailModal">
+<div class="modal">
+<button class="modal-close" id="modalClose">×</button>
+<h3 id="modalTitle">تفاصيل المناسبة</h3>
+<div id="modalContent"></div>
+</div>
+</div>
+<script type="module">
+import { auth, requireLogin, db, collection, doc, getDoc, getDocs, query, where, orderBy } from '../js/firebase-init.js';
+
+/* ===== State ===== */
+let allEvents = [];
+
+/* ===== Helpers ===== */
+function escapeHtml(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function formatDate(ts) {
+  if (!ts) return '—';
+  const d = ts.toMillis ? new Date(ts.toMillis()) : new Date(ts);
+  return d.toLocaleDateString('ar-SA', { year: 'numeric', month: '2-digit', day: '2-digit' });
+}
+
+function formatDateTime(ts) {
+  if (!ts) return '—';
+  const d = ts.toMillis ? new Date(ts.toMillis()) : new Date(ts);
+  return d.toLocaleString('ar-SA', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
+function toMonthKey(ts) {
+  if (!ts) return '';
+  const d = ts.toMillis ? new Date(ts.toMillis()) : new Date(ts);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
+
+function currentMonthKey() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
+
+const typeLabels = { 'زواج': 'زواج', 'تكريم': 'تكريم', 'مجلس': 'مجلس' };
+function getTypeBadge(type) {
+  const t = type || 'أخرى';
+  const cls = typeLabels[t] ? t : 'other';
+  return '<span class="badge ' + cls + '">' + escapeHtml(t) + '</span>';
+}
+
+/* ===== Data Loading ===== */
+requireLogin(async () => {
+  try {
+    // 1. Load all closed events
+    const eventsQ = query(collection(db, 'events'), where('status', '==', 'closed'), orderBy('closedAt', 'desc'));
+    const eventsSnap = await getDocs(eventsQ);
+
+    allEvents = [];
+    const promises = [];
+
+    eventsSnap.forEach((d) => {
+      const r = d.data();
+      const ev = {
+        id: d.id,
+        name: r.name || 'بدون اسم',
+        client: r.client || '',
+        phone: r.phone || '',
+        date: r.date || '',
+        time: r.time || '',
+        location: r.location || '',
+        type: r.status === 'closed' ? (r.type || 'أخرى') : 'أخرى',
+        guests: r.guests || 0,
+        confirmed: r.confirmed || 0,
+        attended: r.attended || 0,
+        notes: r.notes || '',
+        budgetEstimated: r.budgetEstimated || 0,
+        budgetActual: r.budgetActual || 0,
+        budgetItems: r.budgetItems || [],
+        closeChecklist: r.closeChecklist || {},
+        closedAt: r.closedAt || r.updatedAt || null,
+        createdAt: r.createdAt || null,
+        updatedAt: r.updatedAt || null,
+      };
+      allEvents.push(ev);
+    });
+
+    // 2. Enrich each event with sub-collection data
+    for (const ev of allEvents) {
+      promises.push(enrichEvent(ev));
+    }
+    await Promise.all(promises);
+
+    updateStats();
+    renderTable();
+  } catch (err) {
+    document.getElementById('tableBody').innerHTML = '<tr><td colspan="6"><div class="empty">تعذّر تحميل البيانات: ' + escapeHtml(err.message) + '</div></td></tr>';
+  }
+});
+
+async function enrichEvent(ev) {
+  // Guest responses
+  let responseCount = 0;
+  let confirmedCount = 0;
+  let attendedFromResponses = 0;
+  try {
+    // Try by eventCode first (from event id as slug)
+    let rQ = query(collection(db, 'responses'), where('eventCode', '==', ev.id));
+    let rSnap = await getDocs(rQ);
+    if (rSnap.empty) {
+      rQ = query(collection(db, 'responses'), where('eventSlug', '==', ev.id));
+      rSnap = await getDocs(rQ);
+    }
+    responseCount = rSnap.size;
+    rSnap.forEach((d) => {
+      const r = d.data();
+      if (r.status === 'yes') confirmedCount++;
+      // count companions too
+      if (r.status === 'yes') confirmedCount += (r.guests || 1) - 1;
+    });
+  } catch (e) { /* ignore permission or missing field */ }
+  ev.responseCount = responseCount;
+  ev.confirmedFromResponses = confirmedCount;
+
+  // Checkins
+  let checkinCount = 0;
+  try {
+    const cQ = query(collection(db, 'checkins'), where('eventId', '==', ev.id));
+    const cSnap = await getDocs(cQ);
+    checkinCount = cSnap.size;
+  } catch (e) {
+    // Fallback: count by guestId matching responses of this event
+    try {
+      const rQ2 = query(collection(db, 'responses'), where('eventCode', '==', ev.id));
+      const rSnap2 = await getDocs(rQ2);
+      const guestIds = [];
+      rSnap2.forEach((d) => guestIds.push(d.id));
+      if (guestIds.length > 0) {
+        // Can't do 'in' with dynamic array easily, use event-level
+      }
+    } catch (e2) { /* ignore */ }
+  }
+  ev.checkinCount = checkinCount;
+
+  // Send logs
+  let sentCount = 0;
+  let deliveredCount = 0;
+  try {
+    const sQ = query(collection(db, 'send_logs'), where('eventId', '==', ev.id));
+    const sSnap = await getDocs(sQ);
+    sentCount = sSnap.size;
+    sSnap.forEach((d) => {
+      const r = d.data();
+      if (r.status === 'sent' || r.status === 'delivered') deliveredCount++;
+    });
+  } catch (e) { /* ignore */ }
+  ev.sentCount = sentCount;
+  ev.deliveredCount = deliveredCount;
+}
+
+/* ===== Stats ===== */
+function updateStats() {
+  document.getElementById('statTotal').textContent = allEvents.length;
+  const cm = currentMonthKey();
+  const monthCount = allEvents.filter(e => toMonthKey(e.closedAt) === cm).length;
+  document.getElementById('statMonth').textContent = monthCount;
+}
+
+/* ===== Filtering ===== */
+function getFiltered() {
+  const search = document.getElementById('searchInput').value.trim().toLowerCase();
+  const typeFilter = document.getElementById('filterType').value;
+  const monthFrom = document.getElementById('monthFrom').value;
+  const monthTo = document.getElementById('monthTo').value;
+
+  return allEvents.filter(ev => {
+    if (typeFilter !== 'all' && ev.type !== typeFilter) return false;
+    if (search && !ev.name.toLowerCase().includes(search)) return false;
+    if (monthFrom) {
+      const ek = toMonthKey(ev.closedAt);
+      if (!ek || ek < monthFrom) return false;
+    }
+    if (monthTo) {
+      const ek = toMonthKey(ev.closedAt);
+      if (!ek || ek > monthTo) return false;
+    }
+    return true;
+  });
+}
+
+/* ===== Render Table ===== */
+function renderTable() {
+  const tbody = document.getElementById('tableBody');
+  const hint = document.getElementById('countHint');
+  const list = getFiltered();
+
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty">لا توجد مناسبات مؤرشفة مطابقة</div></td></tr>';
+    hint.textContent = '';
+    return;
+  }
+
+  tbody.innerHTML = list.map(ev => {
+    return '<tr>' +
+      '<td>' + escapeHtml(ev.name) + '</td>' +
+      '<td>' + getTypeBadge(ev.type) + '</td>' +
+      '<td>' + formatDateTime(ev.closedAt) + '</td>' +
+      '<td>' + (ev.guests || ev.responseCount || 0) + '</td>' +
+      '<td>' + (ev.checkinCount || ev.attended || 0) + '</td>' +
+      '<td class="row-actions">' +
+        '<button class="btn btn-gold btn-sm" data-action="detail" data-id="' + escapeHtml(ev.id) + '">عرض التفاصيل</button>' +
+        '<button class="btn btn-blue btn-sm" data-action="pdf" data-id="' + escapeHtml(ev.id) + '">تصدير PDF</button>' +
+      '</td>' +
+    '</tr>';
+  }).join('');
+
+  hint.textContent = 'عرض ' + list.length + ' من أصل ' + allEvents.length + ' مناسبة';
+}
+
+/* ===== Filter Events ===== */
+document.getElementById('searchInput').addEventListener('input', renderTable);
+document.getElementById('filterType').addEventListener('change', renderTable);
+document.getElementById('monthFrom').addEventListener('change', renderTable);
+document.getElementById('monthTo').addEventListener('change', renderTable);
+document.getElementById('resetFilters').addEventListener('click', () => {
+  document.getElementById('searchInput').value = '';
+  document.getElementById('filterType').value = 'all';
+  document.getElementById('monthFrom').value = '';
+  document.getElementById('monthTo').value = '';
+  renderTable();
+});
+
+/* ===== Table Action Delegation ===== */
+document.getElementById('tableBody').addEventListener('click', async (e) => {
+  const btn = e.target.closest('button[data-action]');
+  if (!btn) return;
+  const action = btn.dataset.action;
+  const id = btn.dataset.id;
+  const ev = allEvents.find(x => x.id === id);
+  if (!ev) return;
+
+  if (action === 'detail') {
+    openDetailModal(ev);
+  } else if (action === 'pdf') {
+    openPdfWindow(ev);
+  }
+});
+
+/* ===== Detail Modal ===== */
+function openDetailModal(ev) {
+  document.getElementById('modalTitle').textContent = ev.name;
+  const totalGuests = ev.guests || ev.responseCount || 0;
+  const confirmed = ev.confirmed || ev.confirmedFromResponses || 0;
+  const attended = ev.checkinCount || ev.attended || 0;
+  const absent = confirmed - attended;
+
+  // Delivery rate
+  const deliveryRate = ev.sentCount > 0 ? Math.round((ev.deliveredCount / ev.sentCount) * 100) : 0;
+  const deliveryColor = deliveryRate >= 80 ? '#4caf50' : deliveryRate >= 50 ? '#d4af37' : '#e07a5f';
+
+  // Budget variance
+  const budgetEst = ev.budgetEstimated || 0;
+  const budgetAct = ev.budgetActual || 0;
+  const budgetVariance = budgetEst > 0 ? Math.round(((budgetAct - budgetEst) / budgetEst) * 100) : 0;
+  const budgetVarClass = budgetVariance <= 0 ? 'variance-pos' : 'variance-neg';
+  const budgetVarSign = budgetVariance > 0 ? '+' : '';
+
+  // Checklist
+  const checklistItems = ev.closeChecklist;
+  const checklistKeys = Object.keys(checklistItems);
+  const checklistDone = checklistKeys.filter(k => checklistItems[k]).length;
+  const checklistTotal = checklistKeys.length;
+  const checklistPct = checklistTotal > 0 ? Math.round((checklistDone / checklistTotal) * 100) : 0;
+
+  let html = '';
+
+  // Event Info Section
+  html += '<div class="detail-section">';
+  html += '<h4>معلومات المناسبة</h4>';
+  html += '<div class="detail-row"><span class="lbl">العميل</span><span class="val">' + escapeHtml(ev.client || '—') + '</span></div>';
+  html += '<div class="detail-row"><span class="lbl">الهاتف</span><span class="val">' + escapeHtml(ev.phone || '—') + '</span></div>';
+  html += '<div class="detail-row"><span class="lbl">التاريخ</span><span class="val">' + escapeHtml(ev.date || '—') + (ev.time ? ' ' + escapeHtml(ev.time) : '') + '</span></div>';
+  html += '<div class="detail-row"><span class="lbl">المكان</span><span class="val">' + escapeHtml(ev.location || '—') + '</span></div>';
+  html += '<div class="detail-row"><span class="lbl">النوع</span><span class="val">' + getTypeBadge(ev.type) + '</span></div>';
+  html += '<div class="detail-row"><span class="lbl">تاريخ الإغلاق</span><span class="val">' + formatDateTime(ev.closedAt) + '</span></div>';
+  if (ev.notes) {
+    html += '<div class="detail-row"><span class="lbl">ملاحظات</span><span class="val">' + escapeHtml(ev.notes) + '</span></div>';
+  }
+  html += '</div>';
+
+  // Guest Summary
+  html += '<div class="detail-section">';
+  html += '<h4>ملخص الضيوف</h4>';
+  html += '<div class="summary-grid">';
+  html += '<div class="summary-item"><div class="val">' + totalGuests + '</div><div class="lbl">مدعوين</div></div>';
+  html += '<div class="summary-item"><div class="val">' + confirmed + '</div><div class="lbl">مؤكدين</div></div>';
+  html += '<div class="summary-item"><div class="val">' + attended + '</div><div class="lbl">حاضرين</div></div>';
+  html += '<div class="summary-item"><div class="val">' + Math.max(0, absent) + '</div><div class="lbl">غائبين</div></div>';
+  html += '</div>';
+  html += '</div>';
+
+  // Communication Summary
+  html += '<div class="detail-section">';
+  html += '<h4>ملخص التواصل</h4>';
+  html += '<div class="detail-row"><span class="lbl">الرسائل المرسلة</span><span class="val">' + ev.sentCount + '</span></div>';
+  html += '<div class="detail-row"><span class="lbl">تم التسليم</span><span class="val">' + ev.deliveredCount + '</span></div>';
+  html += '<div class="detail-row"><span class="lbl">معدل التسليم</span><span class="val">' + deliveryRate + '%</span></div>';
+  html += '<div class="rate-bar"><div class="fill" style="width:' + deliveryRate + '%;background:' + deliveryColor + '"></div></div>';
+  html += '</div>';
+
+  // Budget Summary
+  html += '<div class="detail-section">';
+  html += '<h4>ملخص الميزانية</h4>';
+  html += '<div class="detail-row"><span class="lbl">التكلفة المقدّرة</span><span class="val">' + budgetEst.toLocaleString('ar-SA') + ' ر.س</span></div>';
+  html += '<div class="detail-row"><span class="lbl">التكلفة الفعلية</span><span class="val">' + budgetAct.toLocaleString('ar-SA') + ' ر.س</span></div>';
+  html += '<div class="detail-row"><span class="lbl">نسبة الفرق</span><span class="val ' + budgetVarClass + '">' + budgetVarSign + budgetVariance + '%</span></div>';
+
+  // Budget items table if available
+  if (ev.budgetItems && ev.budgetItems.length > 0) {
+    html += '<table class="budget-table"><thead><tr><th>البند</th><th>المقدّر</th><th>الفعلي</th><th>الفرق</th></tr></thead><tbody>';
+    ev.budgetItems.forEach(item => {
+      const est = item.estimated || 0;
+      const act = item.actual || 0;
+      const varPct = est > 0 ? Math.round(((act - est) / est) * 100) : 0;
+      const varCls = varPct <= 0 ? 'variance-pos' : 'variance-neg';
+      const varSign = varPct > 0 ? '+' : '';
+      html += '<tr>';
+      html += '<td>' + escapeHtml(item.name || '—') + '</td>';
+      html += '<td>' + est.toLocaleString('ar-SA') + '</td>';
+      html += '<td>' + act.toLocaleString('ar-SA') + '</td>';
+      html += '<td class="' + varCls + '">' + varSign + varPct + '%</td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+  }
+  html += '</div>';
+
+  // Closure Checklist
+  html += '<div class="detail-section">';
+  html += '<h4>قائمة إغلاق المناسبة — ' + checklistPct + '%</h4>';
+  html += '<div class="rate-bar" style="margin-bottom:10px"><div class="fill" style="width:' + checklistPct + '%;background:' + (checklistPct === 100 ? '#4caf50' : '#d4af37') + '"></div></div>';
+  if (checklistKeys.length > 0) {
+    html += '<ul class="checklist">';
+    checklistKeys.forEach(key => {
+      const done = checklistItems[key];
+      html += '<li class="' + (done ? 'done' : '') + '"><span class="check-icon">' + (done ? '✅' : '⬜') + '</span>' + escapeHtml(key) + '</li>';
+    });
+    html += '</ul>';
+  } else {
+    html += '<div style="color:#888;font-size:13px">لا توجد بيانات لقائمة الإغلاق</div>';
+  }
+  html += '</div>';
+
+  document.getElementById('modalContent').innerHTML = html;
+  document.getElementById('detailModal').classList.add('open');
+}
+
+/* ===== Modal Close ===== */
+document.getElementById('modalClose').addEventListener('click', () => {
+  document.getElementById('detailModal').classList.remove('open');
+});
+document.getElementById('detailModal').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) {
+    document.getElementById('detailModal').classList.remove('open');
+  }
+});
+
+/* ===== PDF Export ===== */
+function openPdfWindow(ev) {
+  const totalGuests = ev.guests || ev.responseCount || 0;
+  const confirmed = ev.confirmed || ev.confirmedFromResponses || 0;
+  const attended = ev.checkinCount || ev.attended || 0;
+  const absent = Math.max(0, confirmed - attended);
+  const deliveryRate = ev.sentCount > 0 ? Math.round((ev.deliveredCount / ev.sentCount) * 100) : 0;
+  const budgetEst = ev.budgetEstimated || 0;
+  const budgetAct = ev.budgetActual || 0;
+  const budgetVariance = budgetEst > 0 ? Math.round(((budgetAct - budgetEst) / budgetEst) * 100) : 0;
+
+  const html = `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>تقرير ${escapeHtml(ev.name)}</title>
+<style>
+  @page{margin:20mm}
+  *{box-sizing:border-box}
+  body{font-family:Tahoma,Arial,sans-serif;color:#111;margin:0;padding:30px;font-size:13px;line-height:1.7}
+  .header{text-align:center;margin-bottom:30px;padding-bottom:16px;border-bottom:3px solid #111}
+  .header h1{margin:0 0 6px;font-size:22px;color:#111}
+  .header .sub{color:#666;font-size:13px}
+  .section{margin-bottom:24px}
+  .section h2{font-size:15px;border-bottom:1px solid #ccc;padding-bottom:6px;margin:0 0 12px;color:#333}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:right;padding:8px 10px;border:1px solid #ddd}
+  th{background:#f5f5f5;font-weight:bold}
+  .summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+  .summary-box{text-align:center;padding:14px;border:1px solid #ddd;border-radius:6px}
+  .summary-box .num{font-size:26px;font-weight:bold;color:#333}
+  .summary-box .lbl{font-size:11px;color:#888;margin-top:4px}
+  .row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px dotted #ddd}
+  .row .l{color:#666}
+  .row .v{font-weight:bold}
+  .pos{color:green}.neg{color:red}
+  .footer{margin-top:40px;text-align:center;color:#999;font-size:11px;border-top:1px solid #eee;padding-top:12px}
+  @media print{body{padding:10px}}
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>${escapeHtml(ev.name)}</h1>
+    <div class="sub">تقرير المناسبة المؤرشفة — جمرة غضى</div>
+  </div>
+
+  <div class="section">
+    <h2>معلومات المناسبة</h2>
+    <table>
+      <tr><th>العميل</th><td>${escapeHtml(ev.client || '—')}</td><th>الهاتف</th><td>${escapeHtml(ev.phone || '—')}</td></tr>
+      <tr><th>التاريخ</th><td>${escapeHtml(ev.date || '—')} ${escapeHtml(ev.time || '')}</td><th>المكان</th><td>${escapeHtml(ev.location || '—')}</td></tr>
+      <tr><th>النوع</th><td>${escapeHtml(ev.type)}</td><th>تاريخ الإغلاق</th><td>${formatDateTime(ev.closedAt)}</td></tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>ملخص الضيوف</h2>
+    <div class="summary-grid">
+      <div class="summary-box"><div class="num">${totalGuests}</div><div class="lbl">مدعوين</div></div>
+      <div class="summary-box"><div class="num">${confirmed}</div><div class="lbl">مؤكدين</div></div>
+      <div class="summary-box"><div class="num">${attended}</div><div class="lbl">حاضرين</div></div>
+      <div class="summary-box"><div class="num">${absent}</div><div class="lbl">غائبين</div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>ملخص التواصل</h2>
+    <div class="row"><span class="l">الرسائل المرسلة</span><span class="v">${ev.sentCount}</span></div>
+    <div class="row"><span class="l">تم التسليم</span><span class="v">${ev.deliveredCount}</span></div>
+    <div class="row"><span class="l">معدل التسليم</span><span class="v">${deliveryRate}%</span></div>
+  </div>
+
+  <div class="section">
+    <h2>ملخص الميزانية</h2>
+    <div class="row"><span class="l">التكلفة المقدّرة</span><span class="v">${budgetEst.toLocaleString('ar-SA')} ر.س</span></div>
+    <div class="row"><span class="l">التكلفة الفعلية</span><span class="v">${budgetAct.toLocaleString('ar-SA')} ر.س</span></div>
+    <div class="row"><span class="l">نسبة الفرق</span><span class="v ${budgetVariance > 0 ? 'neg' : 'pos'}">${budgetVariance > 0 ? '+' : ''}${budgetVariance}%</span></div>
+    ${ev.budgetItems && ev.budgetItems.length > 0 ? `
+    <table style="margin-top:12px">
+      <thead><tr><th>البند</th><th>المقدّر</th><th>الفعلي</th><th>الفرق</th></tr></thead>
+      <tbody>${ev.budgetItems.map(item => {
+        const est = item.estimated || 0;
+        const act = item.actual || 0;
+        const vp = est > 0 ? Math.round(((act - est) / est) * 100) : 0;
+        return `<tr><td>${escapeHtml(item.name || '—')}</td><td>${est.toLocaleString('ar-SA')}</td><td>${act.toLocaleString('ar-SA')}</td><td class="${vp > 0 ? 'neg' : 'pos'}">${vp > 0 ? '+' : ''}${vp}%</td></tr>`;
+      }).join('')}</tbody>
+    </table>` : ''}
+  </div>
+
+  <div class="footer">
+    تم إنشاء هذا التقرير تلقائيًا من لوحة تحكم جمرة غضى — ${new Date().toLocaleDateString('ar-SA')}
+  </div>
+
+  <script>setTimeout(function(){window.print()},400)<\/script>
+</body>
+</html>`;
+
+  const w = window.open('', '_blank', 'noopener,noreferrer');
+  if (w) {
+    w.document.open();
+    w.document.documentElement.innerHTML = html.replace(/^[\s\S]*?<html[^>]*>/i, '').replace(/<\/html>\s*$/i, '');
+    w.document.close();
+  }
+}
+</script>
+</body>
+</html>

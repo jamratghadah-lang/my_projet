@@ -1,10 +1,12 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+
+<html dir="rtl" lang="ar">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>تذكير الضيوف — لوحة تحكم جمرة غضى</title>
-<meta name="robots" content="noindex, nofollow">
+<meta content="noindex, nofollow" name="robots"/>
 <style>
   body{font-family:Tahoma,Arial,sans-serif;background:#111;color:#eee;margin:0;padding:20px}
   .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
@@ -31,48 +33,48 @@
   #status{font-size:13px;margin-top:10px;color:#8ecb8e}
   .badge{font-size:11px;padding:2px 8px;border-radius:20px;background:#333;color:#ccc}
   .empty{color:#777;text-align:center;padding:20px;font-size:13px}
+
+  @media (max-width: 700px){
+    .container,.page,.content,.main-content{width:100%;max-width:100%;padding-left:12px;padding-right:12px;}
+    .grid{grid-template-columns:1fr !important;}
+    .card{min-width:0;}
+    table{display:block;max-width:100%;overflow-x:auto;white-space:nowrap;}
+  }
 </style>
 </head>
 <body>
-
 <div class="topbar">
-  <h1>تذكير الضيوف (قبل يومين من المناسبة)</h1>
-  <a class="back" href="index.html">← رجوع للوحة</a>
+<h1>تذكير الضيوف (قبل يومين من المناسبة)</h1>
+<a class="back" href="index.html">← رجوع للوحة</a>
 </div>
-
 <div class="card">
-  <h2>طريقة التذكير</h2>
-  <div class="mode-switch">
-    <label><input type="radio" name="mode" value="whatsapp" id="modeWhatsapp"><span>واتساب يدوي (مجاني)</span></label>
-    <label><input type="radio" name="mode" value="sms" id="modeSms"><span>SMS جماعي تلقائي</span></label>
-  </div>
-
-  <div id="smsOptions" style="display:none">
-    <select id="smsProvider">
-      <option value="">اختاري المزوّد...</option>
-      <option value="msegat">Msegat</option>
-      <option value="unifonic">Unifonic</option>
-      <option value="twilio">Twilio</option>
-    </select>
-    <div class="hint">مفاتيح الربط (API) تُضاف لاحقًا من إعدادات Netlify Environment Variables، مو من هنا — عشان الأمان. الآن الاختيار بيتحفظ بس.</div>
-  </div>
-
-  <label style="font-size:13px;color:#ccc">نص رسالة التذكير (استخدمي {name} ليتم استبدالها باسم الضيف):</label>
-  <textarea id="template">مرحبًا {name}، نذكّركم بمناسبتنا بعد يومين 🌸 بانتظار حضوركم.</textarea>
-
-  <button id="saveSettings">حفظ الإعدادات</button>
-  <span id="status"></span>
+<h2>طريقة التذكير</h2>
+<div class="mode-switch">
+<label><input id="modeWhatsapp" name="mode" type="radio" value="whatsapp"/><span>واتساب يدوي (مجاني)</span></label>
+<label><input id="modeSms" name="mode" type="radio" value="sms"/><span>SMS جماعي تلقائي</span></label>
 </div>
-
+<div id="smsOptions" style="display:none">
+<select id="smsProvider">
+<option value="">اختاري المزوّد...</option>
+<option value="msegat">Msegat</option>
+<option value="unifonic">Unifonic</option>
+<option value="twilio">Twilio</option>
+</select>
+<div class="hint">مفاتيح الربط (API) تُضاف لاحقًا من إعدادات Netlify Environment Variables، مو من هنا — عشان الأمان. الآن الاختيار بيتحفظ بس.</div>
+</div>
+<label for="template" style="font-size:13px;color:#ccc">نص رسالة التذكير (استخدمي {name} ليتم استبدالها باسم الضيف):</label>
+<textarea id="template">مرحبًا {name}، نذكّركم بمناسبتنا بعد يومين 🌸 بانتظار حضوركم.</textarea>
+<button id="saveSettings">حفظ الإعدادات</button>
+<span id="status"></span>
+</div>
 <div class="card">
-  <h2>الضيوف المؤكدين للحضور</h2>
-  <div id="guestsWrap"><div class="empty">جارِ التحميل...</div></div>
-  <div id="smsSendWrap" style="display:none;margin-top:12px">
-    <button id="sendSmsBtn">إرسال SMS لكل الضيوف</button>
-    <span id="sendStatus" class="hint"></span>
-  </div>
+<h2>الضيوف المؤكدين للحضور</h2>
+<div id="guestsWrap"><div class="empty">جارِ التحميل...</div></div>
+<div id="smsSendWrap" style="display:none;margin-top:12px">
+<button id="sendSmsBtn">إرسال SMS لكل الضيوف</button>
+<span class="hint" id="sendStatus"></span>
 </div>
-
+</div>
 <script type="module">
 import {
   auth, db, requireLogin,
@@ -164,7 +166,7 @@ function renderGuests() {
   const esc = (s) => {
     const d = document.createElement("div");
     d.textContent = String(s == null ? "" : s);
-    return d.innerHTML;
+    return d.innerHTML.replace(/'/g, "&#39;");
   };
 
   wrap.innerHTML = `<ul class="guest-list">` + guests.map((g) => {

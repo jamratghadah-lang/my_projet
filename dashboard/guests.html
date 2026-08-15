@@ -1,10 +1,12 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+
+<html dir="rtl" lang="ar">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>إدارة المدعوين — لوحة تحكم جمرة غضى</title>
-<meta name="robots" content="noindex, nofollow">
+<meta content="noindex, nofollow" name="robots"/>
 <style>
   *{box-sizing:border-box}
   body{font-family:Tahoma,Arial,sans-serif;background:#111;color:#eee;margin:0;padding:20px}
@@ -51,6 +53,10 @@
 
   /* ===== Table ===== */
   .table-wrap{overflow-x:auto}
+  #guestTable.hide-table .col-table{display:none}
+  #guestTable.hide-seat .col-seat{display:none}
+  #guestTable.hide-gate .col-gate{display:none}
+  .field-table.field-hidden,.field-seat.field-hidden,.field-gate.field-hidden{display:none}
   table{width:100%;border-collapse:collapse;font-size:13px}
   thead th{text-align:right;padding:10px 8px;border-bottom:2px solid #333;color:#d4af37;white-space:nowrap}
   tbody td{padding:10px 8px;border-bottom:1px solid #2a2a2a;white-space:nowrap}
@@ -89,172 +95,207 @@
   .import-preview{max-height:160px;overflow-y:auto;background:#161616;border:1px solid #333;border-radius:8px;padding:8px 10px;font-size:12px;color:#aaa;margin-top:10px}
   .send-results{max-height:180px;overflow-y:auto;font-size:12px;margin-top:10px;background:#161616;border:1px solid #333;border-radius:8px;padding:8px 10px}
   .send-results div{padding:3px 0;border-bottom:1px solid #262626}
+  .edit-log-panel{max-height:300px;overflow-y:auto;font-size:12px;background:#161616;border:1px solid #333;border-radius:8px;padding:10px;margin-top:10px}
+  .edit-log-panel .log-entry{padding:6px 0;border-bottom:1px solid #262626;display:flex;gap:10px;align-items:flex-start}
+  .edit-log-panel .log-entry:last-child{border-bottom:none}
+  .edit-log-panel .log-time{color:#888;white-space:nowrap;font-size:11px}
+  .edit-log-panel .log-field{color:#d4af37;font-weight:bold}
+  .edit-log-panel .log-old{color:#e07a5f;text-decoration:line-through}
+  .edit-log-panel .log-new{color:#4caf50}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;z-index:9999;opacity:0;transition:opacity .3s}
+  .toast.show{opacity:1}
 </style>
 </head>
 <body>
-
 <div class="topbar">
-  <h1>📋 إدارة المدعوين</h1>
-  <a class="back" href="index.html">← رجوع للوحة</a>
+<h1>📋 إدارة المدعوين</h1>
+<a class="back" href="index.html">← رجوع للوحة</a>
 </div>
-
 <!-- ===== Live Stats ===== -->
 <div class="stats">
-  <div class="stat total"><div class="num" id="statTotal">0</div><div class="label">إجمالي المدعوين</div></div>
-  <div class="stat yes"><div class="num" id="statYes">0</div><div class="label">مؤكد الحضور</div></div>
-  <div class="stat no"><div class="num" id="statNo">0</div><div class="label">معتذر</div></div>
-  <div class="stat pending"><div class="num" id="statPending">0</div><div class="label">لم يرد</div></div>
-  <div class="stat archived"><div class="num" id="statArchived">0</div><div class="label">مؤرشف</div></div>
+<div class="stat total"><div class="num" id="statTotal">0</div><div class="label">إجمالي المدعوين</div></div>
+<div class="stat yes"><div class="num" id="statYes">0</div><div class="label">مؤكد الحضور</div></div>
+<div class="stat no"><div class="num" id="statNo">0</div><div class="label">معتذر</div></div>
+<div class="stat pending"><div class="num" id="statPending">0</div><div class="label">لم يرد</div></div>
+<div class="stat archived"><div class="num" id="statArchived">0</div><div class="label">مؤرشف</div></div>
 </div>
-
 <div class="card">
-  <h2>قائمة المدعوين</h2>
-
-  <div class="toolbar">
-    <div class="search-wrap">
-      <input type="text" id="searchInput" placeholder="بحث بالاسم أو رقم الهاتف...">
-      <span class="icon">🔍</span>
-    </div>
-    <select id="filterStatus">
-      <option value="all">كل الحالات</option>
-      <option value="yes">مؤكد الحضور</option>
-      <option value="no">معتذر</option>
-      <option value="pending">لم يرد</option>
-    </select>
-    <button class="btn btn-excel" id="exportExcel">📊 Excel</button>
-    <button class="btn btn-pdf" id="exportPdf">📄 PDF</button>
-  </div>
-
-  <div class="toolbar2">
-    <button class="btn btn-gold" id="openAddModal">➕ إضافة ضيف</button>
-    <button class="btn btn-outline" id="openImportModal">📥 استيراد قائمة</button>
-    <button class="btn btn-purple" id="openSendModal" disabled>✉️ إرسال جماعي (<span id="selCount">0</span>)</button>
-    <label class="toggle-archive">
-      <input type="checkbox" id="showArchived"> إظهار المؤرشفين
-    </label>
-  </div>
-
-  <div class="table-wrap">
-    <table id="guestTable">
-      <thead>
-        <tr>
-          <th><input type="checkbox" id="selectAll"></th>
-          <th>#</th>
-          <th>الاسم</th>
-          <th>الهاتف</th>
-          <th>البريد</th>
-          <th>الحالة</th>
-          <th>عدد الضيوف</th>
-          <th>القالب</th>
-          <th>التاريخ</th>
-          <th>إجراءات</th>
-        </tr>
-      </thead>
-      <tbody id="guestBody">
-        <tr><td colspan="10" class="empty">جارِ التحميل...</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <div class="count-hint" id="countHint"></div>
+<h2>قائمة المدعوين</h2>
+<div class="toolbar">
+<div class="search-wrap">
+<input id="searchInput" placeholder="بحث بالاسم أو رقم الهاتف..." type="text"/>
+<span class="icon">🔍</span>
 </div>
-
+<select id="filterStatus">
+<option value="all">كل الحالات</option>
+<option value="yes">مؤكد الحضور</option>
+<option value="no">معتذر</option>
+<option value="pending">لم يرد</option>
+</select>
+<button class="btn btn-excel" id="exportExcel">📊 Excel</button>
+<button class="btn btn-pdf" id="exportPdf">📄 PDF</button>
+</div>
+<div class="toolbar2">
+<button class="btn btn-gold" id="openAddModal">➕ إضافة ضيف</button>
+<button class="btn btn-outline" id="openImportModal">📥 استيراد قائمة</button>
+<button class="btn btn-purple" disabled="" id="openSendModal">✉️ إرسال جماعي (<span id="selCount">0</span>)</button>
+<button class="btn btn-danger" disabled="" id="bulkDeleteBtn" style="display:none">🗑 حذف المحدد (<span id="bulkDelCount">0</span>)</button>
+<button class="btn btn-outline" id="openFieldsSettings">⚙️ حقول إضافية</button>
+<label class="toggle-archive">
+<input id="showArchived" type="checkbox"/> إظهار المؤرشفين
+    </label>
+</div>
+<div class="table-wrap">
+<table id="guestTable">
+<thead>
+<tr>
+<th><input id="selectAll" type="checkbox"/></th>
+<th>#</th>
+<th>الاسم</th>
+<th>الهاتف</th>
+<th>البريد</th>
+<th>الحالة</th>
+<th>عدد الضيوف</th>
+<th class="col-table">طاولة</th>
+<th class="col-seat">مقعد</th>
+<th class="col-gate">بوابة</th>
+<th>القالب</th>
+<th>التاريخ</th>
+<th>QR</th>
+<th>إجراءات</th>
+</tr>
+</thead>
+<tbody id="guestBody">
+<tr><td class="empty" colspan="14">جارِ التحميل...</td></tr>
+</tbody>
+</table>
+</div>
+<div class="count-hint" id="countHint"></div>
+</div>
 <!-- ===== نافذة إضافة ضيف ===== -->
 <div class="modal-bg" id="addModalBg">
-  <div class="modal">
-    <h3>➕ إضافة ضيف يدويًا</h3>
-    <div class="field"><label>الاسم *</label><input type="text" id="addName" placeholder="اسم الضيف"></div>
-    <div class="field"><label>رقم الجوال (بصيغة دولية بدون +، مثال 9665xxxxxxxx)</label><input type="text" id="addPhone" placeholder="9665xxxxxxxx" dir="ltr"></div>
-    <div class="field"><label>البريد الإلكتروني (اختياري)</label><input type="email" id="addEmail" placeholder="name@example.com" dir="ltr"></div>
-    <div class="field"><label>عدد المرافقين</label><input type="number" id="addGuests" value="1" min="0"></div>
-    <div class="field">
-      <label>الحالة</label>
-      <select id="addStatus">
-        <option value="yes">مؤكد الحضور</option>
-        <option value="pending" selected>لم يرد</option>
-        <option value="no">معتذر</option>
-      </select>
-    </div>
-    <div class="msg-status" id="addStatusMsg"></div>
-    <div class="modal-actions">
-      <button class="btn btn-outline" id="addCancel">إلغاء</button>
-      <button class="btn btn-gold" id="addSave">حفظ</button>
-    </div>
-  </div>
+<div class="modal">
+<h3>➕ إضافة ضيف يدويًا</h3>
+<div class="field"><label for="addName">الاسم *</label><input id="addName" placeholder="اسم الضيف" type="text"/></div>
+<div class="field"><label for="addPhone">رقم الجوال (بصيغة دولية بدون +، مثال 9665xxxxxxxx)</label><input dir="ltr" id="addPhone" placeholder="9665xxxxxxxx" type="text"/></div>
+<div class="field"><label for="addEmail">البريد الإلكتروني (اختياري)</label><input dir="ltr" id="addEmail" placeholder="name@example.com" type="email"/></div>
+<div class="field"><label for="addGuests">عدد المرافقين</label><input id="addGuests" min="0" type="number" value="1"/></div>
+<div class="field field-table"><label for="addTable">رقم الطاولة (اختياري)</label><input id="addTable" placeholder="مثال: 5" type="text"/></div>
+<div class="field field-seat"><label for="addSeat">رقم المقعد (اختياري)</label><input id="addSeat" placeholder="مثال: 2" type="text"/></div>
+<div class="field field-gate"><label for="addGate">البوابة (اختياري)</label><input id="addGate" placeholder="مثال: A" type="text"/></div>
+<div class="field">
+<label for="addStatus">الحالة</label>
+<select id="addStatus">
+<option value="yes">مؤكد الحضور</option>
+<option selected="" value="pending">لم يرد</option>
+<option value="no">معتذر</option>
+</select>
 </div>
-
+<div class="msg-status" id="addStatusMsg"></div>
+<div class="modal-actions">
+<button class="btn btn-outline" id="addCancel">إلغاء</button>
+<button class="btn btn-gold" id="addSave">حفظ</button>
+</div>
+</div>
+</div>
 <!-- ===== نافذة استيراد قائمة ===== -->
 <div class="modal-bg" id="importModalBg">
-  <div class="modal">
-    <h3>📥 استيراد قائمة ضيوف (CSV)</h3>
-    <div class="field">
-      <label>ملف CSV — أعمدة: الاسم, الهاتف, البريد (اختياري), عدد_المرافقين</label>
-      <input type="file" id="importFile" accept=".csv">
-      <div class="hint">أول سطر بالملف لازم يكون عناوين الأعمدة. البريد وعدد المرافقين اختياريين.</div>
-    </div>
-    <div class="import-preview" id="importPreview" style="display:none"></div>
-    <div class="msg-status" id="importStatusMsg"></div>
-    <div class="modal-actions">
-      <button class="btn btn-outline" id="importCancel">إلغاء</button>
-      <button class="btn btn-gold" id="importConfirm" disabled>استيراد</button>
-    </div>
-  </div>
+<div class="modal">
+<h3>📥 استيراد قائمة ضيوف (CSV)</h3>
+<div class="field">
+<label for="importFile">ملف CSV — أعمدة: الاسم, الهاتف, البريد (اختياري), عدد_المرافقين, طاولة (اختياري), مقعد (اختياري), بوابة (اختياري)</label>
+<input accept=".csv" id="importFile" type="file"/>
+<div class="hint">أول سطر بالملف لازم يكون عناوين الأعمدة. البريد وعدد المرافقين والطاولة والمقعد والبوابة اختيارية.</div>
 </div>
-
+<div class="import-preview" id="importPreview" style="display:none"></div>
+<div class="msg-status" id="importStatusMsg"></div>
+<div class="modal-actions">
+<button class="btn btn-outline" id="importCancel">إلغاء</button>
+<button class="btn btn-gold" disabled="" id="importConfirm">استيراد</button>
+</div>
+</div>
+</div>
+<!-- ===== نافذة إعدادات الحقول الإضافية ===== -->
+<div class="modal-bg" id="fieldsModalBg">
+<div class="modal">
+<h3>⚙️ الحقول الإضافية</h3>
+<div class="hint" style="margin-bottom:10px">فعّلي أو عطّلي أي حقل — العرض بالجدول والإضافة والاستيراد يتحدث فورًا. البيانات المحفوظة سابقًا لا تُحذف عند التعطيل.</div>
+<div class="field"><label><input id="fieldTableToggle" type="checkbox"/> إظهار حقل "رقم الطاولة"</label></div>
+<div class="field"><label><input id="fieldSeatToggle" type="checkbox"/> إظهار حقل "رقم المقعد"</label></div>
+<div class="field"><label><input id="fieldGateToggle" type="checkbox"/> إظهار حقل "البوابة"</label></div>
+<div class="msg-status" id="fieldsStatusMsg"></div>
+<div class="modal-actions">
+<button class="btn btn-outline" id="fieldsCancel">إلغاء</button>
+<button class="btn btn-gold" id="fieldsSave">حفظ</button>
+</div>
+</div>
+</div>
 <!-- ===== نافذة الإرسال الجماعي ===== -->
 <div class="modal-bg" id="sendModalBg">
-  <div class="modal">
-    <h3>✉️ إرسال جماعي إلى <span id="sendCountLabel">0</span> ضيف</h3>
-    <div class="field">
-      <label>القناة</label>
-      <div class="radio-row">
-        <label><input type="radio" name="channel" value="whatsapp" checked> واتساب</label>
-        <label><input type="radio" name="channel" value="email"> إيميل</label>
-        <label><input type="radio" name="channel" value="both"> الاثنين</label>
-      </div>
-    </div>
-    <div class="field">
-      <label>عنوان الإيميل (يُستخدم فقط لو القناة تتضمن إيميل)</label>
-      <input type="text" id="sendSubject" value="دار جمرة غضى">
-    </div>
-    <div class="field">
-      <label>محتوى الرسالة (اختاري وحدة أو أكثر — تقدرين تجمعين بينهم)</label>
-      <div class="radio-row">
-        <label><input type="checkbox" id="ctText" checked> نص</label>
-        <label><input type="checkbox" id="ctImage"> صورة / بطاقة</label>
-        <label><input type="checkbox" id="ctVideo"> فيديو</label>
-      </div>
-    </div>
-    <div class="field" id="imageUrlField" style="display:none">
-      <label>رابط الصورة/البطاقة (من Cloudinary)</label>
-      <input type="text" id="sendImageUrl" placeholder="https://res.cloudinary.com/...">
-    </div>
-    <div class="field" id="videoUrlField" style="display:none">
-      <label>رابط الفيديو (من Cloudinary)</label>
-      <input type="text" id="sendVideoUrl" placeholder="https://res.cloudinary.com/...">
-    </div>
-    <div class="field">
-      <label>نص الرسالة (استخدمي {name} ليتم استبدالها باسم كل ضيف)</label>
-      <textarea id="sendMessage" placeholder="مرحباً {name}، ..."></textarea>
-    </div>
-    <div class="msg-status" id="sendStatusMsg"></div>
-    <div class="send-results" id="sendResults" style="display:none"></div>
-    <div class="modal-actions">
-      <button class="btn btn-outline" id="sendCancel">إلغاء</button>
-      <button class="btn btn-purple" id="sendConfirm">إرسال</button>
-    </div>
-  </div>
+<div class="modal">
+<h3>✉️ إرسال جماعي إلى <span id="sendCountLabel">0</span> ضيف</h3>
+<div class="field">
+<label>القناة</label>
+<div class="radio-row">
+<label><input checked="" name="channel" type="radio" value="whatsapp"/> واتساب</label>
+<label><input name="channel" type="radio" value="email"/> إيميل</label>
+<label><input name="channel" type="radio" value="both"/> الاثنين</label>
 </div>
-
+</div>
+<div class="field">
+<label for="sendSubject">عنوان الإيميل (يُستخدم فقط لو القناة تتضمن إيميل)</label>
+<input id="sendSubject" type="text" value="دار جمرة غضى"/>
+</div>
+<div class="field">
+<label for="ctText">محتوى الرسالة (اختاري وحدة أو أكثر — تقدرين تجمعين بينهم)</label>
+<div class="radio-row">
+<label><input checked="" id="ctText" type="checkbox"/> نص</label>
+<label><input id="ctImage" type="checkbox"/> صورة / بطاقة</label>
+<label><input id="ctVideo" type="checkbox"/> فيديو</label>
+</div>
+</div>
+<div class="field" id="imageUrlField" style="display:none">
+<label for="sendImageUrl">رابط الصورة/البطاقة (من Cloudinary)</label>
+<input id="sendImageUrl" placeholder="https://res.cloudinary.com/..." type="text"/>
+</div>
+<div class="field" id="videoUrlField" style="display:none">
+<label for="sendVideoUrl">رابط الفيديو (من Cloudinary)</label>
+<input id="sendVideoUrl" placeholder="https://res.cloudinary.com/..." type="text"/>
+</div>
+<div class="field">
+<label for="sendMessage">نص الرسالة (استخدمي {name} ليتم استبدالها باسم كل ضيف)</label>
+<textarea id="sendMessage" placeholder="مرحباً {name}، ..."></textarea>
+</div>
+<div class="msg-status" id="sendStatusMsg"></div>
+<div class="send-results" id="sendResults" style="display:none"></div>
+<div class="modal-actions">
+<button class="btn btn-outline" id="sendCancel">إلغاء</button>
+<button class="btn btn-purple" id="sendConfirm">إرسال</button>
+</div>
+</div>
+</div>
+<!-- ===== نافذة سجل التعديلات ===== -->
+<div class="modal-bg" id="logModalBg">
+<div class="modal">
+<h3>📋 سجل تعديلات: <span id="logGuestName"></span></h3>
+<div id="logList"><div class="empty">جارِ التحميل...</div></div>
+<div class="modal-actions">
+<button class="btn btn-outline" id="logClose">إغلاق</button>
+</div>
+</div>
+</div>
+<!-- Toast -->
+<div class="toast" id="toast"></div>
 <!-- ===== Libraries for export ===== -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-
 <script type="module">
 import {
   db, auth, requireLogin,
   collection, query, orderBy, onSnapshot,
-  doc, addDoc, updateDoc, deleteDoc, serverTimestamp,
+  doc, addDoc, updateDoc, deleteDoc, serverTimestamp, setDoc,
+  getDocs, getDoc, where,
 } from "../js/firebase-init.js";
 
 let allGuests = [];
@@ -286,17 +327,80 @@ requireLogin(() => {
         email: r.email || "",
         status,
         guests: r.guests || "—",
+        table: r.table || "",
+        seat: r.seat || "",
+        gate: r.gate || "",
         style: r.style || "—",
         archived: !!r.archived,
         manual: r.source === "manual",
+        entryCode: r.entryCode || "",
+        qrRevoked: !!r.qrRevoked,
         date: r.createdAt ? new Date(r.createdAt.toMillis ? r.createdAt.toMillis() : r.createdAt).toLocaleString("ar-SA") : "—",
       });
     });
     updateStats();
     renderTable();
   }, () => {
-    document.getElementById("guestBody").innerHTML = '<tr><td colspan="10" class="empty">تعذّر تحميل البيانات</td></tr>';
+    document.getElementById("guestBody").innerHTML = '<tr><td colspan="14" class="empty">تعذّر تحميل البيانات</td></tr>';
   });
+});
+
+// ===== إعدادات الحقول الإضافية (طاولة/مقعد/بوابة) =====
+// افتراضيًا كل الحقول ظاهرة (true) — لو تعذّر التحميل من Firestore
+// لأي سبب، نبقى على الافتراضي الظاهر بدل ما نخفي شي بالخطأ.
+let fieldSettings = { table: true, seat: true, gate: true };
+
+function applyFieldSettings() {
+  const table = document.getElementById("guestTable");
+  table.classList.toggle("hide-table", !fieldSettings.table);
+  table.classList.toggle("hide-seat", !fieldSettings.seat);
+  table.classList.toggle("hide-gate", !fieldSettings.gate);
+  document.querySelector(".field-table").classList.toggle("field-hidden", !fieldSettings.table);
+  document.querySelector(".field-seat").classList.toggle("field-hidden", !fieldSettings.seat);
+  document.querySelector(".field-gate").classList.toggle("field-hidden", !fieldSettings.gate);
+}
+
+async function loadFieldSettings() {
+  try {
+    const snap = await getDoc(doc(db, "settings", "guestFields"));
+    if (snap.exists()) {
+      const d = snap.data();
+      fieldSettings = {
+        table: d.table !== false,
+        seat: d.seat !== false,
+        gate: d.gate !== false,
+      };
+    }
+  } catch { /* نبقى على الافتراضي الظاهر */ }
+  applyFieldSettings();
+}
+loadFieldSettings();
+
+const fieldsModalBg = document.getElementById("fieldsModalBg");
+document.getElementById("openFieldsSettings").addEventListener("click", () => {
+  document.getElementById("fieldTableToggle").checked = fieldSettings.table;
+  document.getElementById("fieldSeatToggle").checked = fieldSettings.seat;
+  document.getElementById("fieldGateToggle").checked = fieldSettings.gate;
+  document.getElementById("fieldsStatusMsg").textContent = "";
+  fieldsModalBg.classList.add("open");
+});
+document.getElementById("fieldsCancel").addEventListener("click", () => fieldsModalBg.classList.remove("open"));
+document.getElementById("fieldsSave").addEventListener("click", async () => {
+  const msgEl = document.getElementById("fieldsStatusMsg");
+  const newSettings = {
+    table: document.getElementById("fieldTableToggle").checked,
+    seat: document.getElementById("fieldSeatToggle").checked,
+    gate: document.getElementById("fieldGateToggle").checked,
+  };
+  try {
+    await setDoc(doc(db, "settings", "guestFields"), newSettings, { merge: true });
+    fieldSettings = newSettings;
+    applyFieldSettings();
+    msgEl.textContent = "تم الحفظ ✅"; msgEl.className = "msg-status ok";
+    setTimeout(() => fieldsModalBg.classList.remove("open"), 600);
+  } catch {
+    msgEl.textContent = "تعذّر الحفظ"; msgEl.className = "msg-status err";
+  }
 });
 
 // ===== Stats =====
@@ -323,9 +427,12 @@ function getFiltered() {
 }
 
 function escapeHtml(s) {
-  const d = document.createElement("div");
-  d.textContent = String(s);
-  return d.innerHTML;
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 // ===== Render Table =====
@@ -339,7 +446,7 @@ function renderTable() {
   updateSendButton();
 
   if (!list.length) {
-    body.innerHTML = '<tr><td colspan="10" class="empty">لا يوجد مدعوين مطابقين</td></tr>';
+    body.innerHTML = '<tr><td colspan="14" class="empty">لا يوجد مدعوين مطابقين</td></tr>';
     hint.textContent = "";
     return;
   }
@@ -361,11 +468,17 @@ function renderTable() {
       <td dir="ltr" style="text-align:right">${escapeHtml(g.email || "—")}</td>
       <td><span class="badge ${s.cls}">${s.text}</span></td>
       <td>${escapeHtml(String(g.guests))}</td>
+      <td class="col-table">${escapeHtml(g.table || "—")}</td>
+      <td class="col-seat">${escapeHtml(g.seat || "—")}</td>
+      <td class="col-gate">${escapeHtml(g.gate || "—")}</td>
       <td>${escapeHtml(g.style)}</td>
       <td>${escapeHtml(g.date)}</td>
+      <td>${g.entryCode ? `<span style="font-family:monospace;font-size:11px;color:${g.qrRevoked ? '#e07a5f' : '#4caf50'}" dir="ltr">${escapeHtml(g.entryCode)}</span>` : "—"}</td>
       <td class="row-actions">
         <button class="btn btn-sm btn-outline archiveBtn" data-id="${g.id}" data-archived="${g.archived}">${g.archived ? "↩️ استرجاع" : "📦 أرشفة"}</button>
-        <button class="btn btn-sm btn-danger deleteBtn" data-id="${g.id}">🗑</button>
+        <button class="btn btn-sm btn-outline logBtn" data-id="${g.id}" data-name="${escapeHtml(g.name)}">📋</button>
+        ${g.entryCode ? `<button class="btn btn-sm btn-outline qrToggleBtn" data-id="${g.id}" data-revoked="${g.qrRevoked}">${g.qrRevoked ? "♻️ تفعيل" : "🚫 إلغاء"}</button>` : ""}
+        <button class="btn btn-sm btn-danger deleteBtn" data-id="${g.id}" data-name="${escapeHtml(g.name)}">🗑</button>
       </td>
     </tr>`;
   }).join("");
@@ -393,13 +506,10 @@ function renderTable() {
   });
   body.querySelectorAll(".deleteBtn").forEach(btn => {
     btn.addEventListener("click", async () => {
-      if (!confirm("تأكيد حذف هذا الضيف نهائيًا؟ ما فيه تراجع.")) return;
+      const name = btn.dataset.name || "ضيف";
+      if (!confirm(`تأكيد حذف "${name}"؟ سيتم نقله إلى سلة المحذوفات.`)) return;
       btn.disabled = true;
-      try {
-        await deleteDoc(doc(db, "responses", btn.dataset.id));
-      } catch (e) {
-        alert("تعذّر الحذف");
-      }
+      await moveToTrash(btn.dataset.id, name);
       btn.disabled = false;
     });
   });
@@ -408,6 +518,7 @@ function renderTable() {
 function updateSendButton() {
   document.getElementById("selCount").textContent = selectedIds.size;
   document.getElementById("openSendModal").disabled = selectedIds.size === 0;
+  updateBulkDeleteButton();
 }
 
 document.getElementById("searchInput").addEventListener("input", renderTable);
@@ -427,11 +538,12 @@ document.getElementById("exportExcel").addEventListener("click", () => {
   const rows = list.map((g, i) => ({
     "#": i + 1, "الاسم": g.name, "الهاتف": g.phone, "البريد": g.email || "—",
     "الحالة": g.status === "yes" ? "مؤكد الحضور" : g.status === "no" ? "معتذر" : "لم يرد",
-    "عدد الضيوف": g.guests, "القالب": g.style, "التاريخ": g.date,
+    "عدد الضيوف": g.guests, "طاولة": g.table || "—", "مقعد": g.seat || "—", "بوابة": g.gate || "—",
+    "القالب": g.style, "التاريخ": g.date,
     "مؤرشف": g.archived ? "نعم" : "لا",
   }));
   const ws = XLSX.utils.json_to_sheet(rows);
-  ws["!cols"] = [{ wch: 5 }, { wch: 25 }, { wch: 18 }, { wch: 22 }, { wch: 14 }, { wch: 12 }, { wch: 18 }, { wch: 22 }, { wch: 9 }];
+  ws["!cols"] = [{ wch: 5 }, { wch: 25 }, { wch: 18 }, { wch: 22 }, { wch: 14 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 18 }, { wch: 22 }, { wch: 9 }];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "المدعوين");
   XLSX.writeFile(wb, "قائمة-المدعوين.xlsx");
@@ -462,7 +574,7 @@ document.getElementById("exportPdf").addEventListener("click", () => {
 // ===================== نافذة إضافة ضيف =====================
 const addModalBg = document.getElementById("addModalBg");
 document.getElementById("openAddModal").addEventListener("click", () => {
-  ["addName","addPhone","addEmail"].forEach(id => document.getElementById(id).value = "");
+  ["addName","addPhone","addEmail","addTable","addSeat","addGate"].forEach(id => document.getElementById(id).value = "");
   document.getElementById("addGuests").value = 1;
   document.getElementById("addStatus").value = "pending";
   document.getElementById("addStatusMsg").textContent = "";
@@ -474,6 +586,9 @@ document.getElementById("addSave").addEventListener("click", async () => {
   const phone = document.getElementById("addPhone").value.trim().slice(0, 30);
   const email = document.getElementById("addEmail").value.trim().slice(0, 200);
   const guests = parseInt(document.getElementById("addGuests").value || "0", 10);
+  const table = document.getElementById("addTable").value.trim().slice(0, 30);
+  const seat = document.getElementById("addSeat").value.trim().slice(0, 30);
+  const gate = document.getElementById("addGate").value.trim().slice(0, 30);
   const status = document.getElementById("addStatus").value;
   const msgEl = document.getElementById("addStatusMsg");
   if (!name) { msgEl.textContent = "الاسم مطلوب"; msgEl.className = "msg-status err"; return; }
@@ -483,6 +598,7 @@ document.getElementById("addSave").addEventListener("click", async () => {
   try {
     await addDoc(collection(db, "responses"), {
       name, phone: phone || "", email: email || "", guests, status,
+      table: table || "", seat: seat || "", gate: gate || "",
       style: "manual", source: "manual", archived: false,
       entryCode: generateEntryCode(),
       createdAt: serverTimestamp(),
@@ -534,6 +650,9 @@ document.getElementById("importFile").addEventListener("change", async (e) => {
     phone: r["الهاتف"] || r["phone"] || "",
     email: r["البريد"] || r["email"] || "",
     guests: parseInt(r["عدد_المرافقين"] || r["guests"] || "0", 10) || 0,
+    table: r["طاولة"] || r["table"] || "",
+    seat: r["مقعد"] || r["seat"] || "",
+    gate: r["بوابة"] || r["gate"] || "",
   })).filter(r => r.name);
 
   const preview = document.getElementById("importPreview");
@@ -562,6 +681,7 @@ document.getElementById("importConfirm").addEventListener("click", async () => {
       await addDoc(collection(db, "responses"), {
         name: String(r.name).slice(0, 180), phone: String(r.phone || "").slice(0, 30), email: String(r.email || "").slice(0, 200),
         guests: r.guests || 0, status: "pending",
+        table: String(r.table || "").slice(0, 30), seat: String(r.seat || "").slice(0, 30), gate: String(r.gate || "").slice(0, 30),
         style: "manual", source: "manual", archived: false,
         entryCode: generateEntryCode(),
         createdAt: serverTimestamp(),
@@ -645,6 +765,150 @@ document.getElementById("sendConfirm").addEventListener("click", async () => {
     msgEl.textContent = "تعذّر الاتصال بالسيرفر"; msgEl.className = "msg-status err";
   }
   btn.disabled = false;
+});
+
+// ===== Toast =====
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2500);
+}
+
+// ===== سجل تعديلات الضيف =====
+const logModalBg = document.getElementById("logModalBg");
+document.getElementById("logClose").addEventListener("click", () => logModalBg.classList.remove("open"));
+logModalBg.addEventListener("click", (e) => { if (e.target === logModalBg) logModalBg.classList.remove("open"); });
+
+async function showEditLog(guestId, guestName) {
+  document.getElementById("logGuestName").textContent = guestName;
+  const logList = document.getElementById("logList");
+  logList.innerHTML = '<div class="empty">جارِ التحميل...</div>';
+  logModalBg.classList.add("open");
+  try {
+    const q = query(collection(db, "guest_edit_logs"), where("guestId", "==", guestId), orderBy("time", "desc"));
+    const snap = await getDocs(q);
+    if (snap.empty) { logList.innerHTML = '<div class="empty">لا توجد تعديلات مسجلة</div>'; return; }
+    const fieldLabels = { name: "الاسم", phone: "الهاتف", email: "البريد", status: "الحالة", guests: "المرافقين", archived: "الأرشفة" };
+    logList.innerHTML = '<div class="edit-log-panel">' + snap.docs.map(d => {
+      const r = d.data();
+      const t = r.time ? new Date(r.time.toMillis ? r.time.toMillis() : r.time).toLocaleString("ar-SA") : "—";
+      return `<div class="log-entry">
+        <span class="log-time">${escapeHtml(t)}</span>
+        <span>${escapeHtml(r.userName || "النظام")}</span>
+        <span>غيّر</span>
+        <span class="log-field">${escapeHtml(fieldLabels[r.field] || r.field)}</span>
+        <span>من</span>
+        <span class="log-old">${escapeHtml(r.oldValue || "—")}</span>
+        <span>إلى</span>
+        <span class="log-new">${escapeHtml(r.newValue || "—")}</span>
+      </div>`;
+    }).join("") + '</div>';
+  } catch (e) {
+    logList.innerHTML = '<div class="empty">تعذّر تحميل السجل</div>';
+  }
+}
+
+// ===== نقل للحذف (سلة المحذوفات) =====
+async function moveToTrash(guestId, guestName) {
+  try {
+    const guestRef = doc(db, "responses", guestId);
+    const guestSnap = await getDoc(guestRef); // getDoc needs import
+    if (!guestSnap.exists()) { showToast("الضيف غير موجود"); return; }
+    const data = guestSnap.data();
+    // حفظ في سلة المحذوفات
+    await addDoc(collection(db, "trash_items"), {
+      originalCollection: "responses",
+      originalId: guestId,
+      name: guestName,
+      itemType: "guest",
+      originalData: JSON.parse(JSON.stringify(data)),
+      deletedAt: serverTimestamp(),
+    });
+    // تسجيل بالعمليات
+    await addDoc(collection(db, "operation_logs"), {
+      text: `حذف ضيف: ${guestName}`,
+      entity: "guest", entityId: guestId,
+      action: "delete", userName: auth.currentUser?.displayName || "المدير",
+      userId: auth.currentUser?.uid, time: serverTimestamp(),
+    });
+    // حذف النهائي من responses
+    await deleteDoc(guestRef);
+    showToast(`تم نقل "${guestName}" إلى سلة المحذوفات`);
+  } catch (e) {
+    showToast("تعذّر الحذف");
+  }
+}
+
+// ===== Bulk Delete =====
+const bulkDeleteBtn = document.getElementById("bulkDeleteBtn");
+const bulkDelCount = document.getElementById("bulkDelCount");
+
+function updateBulkDeleteButton() {
+  const count = selectedIds.size;
+  bulkDelCount.textContent = count;
+  bulkDeleteBtn.disabled = count === 0;
+  bulkDeleteBtn.style.display = count > 0 ? "inline-flex" : "none";
+}
+
+bulkDeleteBtn.addEventListener("click", async () => {
+  if (!confirm(`تأكيد حذف ${selectedIds.size} ضيف؟ سيتم نقلهم إلى سلة المحذوفات.`)) return;
+  bulkDeleteBtn.disabled = true;
+  let done = 0, failed = 0;
+  for (const id of [...selectedIds]) {
+    const g = allGuests.find(x => x.id === id);
+    try {
+      await moveToTrash(id, g ? g.name : "ضيف");
+      selectedIds.delete(id);
+      done++;
+    } catch { failed++; }
+  }
+  showToast(`تم حذف ${done} ضيف${failed ? ` — فشل ${failed}` : ""}`);
+  updateSendButton();
+  updateBulkDeleteButton();
+  bulkDeleteBtn.disabled = false;
+});
+
+// ===== QR Toggle (إلغاء/تفعيل) =====
+async function toggleQR(guestId, currentlyRevoked) {
+  try {
+    const newVal = !currentlyRevoked;
+    await updateDoc(doc(db, "responses", guestId), { qrRevoked: newVal });
+    // تسجيل بـ qr_usages
+    await addDoc(collection(db, "qr_usages"), {
+      guestId, action: newVal ? "revoke" : "restore",
+      success: true, reason: newVal ? "إلغاء يدوي" : "تفعيل يدوي",
+      actorName: auth.currentUser?.displayName || "المدير",
+      time: serverTimestamp(),
+    });
+    showToast(newVal ? "تم إلغاء QR" : "تم تفعيل QR");
+  } catch (e) {
+    showToast("تعذّر تحديث QR");
+  }
+}
+
+// ===== ربط الأزرار الجديدة بالصفوف =====
+const origRenderTable = renderTable;
+// نعيد تعريف جزء ربط الأحداث بعد الرندر — نضيفها داخل renderTable نفسها
+// بدل ذلك، نستخدم Event Delegation على tbody
+
+document.getElementById("guestBody").addEventListener("click", async (e) => {
+  const btn = e.target.closest("button");
+  if (!btn) return;
+
+  // زر سجل التعديلات
+  if (btn.classList.contains("logBtn")) {
+    showEditLog(btn.dataset.id, btn.dataset.name);
+    return;
+  }
+
+  // زر إلغاء/تفعيل QR
+  if (btn.classList.contains("qrToggleBtn")) {
+    btn.disabled = true;
+    await toggleQR(btn.dataset.id, btn.dataset.revoked === "true");
+    btn.disabled = false;
+    return;
+  }
 });
 
 // ===== Cleanup =====

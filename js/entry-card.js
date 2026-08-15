@@ -6,6 +6,9 @@
 // يُفعَّل بحدث "jg:rsvp-success" يُطلقه فورم كل صفحة بعد نجاح الإرسال، مع تمرير
 // اسم الضيف الذي كتبه بنفسه في الفورم ليظهر مطبوعًا على بطاقته.
 (function () {
+  let lastWallSubmitTime = 0;
+  const WALL_SUBMIT_COOLDOWN = 10000; // 10 seconds
+
   const FONT_MAP = {
     "Aref Ruqaa": { css: "'Aref Ruqaa', serif", google: "Aref+Ruqaa:wght@400;700" },
     "Amiri": { css: "'Amiri', serif", google: "Amiri:wght@400;700" },
@@ -169,7 +172,7 @@
     // توليد QR عبر مكتبة qrcode.js — يرمّز كود الدخول الشخصي لو متوفر،
     // وإلا رابط الدعوة (توافق رجعي لبيانات قديمة)
     ensureQRCode(() => {
-      const inviteUrl = window.location.href.split("?")[0] + (data.access_code ? "?code=" + encodeURIComponent(data.access_code) : "");
+      const inviteUrl = window.location.href;
       const eventCode = document.body.dataset.eventCode || new URLSearchParams(window.location.search).get("eid") || "";
       const qrValue = entryCode ? JSON.stringify({eventId:eventCode,entryCode}) : inviteUrl;
       try {
@@ -207,7 +210,7 @@
   function escapeHtml(str) {
     const d = document.createElement("div");
     d.textContent = str;
-    return d.innerHTML;
+    return d.innerHTML.replace(/'/g, "&#39;");
   }
 
   function ensureHtml2Canvas(cb) {
@@ -217,6 +220,8 @@
     const s = document.createElement("script");
     s.id = "jg-ec-h2c";
     s.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+    s.integrity = "sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA==";
+    s.crossOrigin = "anonymous";
     s.onload = cb;
     document.body.appendChild(s);
   }
@@ -325,25 +330,10 @@
     closeBtn.addEventListener("click", close);
     overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
 
-    loadFirebase().then(fb => {
-      // نستخدم getDocs بدون orderBy لتفادي خطأ فهرسة Firestore المركّب،
-      // ثم نرتّب النتائج يدويًا في الذاكرة.
-      const q = fb.query(
-        fb.collection(fb.db, "guest_wall"),
-        fb.where("slug", "==", slug)
-      );
-      return fb.getDocs(q).then(snap => {
-        const docs = snap.docs.map(doc => doc.data());
-        docs.sort((a, b) => {
-          const ta = (a.createdAt && a.createdAt.seconds) ? a.createdAt.seconds : 0;
-          const tb = (b.createdAt && b.createdAt.seconds) ? b.createdAt.seconds : 0;
-          return tb - ta;
-        });
-        renderWallList(listEl, docs.slice(0, 50));
-      }).then(() => fb);
-    }).catch(() => {
-      renderWallList(listEl, []);
-    });
+    fetch(`/.netlify/functions/guest-wall?slug=${encodeURIComponent(slug)}`)
+      .then(r => r.ok ? r.json() : Promise.reject(new Error("wall")))
+      .then(data => renderWallList(listEl, Array.isArray(data.items) ? data.items : []))
+      .catch(() => renderWallList(listEl, []));
 
     submitBtn.addEventListener("click", () => {
       const name = nameInput.value.trim();
@@ -352,6 +342,15 @@
         showToast("اكتبي اسمك وكلمتك أولاً");
         return;
       }
+      // Client-side rate limiting: 1 comment per 10 seconds
+      const now = Date.now();
+      if (now - lastWallSubmitTime < WALL_SUBMIT_COOLDOWN) {
+        const remaining = Math.ceil((WALL_SUBMIT_COOLDOWN - (now - lastWallSubmitTime)) / 1000);
+        showToast("انتظري " + remaining + " ثوان قبل نشر كلمة أخرى");
+        return;
+      }
+      lastWallSubmitTime = now;
+
       const isPrivate = visWrap.querySelector('input[name="jg-wall-vis"]:checked').value === "private";
 
       submitBtn.disabled = true;
@@ -373,11 +372,11 @@
         return;
       }
 
-      loadFirebase().then(fb => {
-        return fb.addDoc(fb.collection(fb.db, "guest_wall"), {
-          slug, name, message, createdAt: fb.serverTimestamp()
-        });
-      }).then(() => {
+      fetch("/.netlify/functions/guest-wall", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug, name, message }),
+      }).then(r => r.ok ? r.json() : Promise.reject(new Error("wall"))).then(() => {
         msgInput.value = "";
         submitBtn.disabled = false;
         submitBtn.textContent = "نشر";
@@ -414,26 +413,16 @@
 
   async function claimSingleDevice(slug, guestName) {
     try {
-      const fb = await loadFirebase();
-      const lockRef = fb.doc(fb.db, "entry_card_locks", slug);
-      const snap = await fb.getDoc(lockRef);
       const deviceId = getDeviceFingerprint();
-
-      if (snap.exists()) {
-        const existing = snap.data();
-        if (existing.deviceId && existing.deviceId !== deviceId) {
-          return { ok: false, reason: "another_device" };
-        }
-      }
-      await fb.setDoc(lockRef, {
-        slug,
-        guestName: guestName || "",
-        deviceId,
-        claimedAt: fb.serverTimestamp(),
+      const res = await fetch("/.netlify/functions/claim-entry-lock", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug, guestName: guestName || "", deviceId }),
       });
-      return { ok: true };
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return { ok: false, reason: "server_error" };
+      return data.ok ? { ok: true } : { ok: false, reason: data.reason || "another_device" };
     } catch {
-      return { ok: true };
+      return { ok: false, reason: "server_error" };
     }
   }
 
@@ -505,6 +494,45 @@
 
     if (wallEnabled) wallBtn.addEventListener("click", () => openWall(slug, guestName));
 
+    // جلب رقم الطاولة/المقعد/البوابة من بيانات الضيف (لو معبّأة ومفعّلة من
+    // لوحة التحكم) وإضافتها لبطاقة الدخول. غير حرج: أي فشل هنا ما يؤثر
+    // على باقي البطاقة (QR، الأزرار...) لأنه معزول بـ try/catch مستقل.
+    if (entryCode) {
+      loadFirebase().then(async (fb) => {
+        let fieldSettings = { table: true, seat: true, gate: true };
+        try {
+          const settingsSnap = await fb.getDoc(fb.doc(fb.db, "settings", "guestFields"));
+          if (settingsSnap.exists()) {
+            const d = settingsSnap.data();
+            fieldSettings = { table: d.table !== false, seat: d.seat !== false, gate: d.gate !== false };
+          }
+        } catch { /* نبقى على الافتراضي */ }
+
+        const q = fb.query(fb.collection(fb.db, "responses"), fb.where("entryCode", "==", entryCode));
+        const snap = await fb.getDocs(q);
+        if (snap.empty) return;
+        const g = snap.docs[0].data();
+        const extra = [];
+        if (fieldSettings.table && g.table) extra.push(`رقم الطاولة: ${g.table}`);
+        if (fieldSettings.seat && g.seat) extra.push(`رقم المقعد: ${g.seat}`);
+        if (fieldSettings.gate && g.gate) extra.push(`البوابة: ${g.gate}`);
+        if (!extra.length) return;
+
+        let metaEl = card.querySelector(".jg-ec-meta");
+        if (metaEl) {
+          extra.forEach((t, index) => {
+          if (metaEl.textContent && index === 0) metaEl.appendChild(document.createElement("br"));
+          else if (index > 0) metaEl.appendChild(document.createElement("br"));
+          metaEl.appendChild(document.createTextNode(String(t)));
+        });
+        } else {
+          metaEl = el("div", "jg-ec-meta");
+          metaEl.innerHTML = extra.map(t => escapeHtml(t)).join("<br>");
+          card.insertBefore(metaEl, qrWrap);
+        }
+      }).catch(() => { /* تجاهل بصمت — البطاقة تبقى شغالة بدون هالتفاصيل */ });
+    }
+
     // زر تعديل التأكيد — يغلق البطاقة ويعيد فتح نموذج الحضور
     editBtn.addEventListener("click", () => {
       close();
@@ -570,9 +598,19 @@
 
     document.addEventListener("jg:rsvp-success", (ev) => {
       const entryCode = (ev.detail && ev.detail.entryCode) || window.__jgLastEntryCode || "";
-      fetch("../content/rsvp/" + slug + ".json")
-        .then(r => r.json())
-        .then(data => showCard(data, (ev.detail && ev.detail.guestName) || "", slug, entryCode))
+      const inviteCode = new URLSearchParams(window.location.search).get("code") || "";
+      const inviteUrl = `/.netlify/functions/invitation-data?slug=${encodeURIComponent(slug)}${inviteCode ? `&code=${encodeURIComponent(inviteCode)}` : ""}`;
+      const eventCode = (ev.detail && ev.detail.eventCode) || window.__jgLastEventCode || new URLSearchParams(window.location.search).get("eid") || "";
+      const qrStatusUrl = `/.netlify/functions/qr-status?eventId=${encodeURIComponent(eventCode)}`;
+      Promise.all([
+        fetch(inviteUrl, { cache: "no-store" }).then(r => r.ok ? r.json() : Promise.reject(new Error("Invitation data unavailable"))),
+        fetch(qrStatusUrl, { cache: "no-store" }).then(r => r.ok ? r.json() : { qrEnabled: false })
+      ])
+        .then(([data, qr]) => {
+          // QR/entry card is feature-gated by the event's effective package setting.
+          if (!qr.qrEnabled) return;
+          showCard(data, (ev.detail && ev.detail.guestName) || "", slug, entryCode);
+        })
         .catch(() => {});
     });
   });

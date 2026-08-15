@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+
+<html dir="rtl" lang="ar">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>النسخ الاحتياطي — لوحة تحكم جمرة غضى</title>
+<meta content="noindex, nofollow" name="robots"/>
+<style>
+  *{box-sizing:border-box}
+  body{font-family:Tahoma,Arial,sans-serif;background:#111;color:#eee;margin:0;padding:20px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px}
+  h1{color:#d4af37;font-size:20px;margin:0}
+  a.back{color:#aaa;text-decoration:none;font-size:14px}
+  .card{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:18px;margin-bottom:18px}
+  .card h2{font-size:15px;color:#d4af37;margin-top:0}
+  .card h3{font-size:14px;color:#d4af37;margin:0 0 12px}
+  .btn{padding:10px 16px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;font-size:13px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-family:inherit}
+  .btn-gold{background:#d4af37;color:#111}
+  .btn-outline{background:transparent;border:1px solid #555;color:#ddd}
+  .btn:disabled{opacity:.45;cursor:default}
+  .btn-sm{padding:6px 10px;font-size:12px;border-radius:6px}
+  .msg-status{font-size:13px;margin-top:10px;min-height:18px}
+  .msg-status.err{color:#e07a5f}
+  .msg-status.ok{color:#4caf50}
+  .warning{color:#e07a5f;font-size:13px;margin:8px 0;padding:10px;background:rgba(224,122,95,.08);border:1px solid rgba(224,122,95,.2);border-radius:8px;line-height:1.7}
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:12.5px;color:#aaa;margin-bottom:5px}
+  .field input[type="file"]{width:100%;padding:10px;border-radius:8px;border:1px solid #444;background:#222;color:#fff;font-family:inherit;font-size:14px}
+
+  /* Checkboxes grid */
+  .checkboxes{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-bottom:14px}
+  .checkboxes label{display:flex;align-items:center;gap:6px;font-size:13px;color:#ddd;cursor:pointer;padding:6px 10px;background:#222;border:1px solid #333;border-radius:6px;transition:background .15s}
+  .checkboxes label:hover{background:#2a2a2a}
+  .checkboxes input[type="checkbox"]{accent-color:#d4af37;width:16px;height:16px;cursor:pointer}
+  .select-all-row{margin-bottom:10px}
+  .select-all-row label{display:flex;align-items:center;gap:6px;font-size:13px;color:#d4af37;cursor:pointer}
+  .select-all-row input[type="checkbox"]{accent-color:#d4af37;width:16px;height:16px;cursor:pointer}
+
+  /* Table */
+  .table-wrap{overflow-x:auto;max-height:400px;overflow-y:auto}
+  .table-wrap::-webkit-scrollbar{width:6px;height:6px}
+  .table-wrap::-webkit-scrollbar-track{background:#1a1a1a}
+  .table-wrap::-webkit-scrollbar-thumb{background:#444;border-radius:3px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  thead th{text-align:right;padding:10px 8px;border-bottom:2px solid #333;color:#d4af37;white-space:nowrap;position:sticky;top:0;background:#1c1c1c;z-index:1}
+  tbody td{padding:10px 8px;border-bottom:1px solid #2a2a2a;white-space:nowrap}
+  tbody tr:hover{background:#222}
+  .empty{color:#777;text-align:center;padding:30px;font-size:14px}
+  .actions-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px}
+  .download-link{display:inline-flex;align-items:center;gap:6px;color:#4caf50;font-size:14px;text-decoration:none;padding:8px 14px;border:1px solid rgba(76,175,80,.3);border-radius:8px;background:rgba(76,175,80,.08);margin-top:8px}
+  .download-link:hover{background:rgba(76,175,80,.15)}
+  @media(max-width:600px){.checkboxes{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}}
+</style>
+</head>
+<body>
+<div class="topbar">
+<h1>💾 النسخ الاحتياطي</h1>
+<a class="back" href="index.html">← رجوع للوحة</a>
+</div>
+<!-- Create Backup -->
+<div class="card">
+<h2>إنشاء نسخة احتياطية</h2>
+<div class="select-all-row">
+<label><input id="selectAll" type="checkbox"/> تحديد الكل</label>
+</div>
+<div class="checkboxes" id="collectionChecks">
+<label><input checked="" type="checkbox" value="responses"/> responses</label>
+<label><input checked="" type="checkbox" value="couples"/> couples</label>
+<label><input checked="" type="checkbox" value="events"/> events</label>
+<label><input checked="" type="checkbox" value="settings"/> settings</label>
+<label><input checked="" type="checkbox" value="guest_wall"/> guest_wall</label>
+<label><input checked="" type="checkbox" value="checkins"/> checkins</label>
+<label><input checked="" type="checkbox" value="templates"/> templates</label>
+<label><input checked="" type="checkbox" value="send_logs"/> send_logs</label>
+<label><input checked="" type="checkbox" value="scheduled_messages"/> scheduled_messages</label>
+<label><input checked="" type="checkbox" value="operation_logs"/> operation_logs</label>
+<label><input checked="" type="checkbox" value="trash_items"/> trash_items</label>
+<label><input checked="" type="checkbox" value="integration_configs"/> integration_configs</label>
+<label><input checked="" type="checkbox" value="dashboard_notifications"/> dashboard_notifications</label>
+<label><input checked="" type="checkbox" value="users"/> users</label>
+</div>
+<div class="actions-row">
+<button class="btn btn-gold" id="createBackup">💾 إنشاء نسخة احتياطية</button>
+<div id="downloadArea"></div>
+</div>
+<div class="msg-status" id="createStatus"></div>
+</div>
+<!-- Restore Backup -->
+<div class="card">
+<h2>استعادة نسخة احتياطية</h2>
+<div class="field">
+<label for="restoreFile">اختر ملف النسخة الاحتياطية (.json)</label>
+<input accept=".json" id="restoreFile" type="file"/>
+</div>
+<div class="warning">
+    ⚠️ تحذير: الاستعادة ستكتب البيانات فوق الموجود. تأكدي إن عندك نسخة احتياطية حديثة.
+  </div>
+<div class="actions-row">
+<button class="btn btn-outline" disabled="" id="restoreBackup">📥 استعادة النسخة الاحتياطية</button>
+</div>
+<div class="msg-status" id="restoreStatus"></div>
+</div>
+<!-- Backup History -->
+<div class="card">
+<h2>سجل النسخ الاحتياطي</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>التاريخ</th>
+<th>المجموعات</th>
+<th>الحجم</th>
+<th>بواسطة</th>
+</tr>
+</thead>
+<tbody id="historyBody">
+<tr><td class="empty" colspan="4">جارِ التحميل...</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+<script type="module">
+import {
+  db, auth, requireLogin,
+  collection, getDocs,
+} from "../js/firebase-init.js";
+
+function escapeHtml(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// ===== Select All =====
+const selectAllCb = document.getElementById("selectAll");
+const checkboxes = document.querySelectorAll('#collectionChecks input[type="checkbox"]');
+selectAllCb.addEventListener("change", () => {
+  checkboxes.forEach(cb => cb.checked = selectAllCb.checked);
+});
+checkboxes.forEach(cb => {
+  cb.addEventListener("change", () => {
+    const allChecked = [...checkboxes].every(c => c.checked);
+    const someChecked = [...checkboxes].some(c => c.checked);
+    selectAllCb.checked = allChecked;
+    selectAllCb.indeterminate = someChecked && !allChecked;
+  });
+});
+
+// ===== Create Backup =====
+document.getElementById("createBackup").addEventListener("click", async () => {
+  const btn = document.getElementById("createBackup");
+  const statusEl = document.getElementById("createStatus");
+  const downloadArea = document.getElementById("downloadArea");
+  downloadArea.innerHTML = "";
+
+  const selected = [...checkboxes].filter(c => c.checked).map(c => c.value);
+  if (!selected.length) {
+    statusEl.textContent = "اختر مجموعة واحدة على الأقل";
+    statusEl.className = "msg-status err";
+    return;
+  }
+
+  btn.disabled = true;
+  statusEl.textContent = "جارِ إنشاء النسخة الاحتياطية...";
+  statusEl.className = "msg-status";
+
+  try {
+    const idToken = await auth.currentUser.getIdToken();
+    const res = await fetch("/.netlify/functions/backup-restore?action=create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${idToken}` },
+      body: JSON.stringify({ collections: selected }),
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      statusEl.textContent = data.error || "تعذّر إنشاء النسخة الاحتياطية";
+      statusEl.className = "msg-status err";
+    } else {
+      statusEl.textContent = `تم إنشاء النسخة بنجاح — ${data.count || 0} وثيقة من ${selected.length} مجموعة ✅`;
+      statusEl.className = "msg-status ok";
+
+      // Create blob download
+      const jsonStr = JSON.stringify(data.data || data, null, 2);
+      const blob = new Blob([jsonStr], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      downloadArea.innerHTML = `<a class="download-link" href="${url}" download="backup-${new Date().toISOString().slice(0, 10)}.json">⬇️ تحميل الملف</a>`;
+    }
+  } catch (e) {
+    statusEl.textContent = "تعذّر الاتصال بالسيرفر";
+    statusEl.className = "msg-status err";
+  }
+  btn.disabled = false;
+});
+
+// ===== Restore File Input =====
+const restoreFileInput = document.getElementById("restoreFile");
+const restoreBtn = document.getElementById("restoreBackup");
+restoreFileInput.addEventListener("change", () => {
+  restoreBtn.disabled = !restoreFileInput.files.length;
+});
+
+// ===== Restore Backup =====
+restoreBtn.addEventListener("click", async () => {
+  const statusEl = document.getElementById("restoreStatus");
+  const file = restoreFileInput.files[0];
+  if (!file) return;
+
+  if (!confirm("هل أنت متأكدة من استعادة هذه النسخة الاحتياطية؟ سيتم الكتابة فوق البيانات الحالية.")) return;
+
+  restoreBtn.disabled = true;
+  statusEl.textContent = "جارِ قراءة الملف...";
+  statusEl.className = "msg-status";
+
+  try {
+    const text = await file.text();
+    let parsed;
+    try { parsed = JSON.parse(text); } catch { throw new Error("ملف JSON غير صالح"); }
+
+    statusEl.textContent = "جارِ الاستعادة... قد يستغرق ذلك بعض الوقت.";
+
+    const idToken = await auth.currentUser.getIdToken();
+    const res = await fetch("/.netlify/functions/backup-restore?action=restore", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${idToken}` },
+      body: JSON.stringify(parsed),
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      statusEl.textContent = data.error || "تعذّرت الاستعادة";
+      statusEl.className = "msg-status err";
+    } else {
+      statusEl.textContent = `تمت الاستعادة بنجاح — ${data.restored || 0} وثيقة ✅`;
+      statusEl.className = "msg-status ok";
+    }
+  } catch (e) {
+    statusEl.textContent = e.message || "تعذّرت الاستعادة";
+    statusEl.className = "msg-status err";
+  }
+  restoreBtn.disabled = false;
+});
+
+// ===== Backup History =====
+requireLogin(async () => {
+  try {
+    const snap = await getDocs(collection(db, "backups"));
+    const body = document.getElementById("historyBody");
+    if (snap.empty) {
+      body.innerHTML = '<tr><td colspan="4" class="empty">لا يوجد سجل نسخ احتياطي</td></tr>';
+      return;
+    }
+    const rows = [];
+    snap.forEach(d => {
+      const r = d.data();
+      const date = r.createdAt ? (r.createdAt.toMillis ? new Date(r.createdAt.toMillis()) : new Date(r.createdAt)).toLocaleString('ar-SA') : '—';
+      rows.push({
+        date,
+        collections: (r.collections || []).join(', '),
+        size: r.size ? formatBytes(r.size) : '—',
+        user: r.createdBy || '—',
+      });
+    });
+    rows.sort((a, b) => b.date.localeCompare(a.date));
+    body.innerHTML = rows.map(r => `<tr>
+      <td>${escapeHtml(r.date)}</td>
+      <td>${escapeHtml(r.collections)}</td>
+      <td>${escapeHtml(r.size)}</td>
+      <td>${escapeHtml(r.user)}</td>
+    </tr>`).join('');
+  } catch {
+    document.getElementById("historyBody").innerHTML = '<tr><td colspan="4" class="empty">تعذّر تحميل السجل</td></tr>';
+  }
+});
+
+function formatBytes(bytes) {
+  if (!bytes || bytes <= 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  return (bytes / Math.pow(1024, i)).toFixed(1) + ' ' + units[i];
+}
+</script>
+</body>
+</html>

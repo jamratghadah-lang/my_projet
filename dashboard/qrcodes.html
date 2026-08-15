@@ -23,6 +23,13 @@
   .qr-item .link{font-size:11px;color:#888;word-break:break-all;margin-bottom:8px}
   .qr-item button{width:100%;font-size:12px;padding:7px}
   .empty{color:#777;text-align:center;padding:20px;font-size:13px}
+
+  @media (max-width: 700px){
+    .container,.page,.content,.main-content{width:100%;max-width:100%;padding-left:12px;padding-right:12px;}
+    .grid{grid-template-columns:1fr !important;}
+    .card{min-width:0;}
+    table{display:block;max-width:100%;overflow-x:auto;white-space:nowrap;}
+  }
 </style>
 </head>
 <body>
@@ -41,7 +48,7 @@
 
 <div class="card">
   <h2>رموز QR لكل ستايل (روابط عامة للاطلاع على التصميم)</h2>
-  <div class="hint" style="margin-bottom:12px">هذي روابط الستايلات العامة نفسها الموجودة بصفحة "تأكيد الحضور" — مفيدة للمعاينة أو التسويق، مو لطلب عميلة معيّن.</div>
+  <div class="hint" style="margin-bottom:12px">هذي روابط الستايلات العامة — مفيدة للمعاينة أو التسويق، مو لطلب عميلة معيّن. ملاحظة: صفحة "تأكيد الحضور" الرئيسية (rsvp.html) صارت مخفية عن الزوار.</div>
   <div class="qr-grid" id="presetGrid"></div>
 </div>
 

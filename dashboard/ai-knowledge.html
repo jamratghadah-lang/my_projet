@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+
+<html dir="rtl" lang="ar">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Jamrat AI — إدارة المعرفة</title>
+<meta content="noindex, nofollow" name="robots"/>
+<style>
+  *{box-sizing:border-box}
+  body{font-family:Tahoma,Arial,sans-serif;background:#111;color:#eee;margin:0;padding:20px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px}
+  h1{color:#d4af37;font-size:20px;margin:0}
+  a.back{color:#aaa;text-decoration:none;font-size:14px}
+  .card{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:18px;margin-bottom:18px}
+  .card h2{font-size:15px;color:#d4af37;margin:0 0 4px}
+  .card .subtitle{font-size:12px;color:#999;margin:0 0 14px}
+  .card .card-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+
+  .btn{padding:10px 16px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;font-size:13px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-family:inherit}
+  .btn-gold{background:#d4af37;color:#111}
+  .btn-outline{background:transparent;border:1px solid #555;color:#ddd}
+  .btn-danger{background:#c0392b;color:#fff}
+  .btn-green{background:#2e7d32;color:#fff}
+  .btn-sm{padding:6px 10px;font-size:12px;border-radius:6px}
+  .btn:disabled{opacity:.45;cursor:default}
+
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:12.5px;color:#aaa;margin-bottom:5px}
+  .field input,.field select,.field textarea{
+    width:100%;padding:10px 12px;border-radius:8px;border:1px solid #444;background:#222;color:#fff;
+    font-family:inherit;font-size:14px;
+  }
+  .field textarea{min-height:90px;resize:vertical}
+
+  .msg-status{font-size:13px;margin-top:8px;min-height:18px}
+  .msg-status.err{color:#e07a5f}
+  .msg-status.ok{color:#4caf50}
+
+  .table-wrap{overflow-x:auto;max-height:400px;overflow-y:auto}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  thead th{text-align:right;padding:10px 8px;border-bottom:2px solid #333;color:#d4af37;white-space:nowrap;position:sticky;top:0;background:#1c1c1c;z-index:2}
+  tbody td{padding:10px 8px;border-bottom:1px solid #2a2a2a;white-space:nowrap}
+  tbody tr:hover{background:#222}
+  .empty{color:#777;text-align:center;padding:30px;font-size:14px}
+
+  /* Checkbox in table */
+  .chk{width:16px;height:16px;accent-color:#d4af37;cursor:pointer}
+
+  /* Modal */
+  .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:999;align-items:center;justify-content:center;padding:16px}
+  .modal-bg.open{display:flex}
+  .modal{background:#1c1c1c;border:1px solid #333;border-radius:14px;padding:22px;width:100%;max-width:540px;max-height:88vh;overflow-y:auto}
+  .modal h3{margin:0 0 16px;color:#d4af37;font-size:16px}
+  .modal-actions{display:flex;gap:10px;margin-top:18px}
+  .modal-actions .btn{flex:1;justify-content:center}
+
+  .row-actions{display:flex;gap:6px}
+  .last-updated{font-size:11px;color:#666;margin-top:10px;text-align:left}
+  .loading{color:#999;font-size:14px;text-align:center;padding:40px}
+  .features-tag{display:inline-block;background:#333;border-radius:4px;padding:2px 8px;font-size:11px;color:#ccc;margin:2px}
+  .grid-2{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+  @media(max-width:500px){.grid-2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="topbar">
+<h1>🧠 إدارة المعرفة</h1>
+<a class="back" href="index.html">← رجوع للوحة</a>
+</div>
+<div id="app"><div class="loading">جارٍ التحميل...</div></div>
+<!-- Modal: Package -->
+<div class="modal-bg" id="modal-package">
+<div class="modal">
+<h3 id="modal-pkg-title">إضافة باقة</h3>
+<input id="pkg-edit-idx" type="hidden" value="-1"/>
+<div class="field"><label for="pkg-name">الاسم</label><input id="pkg-name" type="text"/></div>
+<div class="field"><label for="pkg-price">السعر (نص مثل: من 150 ريال)</label><input id="pkg-price" type="text"/></div>
+<div class="field"><label for="pkg-features">المميزات (كل ميزة في سطر)</label><textarea id="pkg-features" rows="5"></textarea></div>
+<div class="field"><label for="pkg-guestLimit">الحد الأقصى للمدعوين</label><input id="pkg-guestLimit" type="number" value="0"/></div>
+<div class="grid-2">
+<label style="font-size:13px;display:flex;align-items:center;gap:6px"><input class="chk" id="pkg-aiEnabled" type="checkbox"/> AI مفعّل</label>
+<label style="font-size:13px;display:flex;align-items:center;gap:6px"><input class="chk" id="pkg-rsvpEnabled" type="checkbox"/> RSVP مفعّل</label>
+<label style="font-size:13px;display:flex;align-items:center;gap:6px"><input class="chk" id="pkg-qrEnabled" type="checkbox"/> QR مفعّل</label>
+<label style="font-size:13px;display:flex;align-items:center;gap:6px"><input class="chk" id="pkg-whatsappEnabled" type="checkbox"/> WhatsApp مفعّل</label>
+<label style="font-size:13px;display:flex;align-items:center;gap:6px"><input class="chk" id="pkg-reportsEnabled" type="checkbox"/> تقارير مفعّل</label>
+<label style="font-size:13px;display:flex;align-items:center;gap:6px"><input class="chk" id="pkg-videosEnabled" type="checkbox"/> فيديوهات مفعّل</label>
+</div>
+<div class="modal-actions">
+<button class="btn btn-outline" onclick="window._closeModal('modal-package')">إلغاء</button>
+<button class="btn btn-gold" onclick="window._savePackage()">💾 حفظ</button>
+</div>
+</div>
+</div>
+<!-- Modal: FAQ -->
+<div class="modal-bg" id="modal-faq">
+<div class="modal">
+<h3 id="modal-faq-title">إضافة سؤال</h3>
+<input id="faq-edit-idx" type="hidden" value="-1"/>
+<div class="field"><label for="faq-q">السؤال</label><textarea id="faq-q" rows="2"></textarea></div>
+<div class="field"><label for="faq-a">الجواب</label><textarea id="faq-a" rows="3"></textarea></div>
+<div class="modal-actions">
+<button class="btn btn-outline" onclick="window._closeModal('modal-faq')">إلغاء</button>
+<button class="btn btn-gold" onclick="window._saveFaq()">💾 حفظ</button>
+</div>
+</div>
+</div>
+<script type="module">
+import { requireLogin, db, doc, getDoc, setDoc, serverTimestamp } from '../js/firebase-init.js';
+
+function escapeHtml(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// بيانات الباقات الافتراضية
+const DEFAULT_PACKAGES = [
+  {
+    name: 'برونزي',
+    price: 'من 150 ريال',
+    features: ['دعوة فيديو سينمائية بستايل واحد جاهز','مدة الفيديو حتى 30 ثانية','كتابة الأسماء والتاريخ والموقع','موسيقى خلفية جاهزة','تسليم خلال 3 أيام عمل'],
+    guestLimit: 50, aiEnabled: false, rsvpEnabled: false, qrEnabled: false, whatsappEnabled: false, reportsEnabled: false, videosEnabled: true
+  },
+  {
+    name: 'فضي',
+    price: 'من 280 ريال',
+    features: ['كل مميزات الباقة البرونزية','مدة الفيديو حتى 60 ثانية','تايم لاين المناسبة (الزفة، الاستقبال، العشاء)','اختيار الخط وحجم النص','صفحة تأكيد حضور (RSVP) خاصة بالمناسبة','تسليم خلال يومين'],
+    guestLimit: 150, aiEnabled: false, rsvpEnabled: true, qrEnabled: true, whatsappEnabled: false, reportsEnabled: false, videosEnabled: true
+  },
+  {
+    name: 'ذهبي',
+    price: 'من 450 ريال',
+    features: ['كل مميزات الباقة الفضية','تصميم مخصص بالكامل حسب طلبك','زخارف وتأثيرات بصرية متقدمة','موسيقى خلفية مخصصة','دعم أولوية وتعديلات غير محدودة قبل التسليم','تسليم خلال 24 ساعة'],
+    guestLimit: 500, aiEnabled: true, rsvpEnabled: true, qrEnabled: true, whatsappEnabled: true, reportsEnabled: true, videosEnabled: true
+  }
+];
+
+// الأسئلة الشائعة الافتراضية
+const DEFAULT_FAQ = [
+  { q: 'ما هي خدمات جمرة غضى؟', a: 'نقدم خدمات دعوات فيديو سينمائية للمناسبات المختلفة كالأعراس، التخرجات، التأسيسات، المؤتمرات وغيرها. نقدم باقات متعددة تناسب مختلف الميزانيات.' },
+  { q: 'كم تستغرق عملية التصميم والتسليم؟', a: 'يعتمد على الباقة المختارة: الباقة البرونزية خلال 3 أيام عمل، الفضية خلال يومين، والذهبية خلال 24 ساعة.' },
+  { q: 'هل يمكنني تعديل الدعوة بعد التسليم؟', a: 'نعم، مع الباقة الذهبية يمكنك إجراء تعديلات غير محدودة قبل التسليم النهائي. للباقات الأخرى، التعديلات محدودة.' },
+  { q: 'كيف أقدم طلب الدعوة؟', a: 'يمكنك التواصل معنا عبر واتساب على الرقم 966547266733 أو من خلال نموذج الطلب في الموقع.' },
+  { q: 'هل الدعوة تشمل صفحة تأكيد حضور (RSVP)؟', a: 'نعم، صفحة RSVP متوفرة مع الباقة الفضية والذهبية وتكون خاصة بمناسبتك.' }
+];
+
+// بيانات التواصل الافتراضية
+const DEFAULT_CONTACT = {
+  whatsapp: '966547266733',
+  instagram: '',
+  tiktok: '',
+  x: '',
+  snapchat: '',
+  email: '',
+  phone: '966547266733',
+  website: ''
+};
+
+// بيانات السياسات الافتراضية
+const DEFAULT_POLICIES = {
+  payment: 'يتم الدفع بعد الموافقة على التصميم النهائي. نقبل التحويل البنكي وSTC Pay.',
+  modification: 'يمكن طلب التعديلات خلال 48 ساعة من استلام التصميم الأولي. التعديلات الإضافية قد تتطلب رسوم إضافية.',
+  cancellation: 'يمكن الإلغاء قبل بدء التصميم واسترداد المبلغ كاملاً. بعد بدء التصميم لا يُرد المبلغ.',
+  execution: 'نبدأ العمل فور تأكيد الطلب والدفع. ستبقى على اطلاع بكل مرحلة من مراحل التصميم.',
+  support: 'دعم فني متوفر عبر واتساب من السبت إلى الخميس، 10 صباحاً - 10 مساءً.'
+};
+
+let packages = [];
+let faqItems = [];
+
+requireLogin(async (user) => {
+  const app = document.getElementById('app');
+
+  // بناء الهيكل
+  app.innerHTML = `
+    <!-- الباقات -->
+    <div class="card">
+      <div class="card-actions">
+        <div>
+          <h2>📦 الباقات</h2>
+          <div class="subtitle">إدارة باقات الخدمات والأسعار</div>
+        </div>
+        <button class="btn btn-gold btn-sm" onclick="window._openPkgModal(-1)">➕ إضافة باقة</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>الاسم</th><th>السعر</th><th>المميزات</th><th>الحد الأقصى للمدعوين</th><th>خيارات</th>
+          </tr></thead>
+          <tbody id="pkg-tbody"><tr><td colspan="5" class="empty">جارٍ التحميل...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- معلومات الشركة -->
+    <div class="card">
+      <h2>🏢 معلومات الشركة</h2>
+      <div class="subtitle">المعلومات الأساسية التي يستخدمها المساعد الذكي</div>
+      <div class="field"><label>الاسم</label><textarea id="company-name" rows="2"></textarea></div>
+      <div class="field"><label>الوصف</label><textarea id="company-desc" rows="3"></textarea></div>
+      <div class="field"><label>الخدمات</label><textarea id="company-services" rows="3"></textarea></div>
+      <div class="field"><label>طريقة العمل</label><textarea id="company-process" rows="3"></textarea></div>
+      <button class="btn btn-gold" onclick="window._saveCompany()">💾 حفظ معلومات الشركة</button>
+      <div class="msg-status" id="msg-company"></div>
+      <div class="last-updated" id="updated-company"></div>
+    </div>
+
+    <!-- الأسئلة الشائعة -->
+    <div class="card">
+      <div class="card-actions">
+        <div>
+          <h2>❓ الأسئلة الشائعة</h2>
+          <div class="subtitle">الأسئلة المتكررة وإجاباتها</div>
+        </div>
+        <button class="btn btn-gold btn-sm" onclick="window._openFaqModal(-1)">➕ إضافة سؤال</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>السؤال</th><th>الجواب</th><th>خيارات</th></tr></thead>
+          <tbody id="faq-tbody"><tr><td colspan="3" class="empty">جارٍ التحميل...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- التواصل والسوشيال -->
+    <div class="card">
+      <h2>📞 التواصل والسوشيال</h2>
+      <div class="subtitle">روابط التواصل الاجتماعي ومعلومات الاتصال</div>
+      <div class="grid-2">
+        <div class="field"><label>WhatsApp</label><input type="text" id="contact-whatsapp" dir="ltr"></div>
+        <div class="field"><label>Instagram</label><input type="text" id="contact-instagram" dir="ltr"></div>
+        <div class="field"><label>TikTok</label><input type="text" id="contact-tiktok" dir="ltr"></div>
+        <div class="field"><label>X (Twitter)</label><input type="text" id="contact-x" dir="ltr"></div>
+        <div class="field"><label>Snapchat</label><input type="text" id="contact-snapchat" dir="ltr"></div>
+        <div class="field"><label>Email</label><input type="text" id="contact-email" dir="ltr"></div>
+        <div class="field"><label>الهاتف</label><input type="text" id="contact-phone" dir="ltr"></div>
+        <div class="field"><label>الموقع الإلكتروني</label><input type="text" id="contact-website" dir="ltr"></div>
+      </div>
+      <button class="btn btn-gold" style="margin-top:12px" onclick="window._saveContact()">💾 حفظ بيانات التواصل</button>
+      <div class="msg-status" id="msg-contact"></div>
+      <div class="last-updated" id="updated-contact"></div>
+    </div>
+
+    <!-- السياسات -->
+    <div class="card">
+      <h2>📜 السياسات</h2>
+      <div class="subtitle">سياسات الدفع والتعديل والإلغاء والتنفيذ والدعم</div>
+      <div class="field"><label>الدفع</label><textarea id="policy-payment" rows="3"></textarea></div>
+      <div class="field"><label>التعديل</label><textarea id="policy-modification" rows="3"></textarea></div>
+      <div class="field"><label>الإلغاء</label><textarea id="policy-cancellation" rows="3"></textarea></div>
+      <div class="field"><label>التنفيذ</label><textarea id="policy-execution" rows="3"></textarea></div>
+      <div class="field"><label>الدعم</label><textarea id="policy-support" rows="3"></textarea></div>
+      <button class="btn btn-gold" onclick="window._savePolicies()">💾 حفظ السياسات</button>
+      <div class="msg-status" id="msg-policies"></div>
+      <div class="last-updated" id="updated-policies"></div>
+    </div>
+  `;
+
+  // تحميل البيانات
+  await Promise.all([
+    loadPackages(),
+    loadCompany(),
+    loadFaq(),
+    loadContact(),
+    loadPolicies()
+  ]);
+
+  // ===== الباقات =====
+  async function loadPackages() {
+    try {
+      const snap = await getDoc(doc(db, 'ai_knowledge', 'packages'));
+      if (snap.exists() && (snap.data().packages || snap.data().items) && (snap.data().packages || snap.data().items).length > 0) {
+        packages = snap.data().packages || snap.data().items;
+      } else {
+        // Seed default packages
+        packages = JSON.parse(JSON.stringify(DEFAULT_PACKAGES));
+        await setDoc(doc(db, 'ai_knowledge', 'packages'), {
+          packages: packages,
+          updatedBy: user.email,
+          updatedAt: serverTimestamp()
+        });
+      }
+      renderPackages();
+    } catch(e) {
+      console.error(e);
+      document.getElementById('pkg-tbody').innerHTML = '<tr><td colspan="5" class="empty">خطأ في التحميل</td></tr>';
+    }
+  }
+
+  function renderPackages() {
+    const tb = document.getElementById('pkg-tbody');
+    if (!packages.length) {
+      tb.innerHTML = '<tr><td colspan="5" class="empty">لا توجد باقات</td></tr>';
+      return;
+    }
+    tb.innerHTML = packages.map((p, i) => `
+      <tr>
+        <td><strong>${escapeHtml(p.name)}</strong></td>
+        <td>${escapeHtml(p.price)}</td>
+        <td>${(p.features||[]).map(f => '<span class="features-tag">'+escapeHtml(f)+'</span>').join('')}</td>
+        <td>${p.guestLimit || '—'}</td>
+        <td class="row-actions">
+          <button class="btn btn-outline btn-sm" onclick="window._openPkgModal(${i})">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="window._deletePkg(${i})">🗑️</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  window._openPkgModal = function(idx) {
+    document.getElementById('modal-pkg-title').textContent = idx >= 0 ? 'تعديل باقة' : 'إضافة باقة';
+    document.getElementById('pkg-edit-idx').value = idx;
+    if (idx >= 0) {
+      const p = packages[idx];
+      document.getElementById('pkg-name').value = p.name || '';
+      document.getElementById('pkg-price').value = p.price || '';
+      document.getElementById('pkg-features').value = (p.features||[]).join('\n');
+      document.getElementById('pkg-guestLimit').value = p.guestLimit || 0;
+      document.getElementById('pkg-aiEnabled').checked = !!p.aiEnabled;
+      document.getElementById('pkg-rsvpEnabled').checked = !!p.rsvpEnabled;
+      document.getElementById('pkg-qrEnabled').checked = !!p.qrEnabled;
+      document.getElementById('pkg-whatsappEnabled').checked = !!p.whatsappEnabled;
+      document.getElementById('pkg-reportsEnabled').checked = !!p.reportsEnabled;
+      document.getElementById('pkg-videosEnabled').checked = !!p.videosEnabled;
+    } else {
+      document.getElementById('pkg-name').value = '';
+      document.getElementById('pkg-price').value = '';
+      document.getElementById('pkg-features').value = '';
+      document.getElementById('pkg-guestLimit').value = 0;
+      document.getElementById('pkg-aiEnabled').checked = false;
+      document.getElementById('pkg-rsvpEnabled').checked = false;
+      document.getElementById('pkg-qrEnabled').checked = false;
+      document.getElementById('pkg-whatsappEnabled').checked = false;
+      document.getElementById('pkg-reportsEnabled').checked = false;
+      document.getElementById('pkg-videosEnabled').checked = false;
+    }
+    document.getElementById('modal-package').classList.add('open');
+  };
+
+  window._savePackage = async function() {
+    const idx = parseInt(document.getElementById('pkg-edit-idx').value);
+    const obj = {
+      name: document.getElementById('pkg-name').value.trim(),
+      price: document.getElementById('pkg-price').value.trim(),
+      features: document.getElementById('pkg-features').value.split('\n').map(s=>s.trim()).filter(Boolean),
+      guestLimit: parseInt(document.getElementById('pkg-guestLimit').value) || 0,
+      aiEnabled: document.getElementById('pkg-aiEnabled').checked,
+      rsvpEnabled: document.getElementById('pkg-rsvpEnabled').checked,
+      qrEnabled: document.getElementById('pkg-qrEnabled').checked,
+      whatsappEnabled: document.getElementById('pkg-whatsappEnabled').checked,
+      reportsEnabled: document.getElementById('pkg-reportsEnabled').checked,
+      videosEnabled: document.getElementById('pkg-videosEnabled').checked
+    };
+    if (!obj.name) { alert('الرجاء إدخال اسم الباقة'); return; }
+    if (idx >= 0) packages[idx] = obj; else packages.push(obj);
+    await setDoc(doc(db, 'ai_knowledge', 'packages'), {
+      packages: packages,
+      updatedBy: user.email,
+      updatedAt: serverTimestamp()
+    });
+    renderPackages();
+    window._closeModal('modal-package');
+  };
+
+  window._deletePkg = async function(idx) {
+    if (!confirm('هل تريد حذف هذه الباقة؟')) return;
+    packages.splice(idx, 1);
+    await setDoc(doc(db, 'ai_knowledge', 'packages'), {
+      packages: packages,
+      updatedBy: user.email,
+      updatedAt: serverTimestamp()
+    });
+    renderPackages();
+  };
+
+  // ===== معلومات الشركة =====
+  async function loadCompany() {
+    try {
+      const snap = await getDoc(doc(db, 'ai_knowledge', 'company'));
+      if (snap.exists()) {
+        const d = snap.data();
+        document.getElementById('company-name').value = d.name || '';
+        document.getElementById('company-desc').value = d.description || '';
+        document.getElementById('company-services').value = d.services || '';
+        document.getElementById('company-process').value = d.process || '';
+        if (d.updatedAt) {
+          const dt = d.updatedAt?.toDate ? d.updatedAt.toDate() : new Date(d.updatedAt);
+          document.getElementById('updated-company').textContent = 'آخر تحديث: ' + dt.toLocaleString('ar-SA');
+        }
+      }
+      return true;
+    } catch(e) { console.error(e); return false; }
+  }
+
+  window._saveCompany = async function() {
+    const msg = document.getElementById('msg-company');
+    msg.textContent = ''; msg.className = 'msg-status';
+    try {
+      await setDoc(doc(db, 'ai_knowledge', 'company'), {
+        name: document.getElementById('company-name').value.trim(),
+        description: document.getElementById('company-desc').value.trim(),
+        services: document.getElementById('company-services').value.trim(),
+        process: document.getElementById('company-process').value.trim(),
+        updatedBy: user.email,
+        updatedAt: serverTimestamp()
+      });
+      msg.textContent = 'تم الحفظ بنجاح ✓'; msg.className = 'msg-status ok';
+      document.getElementById('updated-company').textContent = 'آخر تحديث: الآن';
+    } catch(e) {
+      msg.textContent = 'خطأ: ' + escapeHtml(e.message); msg.className = 'msg-status err';
+    }
+  };
+
+  // ===== الأسئلة الشائعة =====
+  async function loadFaq() {
+    try {
+      const snap = await getDoc(doc(db, 'ai_knowledge', 'faq'));
+      if (snap.exists() && (snap.data().packages || snap.data().items) && (snap.data().packages || snap.data().items).length > 0) {
+        faqItems = snap.data().items;
+      } else {
+        faqItems = JSON.parse(JSON.stringify(DEFAULT_FAQ));
+        await setDoc(doc(db, 'ai_knowledge', 'faq'), {
+          items: faqItems,
+          updatedBy: user.email,
+          updatedAt: serverTimestamp()
+        });
+      }
+      renderFaq();
+      return true;
+    } catch(e) {
+      console.error(e);
+      document.getElementById('faq-tbody').innerHTML = '<tr><td colspan="3" class="empty">خطأ في التحميل</td></tr>';
+      return false;
+    }
+  }
+
+  function renderFaq() {
+    const tb = document.getElementById('faq-tbody');
+    if (!faqItems.length) {
+      tb.innerHTML = '<tr><td colspan="3" class="empty">لا توجد أسئلة</td></tr>';
+      return;
+    }
+    tb.innerHTML = faqItems.map((item, i) => `
+      <tr>
+        <td>${escapeHtml(item.q)}</td>
+        <td>${escapeHtml(item.a)}</td>
+        <td class="row-actions">
+          <button class="btn btn-outline btn-sm" onclick="window._openFaqModal(${i})">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="window._deleteFaq(${i})">🗑️</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  window._openFaqModal = function(idx) {
+    document.getElementById('modal-faq-title').textContent = idx >= 0 ? 'تعديل سؤال' : 'إضافة سؤال';
+    document.getElementById('faq-edit-idx').value = idx;
+    if (idx >= 0) {
+      document.getElementById('faq-q').value = faqItems[idx].q || '';
+      document.getElementById('faq-a').value = faqItems[idx].a || '';
+    } else {
+      document.getElementById('faq-q').value = '';
+      document.getElementById('faq-a').value = '';
+    }
+    document.getElementById('modal-faq').classList.add('open');
+  };
+
+  window._saveFaq = async function() {
+    const idx = parseInt(document.getElementById('faq-edit-idx').value);
+    const obj = {
+      q: document.getElementById('faq-q').value.trim(),
+      a: document.getElementById('faq-a').value.trim()
+    };
+    if (!obj.q) { alert('الرجاء إدخال السؤال'); return; }
+    if (idx >= 0) faqItems[idx] = obj; else faqItems.push(obj);
+    await setDoc(doc(db, 'ai_knowledge', 'faq'), {
+      items: faqItems,
+      updatedBy: user.email,
+      updatedAt: serverTimestamp()
+    });
+    renderFaq();
+    window._closeModal('modal-faq');
+  };
+
+  window._deleteFaq = async function(idx) {
+    if (!confirm('هل تريد حذف هذا السؤال؟')) return;
+    faqItems.splice(idx, 1);
+    await setDoc(doc(db, 'ai_knowledge', 'faq'), {
+      items: faqItems,
+      updatedBy: user.email,
+      updatedAt: serverTimestamp()
+    });
+    renderFaq();
+  };
+
+  // ===== التواصل =====
+  async function loadContact() {
+    try {
+      const snap = await getDoc(doc(db, 'ai_knowledge', 'contact'));
+      if (snap.exists()) {
+        const d = snap.data();
+        document.getElementById('contact-whatsapp').value = d.whatsapp || '';
+        document.getElementById('contact-instagram').value = d.instagram || '';
+        document.getElementById('contact-tiktok').value = d.tiktok || '';
+        document.getElementById('contact-x').value = d.x || '';
+        document.getElementById('contact-snapchat').value = d.snapchat || '';
+        document.getElementById('contact-email').value = d.email || '';
+        document.getElementById('contact-phone').value = d.phone || '';
+        document.getElementById('contact-website').value = d.website || '';
+        if (d.updatedAt) {
+          const dt = d.updatedAt?.toDate ? d.updatedAt.toDate() : new Date(d.updatedAt);
+          document.getElementById('updated-contact').textContent = 'آخر تحديث: ' + dt.toLocaleString('ar-SA');
+        }
+      } else {
+        // Pre-fill from settings.json
+        document.getElementById('contact-whatsapp').value = DEFAULT_CONTACT.whatsapp;
+        document.getElementById('contact-phone').value = DEFAULT_CONTACT.phone;
+      }
+    } catch(e) { console.error(e); }
+  }
+
+  window._saveContact = async function() {
+    const msg = document.getElementById('msg-contact');
+    msg.textContent = ''; msg.className = 'msg-status';
+    try {
+      await setDoc(doc(db, 'ai_knowledge', 'contact'), {
+        whatsapp: document.getElementById('contact-whatsapp').value.trim(),
+        instagram: document.getElementById('contact-instagram').value.trim(),
+        tiktok: document.getElementById('contact-tiktok').value.trim(),
+        x: document.getElementById('contact-x').value.trim(),
+        snapchat: document.getElementById('contact-snapchat').value.trim(),
+        email: document.getElementById('contact-email').value.trim(),
+        phone: document.getElementById('contact-phone').value.trim(),
+        website: document.getElementById('contact-website').value.trim(),
+        updatedBy: user.email,
+        updatedAt: serverTimestamp()
+      });
+      msg.textContent = 'تم الحفظ بنجاح ✓'; msg.className = 'msg-status ok';
+      document.getElementById('updated-contact').textContent = 'آخر تحديث: الآن';
+    } catch(e) {
+      msg.textContent = 'خطأ: ' + escapeHtml(e.message); msg.className = 'msg-status err';
+    }
+  };
+
+  // ===== السياسات =====
+  async function loadPolicies() {
+    try {
+      const snap = await getDoc(doc(db, 'ai_knowledge', 'policies'));
+      if (snap.exists()) {
+        const d = snap.data();
+        document.getElementById('policy-payment').value = d.payment || '';
+        document.getElementById('policy-modification').value = d.modification || '';
+        document.getElementById('policy-cancellation').value = d.cancellation || '';
+        document.getElementById('policy-execution').value = d.execution || '';
+        document.getElementById('policy-support').value = d.support || '';
+        if (d.updatedAt) {
+          const dt = d.updatedAt?.toDate ? d.updatedAt.toDate() : new Date(d.updatedAt);
+          document.getElementById('updated-policies').textContent = 'آخر تحديث: ' + dt.toLocaleString('ar-SA');
+        }
+      } else {
+        document.getElementById('policy-payment').value = DEFAULT_POLICIES.payment;
+        document.getElementById('policy-modification').value = DEFAULT_POLICIES.modification;
+        document.getElementById('policy-cancellation').value = DEFAULT_POLICIES.cancellation;
+        document.getElementById('policy-execution').value = DEFAULT_POLICIES.execution;
+        document.getElementById('policy-support').value = DEFAULT_POLICIES.support;
+      }
+    } catch(e) { console.error(e); }
+  }
+
+  window._savePolicies = async function() {
+    const msg = document.getElementById('msg-policies');
+    msg.textContent = ''; msg.className = 'msg-status';
+    try {
+      await setDoc(doc(db, 'ai_knowledge', 'policies'), {
+        payment: document.getElementById('policy-payment').value.trim(),
+        modification: document.getElementById('policy-modification').value.trim(),
+        cancellation: document.getElementById('policy-cancellation').value.trim(),
+        execution: document.getElementById('policy-execution').value.trim(),
+        support: document.getElementById('policy-support').value.trim(),
+        updatedBy: user.email,
+        updatedAt: serverTimestamp()
+      });
+      msg.textContent = 'تم الحفظ بنجاح ✓'; msg.className = 'msg-status ok';
+      document.getElementById('updated-policies').textContent = 'آخر تحديث: الآن';
+    } catch(e) {
+      msg.textContent = 'خطأ: ' + escapeHtml(e.message); msg.className = 'msg-status err';
+    }
+  };
+
+  // ===== Modal helpers =====
+  window._closeModal = function(id) {
+    document.getElementById(id).classList.remove('open');
+  };
+
+  // إغلاق المودال عند الضغط خارجها
+  document.querySelectorAll('.modal-bg').forEach(bg => {
+    bg.addEventListener('click', (e) => {
+      if (e.target === bg) bg.classList.remove('open');
+    });
+  });
+});
+</script>
+</body>
+</html>

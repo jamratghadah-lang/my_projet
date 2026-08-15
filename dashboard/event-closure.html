@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>إغلاق المناسبة — لوحة تحكم جمرة غضى</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+  *{box-sizing:border-box}
+  body{font-family:Tahoma,Arial,sans-serif;background:#111;color:#eee;margin:0;padding:20px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px}
+  h1{color:#d4af37;font-size:20px;margin:0}
+  a.back{color:#aaa;text-decoration:none;font-size:14px}
+  .card{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:18px;margin-bottom:18px}
+  .card h2{font-size:15px;color:#d4af37;margin-top:0}
+
+  /* ===== Select ===== */
+  .event-select-wrap{margin-bottom:18px}
+  .event-select-wrap label{display:block;font-size:13px;color:#aaa;margin-bottom:6px}
+  .event-select-wrap select{width:100%;max-width:500px;padding:12px 14px;border-radius:8px;border:1px solid #444;background:#222;color:#fff;font-family:inherit;font-size:14px;cursor:pointer}
+  .event-select-wrap .event-meta{font-size:12px;color:#888;margin-top:6px}
+
+  /* ===== Checklist ===== */
+  .checklist{list-style:none;padding:0;margin:0}
+  .checklist li{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid #2a2a2a;font-size:13px}
+  .checklist li:last-child{border-bottom:none}
+  .checklist li input[type=checkbox]{width:18px;height:18px;accent-color:#d4af37;cursor:pointer;flex-shrink:0}
+  .checklist li.done{color:#666;text-decoration:line-through}
+  .checklist li .count-hint{margin-right:auto;font-size:11px;color:#888;background:#222;padding:2px 8px;border-radius:10px;white-space:nowrap}
+  .checklist-progress{margin-bottom:14px}
+  .checklist-progress .bar{width:100%;height:8px;background:#333;border-radius:4px;overflow:hidden}
+  .checklist-progress .bar-fill{height:100%;background:#d4af37;border-radius:4px;transition:width .3s}
+  .checklist-progress .label{font-size:12px;color:#999;margin-bottom:4px}
+
+  /* ===== Summary Cards ===== */
+  .summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:14px}
+  .summary-item{background:#222;border-radius:8px;padding:14px;text-align:center}
+  .summary-item .val{font-size:26px;font-weight:bold;color:#d4af37}
+  .summary-item .lbl{font-size:11px;color:#999;margin-top:4px}
+  .summary-item.confirmed .val{color:#4caf50}
+  .summary-item.attended .val{color:#2196f3}
+  .summary-item.absent .val{color:#e07a5f}
+
+  .rate-bar{height:10px;background:#333;border-radius:5px;overflow:hidden;margin-top:8px}
+  .rate-bar .fill{height:100%;border-radius:5px;transition:width .3s}
+
+  /* ===== Communication Summary ===== */
+  .comm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:14px}
+  .comm-item{background:#222;border-radius:8px;padding:14px;text-align:center}
+  .comm-item .val{font-size:26px;font-weight:bold;color:#d4af37}
+  .comm-item .lbl{font-size:11px;color:#999;margin-top:4px}
+  .comm-item.success .val{color:#4caf50}
+  .comm-item.fail .val{color:#e07a5f}
+  .comm-item.reply .val{color:#2196f3}
+
+  /* ===== Budget Table ===== */
+  .budget-items-table{width:100%;border-collapse:collapse;font-size:13px}
+  .budget-items-table th{text-align:right;padding:8px;border-bottom:1px solid #333;color:#d4af37;font-size:12px}
+  .budget-items-table td{padding:8px;border-bottom:1px solid #2a2a2a}
+  .budget-items-table input{width:100%;padding:6px 8px;border-radius:6px;border:1px solid #444;background:#222;color:#fff;font-family:inherit;font-size:13px}
+  .budget-items-table .variance-pos{color:#e07a5f;font-weight:bold}
+  .budget-items-table .variance-neg{color:#4caf50;font-weight:bold}
+  .budget-total-row td{border-top:2px solid #d4af37;font-weight:bold;color:#d4af37}
+
+  /* ===== Buttons ===== */
+  .btn{padding:10px 16px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;font-size:13px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-family:inherit}
+  .btn-gold{background:#d4af37;color:#111;font-size:15px;padding:14px 28px}
+  .btn-outline{background:transparent;border:1px solid #555;color:#ddd}
+  .btn-danger{background:#c0392b;color:#fff}
+  .btn-green{background:#2e7d32;color:#fff}
+  .btn:disabled{opacity:.45;cursor:default}
+  .btn-sm{padding:6px 10px;font-size:12px;border-radius:6px}
+
+  /* ===== Close Button Area ===== */
+  .close-section{background:#1c1c1c;border:1px solid #d4af37;border-radius:10px;padding:22px;margin-bottom:18px;text-align:center}
+  .close-section .warning{font-size:12px;color:#e07a5f;margin-bottom:14px}
+  .close-section .note{font-size:11px;color:#888;margin-top:10px}
+
+  /* ===== Loading / Empty ===== */
+  .loading{color:#888;text-align:center;padding:40px;font-size:14px}
+  .empty-state{color:#777;text-align:center;padding:30px;font-size:14px}
+
+  /* ===== Section Title ===== */
+  .section-title{font-size:14px;color:#d4af37;margin:0 0 14px;padding-bottom:8px;border-bottom:1px solid #2a2a2a}
+
+  /* ===== Success Overlay ===== */
+  .success-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:999;align-items:center;justify-content:center;padding:16px}
+  .success-overlay.visible{display:flex}
+  .success-box{background:#1c1c1c;border:1px solid #4caf50;border-radius:14px;padding:30px;text-align:center;max-width:400px}
+  .success-box .icon{font-size:48px;margin-bottom:12px}
+  .success-box h3{color:#4caf50;margin:0 0 10px;font-size:18px}
+  .success-box p{color:#ccc;font-size:14px;margin:0 0 20px}
+
+  @media(max-width:600px){.summary-item .val,.comm-item .val{font-size:20px}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>إغلاق المناسبة</h1>
+  <a class="back" href="events.html">&larr; رجوع للفعاليات</a>
+</div>
+
+<!-- ===== Event Selector ===== -->
+<div class="card">
+  <h2>اختر المناسبة</h2>
+  <div class="event-select-wrap">
+    <label for="eventSelector">المناسبة المراد إغلاقها</label>
+    <select id="eventSelector">
+      <option value="">-- اختر مناسبة نشطة --</option>
+    </select>
+    <div class="event-meta" id="eventMeta"></div>
+  </div>
+</div>
+
+<!-- ===== Content (hidden until event selected) ===== -->
+<div id="closureContent" style="display:none">
+
+  <!-- 1. Closure Checklist -->
+  <div class="card">
+    <h2>تشيك ليست الإغلاق</h2>
+    <div class="checklist-progress">
+      <div class="label" id="checklistLabel">0 / 5 مكتمل</div>
+      <div class="bar"><div class="bar-fill" id="checklistBar" style="width:0%"></div></div>
+    </div>
+    <ul class="checklist" id="checklistItems">
+      <li>جارِ التحميل...</li>
+    </ul>
+  </div>
+
+  <!-- 2. Final Attendance Summary -->
+  <div class="card">
+    <h2>ملخص حضور نهائي</h2>
+    <div class="summary-grid" id="attendanceSummary">
+      <div class="summary-item confirmed"><div class="val" id="attConfirmed">0</div><div class="lbl">مؤكد الحضور</div></div>
+      <div class="summary-item attended"><div class="val" id="attAttended">0</div><div class="lbl">حضر فعليًا (تشيك-إن)</div></div>
+      <div class="summary-item absent"><div class="val" id="attAbsent">0</div><div class="lbl">غائب (مؤكد ولم يحضر)</div></div>
+    </div>
+    <div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:#999;margin-bottom:2px">
+        <span>نسبة الحضور الفعلي من المؤكدين</span>
+        <span id="attRate">0%</span>
+      </div>
+      <div class="rate-bar"><div class="fill" id="attRateBar" style="width:0%;background:#4caf50"></div></div>
+    </div>
+  </div>
+
+  <!-- 3. Communication Summary -->
+  <div class="card">
+    <h2>ملخص الإرسال والتواصل</h2>
+    <div class="comm-grid" id="commSummary">
+      <div class="comm-item"><div class="val" id="commTotal">0</div><div class="lbl">إجمالي الرسائل</div></div>
+      <div class="comm-item success"><div class="val" id="commDelivered">0</div><div class="lbl">تم التسليم</div></div>
+      <div class="comm-item fail"><div class="val" id="commFailed">0</div><div class="lbl">فشل التسليم</div></div>
+      <div class="comm-item reply"><div class="val" id="commReplies">0</div><div class="lbl">الردود المستلمة</div></div>
+    </div>
+    <div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:#999;margin-bottom:2px">
+        <span>معدل نجاح التسليم</span>
+        <span id="commRate">0%</span>
+      </div>
+      <div class="rate-bar"><div class="fill" id="commRateBar" style="width:0%;background:#4caf50"></div></div>
+    </div>
+  </div>
+
+  <!-- 4. Budget Tracking -->
+  <div class="card">
+    <h2>متابعة مالية / ميزانية</h2>
+    <div style="overflow-x:auto">
+      <table class="budget-items-table" id="budgetTable">
+        <thead>
+          <tr>
+            <th>البند</th>
+            <th>التكلفة المقدّرة</th>
+            <th>التكلفة الفعلية</th>
+            <th>نسبة الفرق</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="budgetBody">
+          <tr><td colspan="5" class="empty-state">جارِ التحميل...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="text-align:center;padding-top:12px">
+      <button class="btn btn-outline btn-sm" id="addBudgetRowBtn">+ إضافة بند</button>
+    </div>
+  </div>
+
+  <!-- 5. Close Event Button -->
+  <div class="close-section">
+    <div class="warning">⚠️ بعد الإغلاق لن يمكنك تعديل بيانات المناسبة</div>
+    <button class="btn btn-gold" id="closeEventBtn" disabled>إغلاق المناسبة نهائيًا</button>
+    <div class="note">يجب تعليم جميع بنود قائمة التحقق أعلاه لتفعيل الزر</div>
+  </div>
+
+</div>
+
+<!-- ===== Success Overlay ===== -->
+<div class="success-overlay" id="successOverlay">
+  <div class="success-box">
+    <div class="icon">✅</div>
+    <h3>تم إغلاق المناسبة بنجاح</h3>
+    <p>تم حفظ ملخص الإغلاق وتحويل المناسبة للأرشيف.</p>
+    <button class="btn btn-gold" id="goToArchive">الذهاب للأرشيف</button>
+  </div>
+</div>
+
+<script type="module">
+import { auth, requireLogin, db, collection, doc, getDoc, getDocs, query, where, orderBy, setDoc, updateDoc, serverTimestamp, deleteDoc } from '../js/firebase-init.js';
+
+// ===== State =====
+let currentEventId = null;
+let currentEventData = null;
+let budgetItems = [];
+
+const DEFAULT_BUDGET = [
+  { name: "قاعة", estimated: 0, actual: 0 },
+  { name: "تجهيزات", estimated: 0, actual: 0 },
+  { name: "ضيافة", estimated: 0, actual: 0 },
+  { name: "فيديو/تصوير", estimated: 0, actual: 0 },
+  { name: "دعوات", estimated: 0, actual: 0 },
+  { name: "أخرى", estimated: 0, actual: 0 },
+];
+
+function escapeHtml(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function formatNum(n) {
+  return Number(n || 0).toLocaleString("ar-SA");
+}
+
+// ===== Init =====
+requireLogin(async () => {
+  // Check URL param
+  const urlParams = new URLSearchParams(window.location.search);
+  const preselectedId = urlParams.get("event");
+
+  // Load active events for selector
+  await loadEventSelector(preselectedId);
+});
+
+// ===== Load Event Selector =====
+async function loadEventSelector(preselectId) {
+  const sel = document.getElementById("eventSelector");
+  try {
+    const q = query(collection(db, "events"), orderBy("createdAt", "desc"));
+    const snap = await getDocs(q);
+    let options = "<option value=\"\">-- اختر مناسبة نشطة --</option>";
+    snap.forEach(d => {
+      const r = d.data();
+      const status = r.status || "preparing";
+      if (status === "closed" || status === "archived") return;
+      const selected = (preselectId === d.id) ? "selected" : "";
+      const dateStr = r.date || "";
+      options += `<option value="${d.id}" ${selected}>${escapeHtml(r.name || "—")} — ${dateStr}</option>`;
+    });
+    sel.innerHTML = options;
+
+    // Auto-select if URL param matches
+    if (preselectId) {
+      sel.value = preselectId;
+      if (sel.value === preselectId) {
+        await onEventSelect(preselectId);
+      }
+    }
+  } catch (e) {
+    sel.innerHTML = '<option value="">تعذّر تحميل المناسبات</option>';
+  }
+}
+
+// ===== Event Selector Change =====
+document.getElementById("eventSelector").addEventListener("change", async (e) => {
+  const id = e.target.value;
+  if (!id) {
+    document.getElementById("closureContent").style.display = "none";
+    document.getElementById("eventMeta").textContent = "";
+    currentEventId = null;
+    currentEventData = null;
+    return;
+  }
+  await onEventSelect(id);
+});
+
+async function onEventSelect(id) {
+  currentEventId = id;
+  document.getElementById("closureContent").style.display = "block";
+
+  // Load event doc
+  const evSnap = await getDoc(doc(db, "events", id));
+  if (!evSnap.exists()) {
+    document.getElementById("eventMeta").textContent = "المناسبة غير موجودة";
+    return;
+  }
+  currentEventData = { id: evSnap.id, ...evSnap.data() };
+  const ev = currentEventData;
+
+  document.getElementById("eventMeta").textContent = `العميل: ${ev.client || "—"} | التاريخ: ${ev.date || "—"} | الحالة: ${ev.status || "preparing"}`;
+
+  // Load all sections in parallel
+  await Promise.all([
+    loadChecklist(ev),
+    loadAttendanceSummary(ev),
+    loadCommunicationSummary(ev),
+    loadBudget(ev),
+  ]);
+}
+
+// ===== 1. Closure Checklist =====
+const CHECKLIST_ITEMS = [
+  { key: "invitations", label: "جميع الدعوات أُرسلت" },
+  { key: "checkins",   label: "تم تسجيل جميع الحضور" },
+  { key: "thanks",     label: "تم إرسال رسائل الشكر" },
+  { key: "payments",   label: "تم تسوية كافة المدفوعات" },
+  { key: "responses",  label: "لا توجد ردود معلّقة" },
+];
+
+let checklistState = {};
+
+async function loadChecklist(ev) {
+  // Load counts for hints
+  const counts = {};
+
+  // 1. Invitations: count guests vs send_logs
+  let totalGuests = 0;
+  try {
+    const guestsQ = query(collection(db, "guests"), where("eventId", "==", ev.id));
+    const guestsSnap = await getDocs(guestsQ);
+    totalGuests = guestsSnap.size;
+  } catch (e) { /* collection may not exist */ }
+
+  let sentCount = 0;
+  try {
+    const sendQ = query(collection(db, "send_logs"), where("eventId", "==", ev.id));
+    const sendSnap = await getDocs(sendQ);
+    sendSnap.forEach(d => {
+      const r = d.data();
+      if (r.status === "success" || r.status === "sent" || r.status === "delivered") sentCount++;
+    });
+  } catch (e) { /* collection may not exist */ }
+  counts.invitations = { done: totalGuests > 0 && sentCount >= totalGuests, hint: `أُرسلت ${sentCount} من ${totalGuests} دعوة` };
+
+  // 2. Checkins: confirmed vs actually checked in
+  let confirmedCount = 0;
+  let checkinCount = 0;
+  try {
+    const respQ = query(collection(db, "responses"), where("eventId", "==", ev.id), where("status", "==", "confirmed"));
+    const respSnap = await getDocs(respQ);
+    confirmedCount = respSnap.size;
+  } catch (e) { /* collection may not exist */ }
+  try {
+    const checkQ = query(collection(db, "checkins"), where("eventId", "==", ev.id));
+    const checkSnap = await getDocs(checkQ);
+    checkinCount = checkSnap.size;
+  } catch (e) { /* collection may not exist */ }
+  counts.checkins = { done: confirmedCount > 0 && checkinCount >= confirmedCount, hint: `سُجّل ${checkinCount} من ${confirmedCount} مؤكد` };
+
+  // 3. Thank you messages (check if any 'thank' type send_logs exist)
+  let thankCount = 0;
+  try {
+    const thankQ = query(collection(db, "send_logs"), where("eventId", "==", ev.id), where("type", "==", "thank_you"));
+    const thankSnap = await getDocs(thankQ);
+    thankCount = thankSnap.size;
+  } catch (e) { /* collection may not exist or index missing */ }
+  counts.thanks = { done: thankCount > 0, hint: thankCount > 0 ? `تم إرسال ${thankCount} رسالة شكر` : "لم تُرسل رسائل شكر بعد" };
+
+  // 4. Payments (assume manual confirmation — just check if user marks it)
+  counts.payments = { done: false, hint: "تحقق يدويًا من تسوية المدفوعات" };
+
+  // 5. Pending responses
+  let pendingCount = 0;
+  try {
+    const pendQ = query(collection(db, "responses"), where("eventId", "==", ev.id), where("status", "==", "pending"));
+    const pendSnap = await getDocs(pendQ);
+    pendingCount = pendSnap.size;
+  } catch (e) { /* collection may not exist */ }
+  counts.responses = { done: pendingCount === 0, hint: pendingCount > 0 ? `يوجد ${pendingCount} رد معلّق` : "لا توجد ردود معلّقة" };
+
+  // Restore saved checklist state
+  const saved = ev.closureChecklist || {};
+  checklistState = {};
+  CHECKLIST_ITEMS.forEach(item => {
+    checklistState[item.key] = saved[item.key] ?? counts[item.key].done;
+  });
+
+  renderChecklist(counts);
+}
+
+function renderChecklist(counts) {
+  const ul = document.getElementById("checklistItems");
+  ul.innerHTML = CHECKLIST_ITEMS.map(item => {
+    const checked = checklistState[item.key] ? "checked" : "";
+    const doneClass = checklistState[item.key] ? "done" : "";
+    const hint = counts[item.key] ? counts[item.key].hint : "";
+    return `<li class="${doneClass}">
+      <input type="checkbox" data-key="${item.key}" ${checked}>
+      <span>${escapeHtml(item.label)}</span>
+      <span class="count-hint">${escapeHtml(hint)}</span>
+    </li>`;
+  }).join("");
+
+  updateChecklistProgress();
+
+  // Bind checkbox changes
+  ul.querySelectorAll("input[type=checkbox]").forEach(cb => {
+    cb.addEventListener("change", () => {
+      checklistState[cb.dataset.key] = cb.checked;
+      const li = cb.closest("li");
+      if (cb.checked) li.classList.add("done"); else li.classList.remove("done");
+      updateChecklistProgress();
+      saveChecklistState();
+    });
+  });
+}
+
+function updateChecklistProgress() {
+  const total = CHECKLIST_ITEMS.length;
+  const done = Object.values(checklistState).filter(Boolean).length;
+  const pct = Math.round((done / total) * 100);
+  document.getElementById("checklistLabel").textContent = `${done} / ${total} مكتمل`;
+  document.getElementById("checklistBar").style.width = pct + "%";
+
+  // Enable/disable close button
+  document.getElementById("closeEventBtn").disabled = (done < total);
+}
+
+async function saveChecklistState() {
+  if (!currentEventId) return;
+  try {
+    await updateDoc(doc(db, "events", currentEventId), { closureChecklist: checklistState });
+  } catch (e) { /* silent */ }
+}
+
+// ===== 2. Final Attendance Summary =====
+async function loadAttendanceSummary(ev) {
+  let confirmedCount = 0;
+  let checkinCount = 0;
+
+  // Confirmed guests
+  try {
+    const q = query(collection(db, "responses"), where("eventId", "==", ev.id), where("status", "==", "confirmed"));
+    const snap = await getDocs(q);
+    confirmedCount = snap.size;
+  } catch (e) { /* collection may not exist */ }
+
+  // Actually checked in
+  try {
+    const q = query(collection(db, "checkins"), where("eventId", "==", ev.id));
+    const snap = await getDocs(q);
+    checkinCount = snap.size;
+  } catch (e) { /* collection may not exist */ }
+
+  const absent = Math.max(0, confirmedCount - checkinCount);
+  const rate = confirmedCount > 0 ? Math.round((checkinCount / confirmedCount) * 100) : 0;
+
+  document.getElementById("attConfirmed").textContent = formatNum(confirmedCount);
+  document.getElementById("attAttended").textContent = formatNum(checkinCount);
+  document.getElementById("attAbsent").textContent = formatNum(absent);
+  document.getElementById("attRate").textContent = rate + "%";
+  document.getElementById("attRateBar").style.width = rate + "%";
+  document.getElementById("attRateBar").style.background = rate >= 70 ? "#4caf50" : rate >= 40 ? "#d4af37" : "#e07a5f";
+
+  // Store for closure summary
+  window._attendanceSummary = { confirmed: confirmedCount, attended: checkinCount, absent, rate };
+}
+
+// ===== 3. Communication Summary =====
+async function loadCommunicationSummary(ev) {
+  let total = 0, delivered = 0, failed = 0;
+  let replyCount = 0;
+
+  // Send logs
+  try {
+    const q = query(collection(db, "send_logs"), where("eventId", "==", ev.id));
+    const snap = await getDocs(q);
+    snap.forEach(d => {
+      const r = d.data();
+      total++;
+      const st = r.status || "";
+      if (st === "success" || st === "sent" || st === "delivered") delivered++;
+      else failed++;
+    });
+  } catch (e) { /* collection may not exist */ }
+
+  // Replies (responses count)
+  try {
+    const q = query(collection(db, "responses"), where("eventId", "==", ev.id));
+    const snap = await getDocs(q);
+    replyCount = snap.size;
+  } catch (e) { /* collection may not exist */ }
+
+  const successRate = total > 0 ? Math.round((delivered / total) * 100) : 0;
+
+  document.getElementById("commTotal").textContent = formatNum(total);
+  document.getElementById("commDelivered").textContent = formatNum(delivered);
+  document.getElementById("commFailed").textContent = formatNum(failed);
+  document.getElementById("commReplies").textContent = formatNum(replyCount);
+  document.getElementById("commRate").textContent = successRate + "%";
+  document.getElementById("commRateBar").style.width = successRate + "%";
+  document.getElementById("commRateBar").style.background = successRate >= 80 ? "#4caf50" : successRate >= 50 ? "#d4af37" : "#e07a5f";
+
+  // Store for closure summary
+  window._commSummary = { total, delivered, failed, replyCount, successRate };
+}
+
+// ===== 4. Budget Tracking =====
+async function loadBudget(ev) {
+  // Try loading saved budget items from subcollection first, fallback to budgetItems array
+  try {
+    const budgetSnap = await getDocs(collection(db, "events", ev.id, "budget"));
+    if (budgetSnap.size > 0) {
+      budgetItems = budgetSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } else {
+      budgetItems = ev.budgetItems && ev.budgetItems.length > 0
+        ? ev.budgetItems.map((item, i) => ({ ...item, _idx: i }))
+        : DEFAULT_BUDGET.map((item, i) => ({ ...item, _idx: i }));
+    }
+  } catch (e) {
+    budgetItems = ev.budgetItems && ev.budgetItems.length > 0
+      ? ev.budgetItems.map((item, i) => ({ ...item, _idx: i }))
+      : DEFAULT_BUDGET.map((item, i) => ({ ...item, _idx: i }));
+  }
+  renderBudgetTable();
+}
+
+function renderBudgetTable() {
+  const tbody = document.getElementById("budgetBody");
+  if (!budgetItems || !budgetItems.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty-state">لا توجد بنود</td></tr>';
+    return;
+  }
+
+  let totalEst = 0, totalAct = 0;
+  let rows = budgetItems.map((item, i) => {
+    const est = Number(item.estimated) || 0;
+    const act = Number(item.actual) || 0;
+    totalEst += est;
+    totalAct += act;
+    const variance = est > 0 ? ((act - est) / est * 100).toFixed(1) : "0";
+    const varNum = parseFloat(variance);
+    const varClass = varNum > 0 ? "variance-pos" : varNum < 0 ? "variance-neg" : "";
+    const sign = varNum > 0 ? "+" : "";
+    const rowId = item.id || item._idx || i;
+    return `<tr data-rid="${rowId}">
+      <td><input type="text" value="${escapeHtml(item.name || "")}" data-i="${i}" data-field="name"></td>
+      <td><input type="number" value="${est}" data-i="${i}" data-field="estimated" dir="ltr"></td>
+      <td><input type="number" value="${act}" data-i="${i}" data-field="actual" dir="ltr"></td>
+      <td class="${varClass}">${sign}${variance}%</td>
+      <td><button class="btn btn-sm btn-danger removeBudgetRowBtn" data-i="${i}">✕</button></td>
+    </tr>`;
+  }).join("");
+
+  // Total row
+  const totalVariance = totalEst > 0 ? ((totalAct - totalEst) / totalEst * 100).toFixed(1) : "0";
+  const totalVarNum = parseFloat(totalVariance);
+  const totalVarClass = totalVarNum > 0 ? "variance-pos" : totalVarNum < 0 ? "variance-neg" : "";
+  const totalSign = totalVarNum > 0 ? "+" : "";
+  rows += `<tr class="budget-total-row">
+    <td>الإجمالي</td>
+    <td dir="ltr" style="text-align:right">${formatNum(totalEst)}</td>
+    <td dir="ltr" style="text-align:right">${formatNum(totalAct)}</td>
+    <td class="${totalVarClass}">${totalSign}${totalVariance}%</td>
+    <td></td>
+  </tr>`;
+
+  tbody.innerHTML = rows;
+
+  // Bind input changes
+  tbody.querySelectorAll("input").forEach(inp => {
+    inp.addEventListener("change", () => {
+      const idx = parseInt(inp.dataset.i);
+      const field = inp.dataset.field;
+      if (field === "estimated" || field === "actual") {
+        budgetItems[idx][field] = Number(inp.value) || 0;
+      } else {
+        budgetItems[idx][field] = inp.value;
+      }
+      renderBudgetTable();
+      saveBudget();
+    });
+  });
+
+  // Bind remove buttons
+  tbody.querySelectorAll(".removeBudgetRowBtn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const idx = parseInt(btn.dataset.i);
+      budgetItems.splice(idx, 1);
+      renderBudgetTable();
+      saveBudget();
+    });
+  });
+}
+
+async function saveBudget() {
+  if (!currentEventId) return;
+  // Save as budgetItems array in event doc
+  const cleanItems = budgetItems.map(({ id, _idx, ...rest }) => rest);
+  try {
+    await updateDoc(doc(db, "events", currentEventId), { budgetItems: cleanItems });
+  } catch (e) { /* silent */ }
+}
+
+// Add budget row
+document.getElementById("addBudgetRowBtn").addEventListener("click", () => {
+  budgetItems.push({ name: "", estimated: 0, actual: 0 });
+  renderBudgetTable();
+  saveBudget();
+});
+
+// ===== 5. Close Event =====
+document.getElementById("closeEventBtn").addEventListener("click", async () => {
+  if (!currentEventId) return;
+  if (!confirm("هل أنت متأكد من إغلاق المناسبة نهائيًا؟\n\nسيتم تحويل المناسبة لحالة \"مغلقة\" ولن يمكنك تعديل بياناتها.")) return;
+
+  const btn = document.getElementById("closeEventBtn");
+  btn.disabled = true;
+  btn.textContent = "جارِ الإغلاق...";
+
+  try {
+    // Build closure summary
+    const closureSummary = {
+      attendance: window._attendanceSummary || {},
+      communication: window._commSummary || {},
+      closedBy: auth.currentUser?.email || "unknown",
+    };
+
+    // Save budget and close event
+    const cleanItems = budgetItems.map(({ id, _idx, ...rest }) => rest);
+    await updateDoc(doc(db, "events", currentEventId), {
+      status: "closed",
+      closedAt: serverTimestamp(),
+      closureSummary: closureSummary,
+      budgetItems: cleanItems,
+    });
+
+    // Show success overlay
+    document.getElementById("successOverlay").classList.add("visible");
+  } catch (e) {
+    alert("تعذّر إغلاق المناسبة: " + e.message);
+    btn.disabled = false;
+    btn.textContent = "إغلاق المناسبة نهائيًا";
+    updateChecklistProgress();
+  }
+});
+
+// Go to archive
+document.getElementById("goToArchive").addEventListener("click", () => {
+  window.location.href = "archive.html";
+});
+</script>
+</body>
+</html>

@@ -9,7 +9,7 @@
 const { resolveRecipients, sendReportEmail, escapeHtml, getAdminDb } = require("./_report-lib");
 const { checkRateLimit } = require("./_rate-limit");
 
-exports.handler = async (event) => {
+async function handle(event) {
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
   }
@@ -72,6 +72,21 @@ exports.handler = async (event) => {
     const result = await sendReportEmail({ to: recipients, subject, text: textBody, html: htmlBody });
     return { statusCode: 200, body: JSON.stringify(result) };
   } catch (err) {
-    return { statusCode: 200, body: JSON.stringify({ sent: false, error: String(err) }) };
+    return { statusCode: 200, body: JSON.stringify({ sent: false, error: "notification delivery failed" }) };
   }
+};
+
+
+const ALLOWED_ORIGINS = new Set(["https://jamratghadah.com", "https://admin.jamratghadah.com"]);
+exports.handler = async (event) => {
+  const origin = String(event.headers?.origin || "").toLowerCase();
+  const headers = {
+    "Access-Control-Allow-Origin": ALLOWED_ORIGINS.has(origin) ? origin : "https://jamratghadah.com",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Content-Type": "application/json; charset=utf-8",
+  };
+  if (event.httpMethod === "OPTIONS") return { statusCode: 204, headers, body: "" };
+  const result = await handle(event);
+  return { ...result, headers: { ...headers, ...(result.headers || {}) } };
 };

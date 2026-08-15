@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+
+<html dir="rtl" lang="ar">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>مكتبة قوالب الرسائل — لوحة تحكم جمرة غضى</title>
+<meta content="noindex, nofollow" name="robots"/>
+<style>
+  *{box-sizing:border-box}
+  body{font-family:Tahoma,Arial,sans-serif;background:#111;color:#eee;margin:0;padding:20px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px}
+  h1{color:#d4af37;font-size:20px;margin:0}
+  a.back{color:#aaa;text-decoration:none;font-size:14px}
+  .card{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:18px;margin-bottom:18px}
+  .card h2{font-size:15px;color:#d4af37;margin-top:0}
+
+  /* ===== Toolbar ===== */
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+  .search-wrap{flex:1;min-width:180px;position:relative}
+  .search-wrap input{width:100%;padding:10px 36px 10px 12px;border-radius:8px;border:1px solid #444;background:#222;color:#fff;font-family:inherit;font-size:14px}
+  .search-wrap .icon{position:absolute;right:10px;top:50%;transform:translateY(-50%);color:#888;font-size:16px;pointer-events:none}
+  select{padding:10px 12px;border-radius:8px;border:1px solid #444;background:#222;color:#fff;font-family:inherit;font-size:14px;cursor:pointer}
+  .btn{padding:10px 16px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;font-size:13px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-family:inherit}
+  .btn-gold{background:#d4af37;color:#111}
+  .btn-outline{background:transparent;border:1px solid #555;color:#ddd}
+  .btn-danger{background:#c0392b;color:#fff}
+  .btn:disabled{opacity:.45;cursor:default}
+  .btn-sm{padding:6px 10px;font-size:12px;border-radius:6px}
+  .toolbar2{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;padding-top:10px;border-top:1px solid #2a2a2a}
+
+  /* ===== Templates Grid ===== */
+  .templates-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
+  .template-card{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:18px;transition:border-color .2s}
+  .template-card:hover{border-color:#555}
+  .template-card .card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:8px}
+  .template-card .card-header h3{margin:0;font-size:14px;color:#eee;flex:1}
+  .template-card .badges{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+  .template-card .meta{font-size:11px;color:#888;margin-bottom:10px;display:flex;flex-wrap:wrap;gap:10px}
+  .template-card .preview{font-size:12px;color:#bbb;line-height:1.6;background:#161616;border:1px solid #2a2a2a;border-radius:8px;padding:10px 12px;margin-bottom:12px;min-height:50px;word-break:break-word;white-space:pre-wrap}
+  .template-card .actions{display:flex;gap:6px;flex-wrap:wrap}
+
+  .badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:bold;white-space:nowrap;display:inline-block}
+  .badge.type-invite{background:rgba(212,175,55,.12);color:#d4af37;border:1px solid rgba(212,175,55,.25)}
+  .badge.type-reminder{background:rgba(66,133,244,.12);color:#6ea8fe;border:1px solid rgba(66,133,244,.25)}
+  .badge.type-thank_you{background:rgba(76,175,80,.12);color:#66bb6a;border:1px solid rgba(76,175,80,.25)}
+  .badge.type-custom{background:rgba(156,39,176,.12);color:#ba68c8;border:1px solid rgba(156,39,176,.25)}
+  .badge.lang-ar{background:rgba(212,175,55,.1);color:#d4af37;border:1px solid rgba(212,175,55,.25)}
+  .badge.lang-en{background:rgba(76,175,80,.1);color:#66bb6a;border:1px solid rgba(76,175,80,.25)}
+  .badge.lang-fr{background:rgba(66,133,244,.1);color:#6ea8fe;border:1px solid rgba(66,133,244,.25)}
+
+  .empty{color:#777;text-align:center;padding:50px;font-size:14px}
+  .count-hint{font-size:12px;color:#888;margin-top:8px}
+
+  /* ===== Toast ===== */
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#333;color:#fff;padding:12px 24px;border-radius:10px;font-size:13px;z-index:1100;opacity:0;transition:all .35s ease;pointer-events:none;border:1px solid #555}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* ===== Modal ===== */
+  .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:999;align-items:center;justify-content:center;padding:16px}
+  .modal-bg.open{display:flex}
+  .modal{background:#1c1c1c;border:1px solid #333;border-radius:14px;padding:22px;width:100%;max-width:520px;max-height:88vh;overflow-y:auto}
+  .modal::-webkit-scrollbar{width:6px}
+  .modal::-webkit-scrollbar-track{background:#1c1c1c}
+  .modal::-webkit-scrollbar-thumb{background:#444;border-radius:3px}
+  .modal h3{margin:0 0 16px;color:#d4af37;font-size:16px}
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:12.5px;color:#aaa;margin-bottom:5px}
+  .field input,.field select,.field textarea{
+    width:100%;padding:10px 12px;border-radius:8px;border:1px solid #444;background:#222;color:#fff;
+    font-family:inherit;font-size:14px;
+  }
+  .field textarea{min-height:120px;resize:vertical}
+  .field .hint{font-size:11.5px;color:#777;margin-top:4px}
+  .modal-actions{display:flex;gap:10px;margin-top:18px}
+  .modal-actions .btn{flex:1;justify-content:center}
+  .msg-status{font-size:13px;margin-top:10px;min-height:18px}
+  .msg-status.err{color:#e07a5f}
+  .msg-status.ok{color:#4caf50}
+  @media(max-width:600px){
+    .templates-grid{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div class="topbar">
+<h1>📝 مكتبة قوالب الرسائل</h1>
+<a class="back" href="index.html">← رجوع للوحة</a>
+</div>
+<div class="card">
+<h2>القوالب</h2>
+<div class="toolbar">
+<div class="search-wrap">
+<input id="searchInput" placeholder="بحث باسم القالب..." type="text"/>
+<span class="icon">🔍</span>
+</div>
+</div>
+<div class="toolbar2">
+<select id="filterType">
+<option value="all">كل الأنواع</option>
+<option value="invite">دعوة</option>
+<option value="reminder">تذكير</option>
+<option value="thank_you">شكر</option>
+<option value="custom">مخصص</option>
+</select>
+<select id="filterLang">
+<option value="all">كل اللغات</option>
+<option value="ar">عربي</option>
+<option value="en">English</option>
+<option value="fr">Français</option>
+</select>
+<button class="btn btn-gold" id="openAddModal">➕ إضافة قالب</button>
+</div>
+<div class="templates-grid" id="templatesGrid">
+<div class="empty">جارِ التحميل...</div>
+</div>
+<div class="count-hint" id="countHint"></div>
+</div>
+<!-- ===== Add/Edit Template Modal ===== -->
+<div class="modal-bg" id="modalBg">
+<div class="modal">
+<h3 id="modalTitle">➕ إضافة قالب جديد</h3>
+<div class="field">
+<label for="tmplName">اسم القالب *</label>
+<input id="tmplName" placeholder="مثال: دعوة زفاف رسمية" type="text"/>
+</div>
+<div class="field">
+<label for="tmplType">النوع</label>
+<select id="tmplType">
+<option value="invite">دعوة</option>
+<option value="reminder">تذكير</option>
+<option value="thank_you">شكر</option>
+<option value="custom">مخصص</option>
+</select>
+</div>
+<div class="field">
+<label for="tmplLang">اللغة</label>
+<select id="tmplLang">
+<option value="ar">عربي</option>
+<option value="en">English</option>
+<option value="fr">Français</option>
+</select>
+</div>
+<div class="field">
+<label for="tmplEvent">الفعالية (اختياري)</label>
+<select id="tmplEvent">
+<option value="">عام (لكل الفعاليات)</option>
+</select>
+</div>
+<div class="field">
+<label for="tmplText">نص الرسالة *</label>
+<textarea id="tmplText" placeholder="اكتبي نص الرسالة هنا..."></textarea>
+<div class="hint">استخدمي {name} لاسم الضيف و {event} لاسم الفعالية</div>
+</div>
+<div class="msg-status" id="modalStatus"></div>
+<div class="modal-actions">
+<button class="btn btn-outline" id="modalCancel">إلغاء</button>
+<button class="btn btn-gold" id="modalSave">حفظ</button>
+</div>
+</div>
+</div>
+<!-- ===== Toast Notification ===== -->
+<div class="toast" id="toast"></div>
+<script type="module">
+import {
+  db, requireLogin,
+  collection, query, orderBy, onSnapshot,
+  doc, addDoc, updateDoc, deleteDoc, serverTimestamp,
+  getDocs,
+} from "../js/firebase-init.js";
+
+let allTemplates = [];
+let allEvents = [];
+let unsub = null;
+let editingId = null;
+
+// ===== Labels Maps =====
+const typeLabels = {
+  invite: "دعوة",
+  reminder: "تذكير",
+  thank_you: "شكر",
+  custom: "مخصص",
+};
+
+const langLabels = {
+  ar: "عربي",
+  en: "English",
+  fr: "Français",
+};
+
+// ===== XSS Protection =====
+function escapeHtml(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// ===== Toast =====
+function showToast(msg) {
+  const toast = document.getElementById("toast");
+  toast.textContent = msg;
+  toast.classList.add("show");
+  setTimeout(() => toast.classList.remove("show"), 2500);
+}
+
+// ===== Format Date =====
+function formatDate(ts) {
+  if (!ts) return "—";
+  const millis = ts.toMillis ? ts.toMillis() : new Date(ts).getTime();
+  return new Date(millis).toLocaleString("ar-SA", {
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit",
+  });
+}
+
+// ===== Load Events for Dropdown =====
+async function loadEvents() {
+  try {
+    const snap = await getDocs(collection(db, "events"));
+    allEvents = [];
+    snap.forEach((d) => {
+      const r = d.data();
+      allEvents.push({ id: d.id, name: r.name || r.title || d.id });
+    });
+    const sel = document.getElementById("tmplEvent");
+    sel.innerHTML = '<option value="">عام (لكل الفعاليات)</option>';
+    allEvents.forEach((ev) => {
+      sel.innerHTML += `<option value="${escapeHtml(ev.id)}">${escapeHtml(ev.name)}</option>`;
+    });
+  } catch (e) {
+    console.error("Error loading events:", e);
+  }
+}
+
+// ===== Init =====
+requireLogin(async () => {
+  await loadEvents();
+  const q = query(collection(db, "templates"), orderBy("updatedAt", "desc"));
+  unsub = onSnapshot(q, (snap) => {
+    allTemplates = [];
+    snap.forEach((d) => {
+      const r = d.data();
+      allTemplates.push({
+        id: d.id,
+        name: r.name || "—",
+        type: r.type || "custom",
+        lang: r.lang || "ar",
+        eventId: r.eventId || "",
+        eventName: r.eventName || "عام",
+        text: r.text || "",
+        createdAt: r.createdAt,
+        updatedAt: r.updatedAt,
+      });
+    });
+    renderTemplates();
+  }, () => {
+    document.getElementById("templatesGrid").innerHTML = '<div class="empty">تعذّر تحميل البيانات</div>';
+  });
+});
+
+// ===== Filter =====
+function getFiltered() {
+  const search = document.getElementById("searchInput").value.trim().toLowerCase();
+  const typeFilter = document.getElementById("filterType").value;
+  const langFilter = document.getElementById("filterLang").value;
+
+  return allTemplates.filter(t => {
+    if (typeFilter !== "all" && t.type !== typeFilter) return false;
+    if (langFilter !== "all" && t.lang !== langFilter) return false;
+    if (search && !t.name.toLowerCase().includes(search)) return false;
+    return true;
+  });
+}
+
+// ===== Render Templates =====
+function renderTemplates() {
+  const grid = document.getElementById("templatesGrid");
+  const list = getFiltered();
+  const hint = document.getElementById("countHint");
+
+  if (!list.length) {
+    grid.innerHTML = '<div class="empty">لا يوجد قوالب مطابقة</div>';
+    hint.textContent = "";
+    return;
+  }
+
+  grid.innerHTML = list.map((t) => {
+    const typeCls = `type-${t.type}`;
+    const langCls = `lang-${t.lang}`;
+    const preview = t.text.length > 100 ? t.text.slice(0, 100) + "..." : t.text;
+    return `<div class="template-card" data-id="${t.id}">
+      <div class="card-header">
+        <h3>${escapeHtml(t.name)}</h3>
+      </div>
+      <div class="badges">
+        <span class="badge ${typeCls}">${escapeHtml(typeLabels[t.type] || t.type)}</span>
+        <span class="badge ${langCls}">${escapeHtml(langLabels[t.lang] || t.lang)}</span>
+      </div>
+      <div class="meta">
+        <span>📋 الفعالية: <strong style="color:#ccc">${escapeHtml(t.eventName)}</strong></span>
+        <span>📅 التحديث: ${escapeHtml(formatDate(t.updatedAt))}</span>
+      </div>
+      <div class="preview">${escapeHtml(preview)}</div>
+      <div class="actions">
+        <button class="btn btn-sm btn-gold useBtn" data-id="${t.id}" title="نسخ نص القالب واستخدامه">📋 استخدام</button>
+        <button class="btn btn-sm btn-outline editBtn" data-id="${t.id}" title="تعديل القالب">✏️ تعديل</button>
+        <button class="btn btn-sm btn-outline copyBtn" data-id="${t.id}" title="نسخ النص">📄 نسخ</button>
+        <button class="btn btn-sm btn-danger deleteBtn" data-id="${t.id}" title="حذف القالب">🗑 حذف</button>
+      </div>
+    </div>`;
+  }).join("");
+
+  hint.textContent = `عرض ${list.length} من أصل ${allTemplates.length} قالب`;
+
+  // Bind events
+  grid.querySelectorAll(".useBtn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const tmpl = allTemplates.find(t => t.id === btn.dataset.id);
+      if (tmpl && tmpl.text) {
+        navigator.clipboard.writeText(tmpl.text).then(() => {
+          showToast("تم نسخ نص القالب ✅");
+        }).catch(() => {
+          showToast("تعذّر النسخ");
+        });
+      }
+    });
+  });
+
+  grid.querySelectorAll(".editBtn").forEach(btn => {
+    btn.addEventListener("click", () => openEditModal(btn.dataset.id));
+  });
+
+  grid.querySelectorAll(".copyBtn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const tmpl = allTemplates.find(t => t.id === btn.dataset.id);
+      if (tmpl && tmpl.text) {
+        navigator.clipboard.writeText(tmpl.text).then(() => {
+          showToast("تم نسخ نص القالب ✅");
+        }).catch(() => {
+          showToast("تعذّر النسخ");
+        });
+      }
+    });
+  });
+
+  grid.querySelectorAll(".deleteBtn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      if (!confirm("تأكيد حذف هذا القالب نهائيًا؟ ما فيه تراجع.")) return;
+      btn.disabled = true;
+      try {
+        await deleteDoc(doc(db, "templates", btn.dataset.id));
+        showToast("تم حذف القالب ✅");
+      } catch (e) {
+        showToast("تعذّر حذف القالب");
+      }
+      btn.disabled = false;
+    });
+  });
+}
+
+// ===== Filter Events =====
+document.getElementById("searchInput").addEventListener("input", renderTemplates);
+document.getElementById("filterType").addEventListener("change", renderTemplates);
+document.getElementById("filterLang").addEventListener("change", renderTemplates);
+
+// ===== Modal Logic =====
+const modalBg = document.getElementById("modalBg");
+
+document.getElementById("openAddModal").addEventListener("click", () => {
+  editingId = null;
+  document.getElementById("modalTitle").textContent = "➕ إضافة قالب جديد";
+  document.getElementById("tmplName").value = "";
+  document.getElementById("tmplType").value = "invite";
+  document.getElementById("tmplLang").value = "ar";
+  document.getElementById("tmplEvent").value = "";
+  document.getElementById("tmplText").value = "";
+  document.getElementById("modalStatus").textContent = "";
+  modalBg.classList.add("open");
+});
+
+document.getElementById("modalCancel").addEventListener("click", () => modalBg.classList.remove("open"));
+
+function openEditModal(id) {
+  const tmpl = allTemplates.find(t => t.id === id);
+  if (!tmpl) return;
+  editingId = id;
+  document.getElementById("modalTitle").textContent = "✏️ تعديل القالب";
+  document.getElementById("tmplName").value = tmpl.name;
+  document.getElementById("tmplType").value = tmpl.type;
+  document.getElementById("tmplLang").value = tmpl.lang;
+  document.getElementById("tmplEvent").value = tmpl.eventId;
+  document.getElementById("tmplText").value = tmpl.text;
+  document.getElementById("modalStatus").textContent = "";
+  modalBg.classList.add("open");
+}
+
+document.getElementById("modalSave").addEventListener("click", async () => {
+  const name = document.getElementById("tmplName").value.trim().slice(0, 200);
+  const type = document.getElementById("tmplType").value;
+  const lang = document.getElementById("tmplLang").value;
+  const eventId = document.getElementById("tmplEvent").value;
+  const text = document.getElementById("tmplText").value.trim();
+  const msgEl = document.getElementById("modalStatus");
+
+  if (!name) { msgEl.textContent = "اسم القالب مطلوب"; msgEl.className = "msg-status err"; return; }
+  if (!text) { msgEl.textContent = "نص الرسالة مطلوب"; msgEl.className = "msg-status err"; return; }
+
+  // Get event name from selection
+  const eventSelect = document.getElementById("tmplEvent");
+  const eventName = eventSelect.selectedIndex > 0 ? eventSelect.options[eventSelect.selectedIndex].text : "عام";
+
+  const btn = document.getElementById("modalSave");
+  btn.disabled = true;
+  try {
+    const data = { name, type, lang, eventId, eventName, text, updatedAt: serverTimestamp() };
+    if (editingId) {
+      await updateDoc(doc(db, "templates", editingId), data);
+      msgEl.textContent = "تم تحديث القالب ✅"; msgEl.className = "msg-status ok";
+    } else {
+      data.createdAt = serverTimestamp();
+      await addDoc(collection(db, "templates"), data);
+      msgEl.textContent = "تم إضافة القالب ✅"; msgEl.className = "msg-status ok";
+    }
+    setTimeout(() => modalBg.classList.remove("open"), 600);
+  } catch (e) {
+    msgEl.textContent = "تعذّر حفظ القالب"; msgEl.className = "msg-status err";
+  }
+  btn.disabled = false;
+});
+
+// Close modal on background click
+modalBg.addEventListener("click", (e) => {
+  if (e.target === modalBg) modalBg.classList.remove("open");
+});
+
+// ===== Cleanup =====
+window.addEventListener("beforeunload", () => { if (unsub) unsub(); });
+</script>
+</body>
+</html>

@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>إدارة رموز QR المركزية — لوحة تحكم جمرة غضى</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+  *{box-sizing:border-box}
+  body{font-family:Tahoma,Arial,sans-serif;background:#111;color:#eee;margin:0;padding:20px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px}
+  h1{color:#d4af37;font-size:20px;margin:0}
+  a.back{color:#aaa;text-decoration:none;font-size:14px}
+  .card{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:18px;margin-bottom:18px}
+  .card h2{font-size:15px;color:#d4af37;margin-top:0}
+
+  /* ===== Stats ===== */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:18px}
+  .stat{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:16px;text-align:center;position:relative;overflow:hidden}
+  .stat::before{content:"";position:absolute;top:0;right:0;width:4px;height:100%}
+  .stat.total::before{background:#d4af37}
+  .stat.active::before{background:#4caf50}
+  .stat.revoked::before{background:#e07a5f}
+  .stat .num{font-size:30px;font-weight:bold;line-height:1}
+  .stat.total .num{color:#d4af37}
+  .stat.active .num{color:#4caf50}
+  .stat.revoked .num{color:#e07a5f}
+  .stat .label{font-size:11px;color:#999;margin-top:6px}
+
+  /* ===== Toolbar ===== */
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+  .search-wrap{flex:1;min-width:180px;position:relative}
+  .search-wrap input{width:100%;padding:10px 36px 10px 12px;border-radius:8px;border:1px solid #444;background:#222;color:#fff;font-family:inherit;font-size:14px}
+  .search-wrap .icon{position:absolute;right:10px;top:50%;transform:translateY(-50%);color:#888;font-size:16px;pointer-events:none}
+  select{padding:10px 12px;border-radius:8px;border:1px solid #444;background:#222;color:#fff;font-family:inherit;font-size:14px;cursor:pointer}
+  .btn{padding:10px 16px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;font-size:13px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-family:inherit}
+  .btn-gold{background:#d4af37;color:#111}
+  .btn-outline{background:transparent;border:1px solid #555;color:#ddd}
+  .btn-danger{background:#c0392b;color:#fff}
+  .btn-success{background:#4caf50;color:#fff}
+  .btn:disabled{opacity:.45;cursor:default}
+  .btn-sm{padding:6px 10px;font-size:12px;border-radius:6px}
+  .toolbar2{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;padding-top:10px;border-top:1px solid #2a2a2a}
+  .count-hint{font-size:12px;color:#888;margin-top:8px}
+
+  /* ===== QR Grid ===== */
+  .qr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
+  .qr-card{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:14px;text-align:center;position:relative;transition:border-color .2s}
+  .qr-card:hover{border-color:#555}
+  .qr-card.selected{border-color:#d4af37;box-shadow:0 0 0 1px #d4af37}
+  .qr-card .qr-check{position:absolute;top:10px;right:10px;cursor:pointer;width:18px;height:18px;accent-color:#d4af37}
+  .qr-card canvas,.qr-card img{width:120px;height:120px;border-radius:8px;background:#fff;margin:0 auto 10px;display:block}
+  .qr-card .guest-name{font-size:14px;color:#eee;font-weight:bold;margin-bottom:4px}
+  .qr-card .entry-code{font-size:13px;color:#d4af37;font-weight:bold;direction:ltr;margin-bottom:4px}
+  .qr-card .phone{font-size:12px;color:#999;direction:ltr;margin-bottom:4px}
+  .qr-card .event-name{font-size:11px;color:#888;margin-bottom:8px}
+  .badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:bold;white-space:nowrap;display:inline-block;margin-bottom:8px}
+  .badge.active{background:rgba(76,175,80,.15);color:#4caf50;border:1px solid rgba(76,175,80,.3)}
+  .badge.revoked{background:rgba(224,122,95,.15);color:#e07a5f;border:1px solid rgba(224,122,95,.3)}
+  .qr-card-actions{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+  .qr-card-actions .btn{font-size:11px;padding:5px 10px}
+  .empty{color:#777;text-align:center;padding:30px;font-size:14px}
+
+  /* ===== Log Table ===== */
+  .table-wrap{overflow-x:auto;max-height:400px;overflow-y:auto}
+  .table-wrap::-webkit-scrollbar{width:6px;height:6px}
+  .table-wrap::-webkit-scrollbar-track{background:#1a1a1a}
+  .table-wrap::-webkit-scrollbar-thumb{background:#444;border-radius:3px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  thead th{text-align:right;padding:10px 8px;border-bottom:2px solid #333;color:#d4af37;white-space:nowrap;position:sticky;top:0;background:#1c1c1c;z-index:2}
+  tbody td{padding:10px 8px;border-bottom:1px solid #2a2a2a;white-space:nowrap}
+  tbody tr:hover{background:#222}
+  .badge-sm{font-size:10px;padding:2px 8px;border-radius:12px;font-weight:bold}
+  .badge-sm.success{background:rgba(76,175,80,.15);color:#4caf50}
+  .badge-sm.fail{background:rgba(224,122,95,.15);color:#e07a5f}
+
+  /* ===== Toast ===== */
+  .toast-container{position:fixed;bottom:20px;left:20px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+  .toast{padding:12px 18px;border-radius:8px;font-size:13px;color:#fff;animation:toastIn .3s ease;min-width:200px}
+  .toast.ok{background:#2e7d32}
+  .toast.err{background:#c62828}
+  .toast.info{background:#1565c0}
+  @keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+  @media(max-width:600px){
+    .stat .num{font-size:22px}
+    .qr-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}
+    .qr-card canvas,.qr-card img{width:100px;height:100px}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>🔒 إدارة رموز QR المركزية</h1>
+  <a class="back" href="index.html">← رجوع للوحة</a>
+</div>
+
+<!-- ===== Stats ===== -->
+<div class="stats">
+  <div class="stat total"><div class="num" id="statTotal">0</div><div class="label">إجمالي الرموز</div></div>
+  <div class="stat active"><div class="num" id="statActive">0</div><div class="label">رموز فعّالة</div></div>
+  <div class="stat revoked"><div class="num" id="statRevoked">0</div><div class="label">رموز ملغاة</div></div>
+</div>
+
+<!-- ===== Filter / Search ===== -->
+<div class="card">
+  <h2>بحث وتصفية</h2>
+  <div class="toolbar">
+    <div class="search-wrap">
+      <input type="text" id="searchInput" placeholder="بحث باسم الضيف...">
+      <span class="icon">🔍</span>
+    </div>
+    <select id="filterStatus">
+      <option value="all">الكل</option>
+      <option value="active">فعّال</option>
+      <option value="revoked">ملغى</option>
+    </select>
+    <select id="filterEvent">
+      <option value="all">كل الفعاليات</option>
+    </select>
+  </div>
+  <div class="toolbar2">
+    <button class="btn btn-danger btn-sm" id="bulkRevoke" disabled>❌ إلغاء المحدّد (<span id="bulkRevokeCount">0</span>)</button>
+    <button class="btn btn-success btn-sm" id="bulkRestore" disabled>✅ تفعيل المحدّد (<span id="bulkRestoreCount">0</span>)</button>
+    <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#aaa;margin-inline-start:auto;cursor:pointer">
+      <input type="checkbox" id="selectAllCb"> تحديد الكل
+    </label>
+  </div>
+  <div class="count-hint" id="countHint"></div>
+</div>
+
+<!-- ===== QR Grid ===== -->
+<div class="card">
+  <h2>شبكة رموز QR</h2>
+  <div class="qr-grid" id="qrGrid">
+    <div class="empty">جارِ التحميل...</div>
+  </div>
+</div>
+
+<!-- ===== QR Usage Log ===== -->
+<div class="card">
+  <h2>سجل استخدام الرموز</h2>
+  <div class="table-wrap" id="logTableWrap">
+    <table id="logTable">
+      <thead>
+        <tr>
+          <th>الوقت</th>
+          <th>اسم الضيف</th>
+          <th>الإجراء</th>
+          <th>النتيجة</th>
+          <th>المُنفّذ</th>
+        </tr>
+      </thead>
+      <tbody id="logBody">
+        <tr><td colspan="5" class="empty">جارِ التحميل...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script type="module">
+import { auth, db, requireLogin, collection, doc, addDoc, updateDoc, getDocs, query, where, orderBy, onSnapshot, serverTimestamp } from "../js/firebase-init.js";
+
+requireLogin(async (user) => {
+
+  /* ===== XSS Protection ===== */
+  function escapeHtml(str) {
+    if (!str) return "";
+    const div = document.createElement("div");
+    div.textContent = String(str);
+    return div.innerHTML;
+  }
+
+  /* ===== Toast ===== */
+  function showToast(msg, type) {
+    const container = document.getElementById("toastContainer");
+    const t = document.createElement("div");
+    t.className = "toast " + (type || "info");
+    t.textContent = msg;
+    container.appendChild(t);
+    setTimeout(() => { t.style.opacity = "0"; setTimeout(() => t.remove(), 300); }, 3000);
+  }
+
+  /* ===== State ===== */
+  let allQrDocs = [];
+  let selectedIds = new Set();
+  let eventsMap = {};
+
+  /* ===== DOM Refs ===== */
+  const searchInput = document.getElementById("searchInput");
+  const filterStatus = document.getElementById("filterStatus");
+  const filterEvent = document.getElementById("filterEvent");
+  const qrGrid = document.getElementById("qrGrid");
+  const selectAllCb = document.getElementById("selectAllCb");
+  const bulkRevoke = document.getElementById("bulkRevoke");
+  const bulkRestore = document.getElementById("bulkRestore");
+  const bulkRevokeCount = document.getElementById("bulkRevokeCount");
+  const bulkRestoreCount = document.getElementById("bulkRestoreCount");
+  const countHint = document.getElementById("countHint");
+  const logBody = document.getElementById("logBody");
+
+  /* ===== Format time ===== */
+  function formatTime(ts) {
+    if (!ts) return "—";
+    const d = ts.toDate ? ts.toDate() : new Date(ts);
+    return d.toLocaleDateString("ar-SA", { year: "numeric", month: "2-digit", day: "2-digit" })
+         + " " + d.toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit" });
+  }
+
+  /* ===== Action labels ===== */
+  function actionLabel(action) {
+    const map = { scan: "مسح", verify: "تحقق", issue: "إصدار", revoke: "إلغاء", rotate: "تدوير" };
+    return map[action] || escapeHtml(action);
+  }
+
+  /* ===== Load Events for Filter ===== */
+  async function loadEvents() {
+    try {
+      const snap = await getDocs(collection(db, "events"));
+      snap.forEach(d => {
+        eventsMap[d.id] = d.data().name || d.id;
+        const opt = document.createElement("option");
+        opt.value = d.id;
+        opt.textContent = d.data().name || d.id;
+        filterEvent.appendChild(opt);
+      });
+    } catch (e) {
+      console.error("Error loading events:", e);
+    }
+  }
+
+  /* ===== Stats ===== */
+  function updateStats() {
+    const total = allQrDocs.length;
+    const active = allQrDocs.filter(d => !d.data().qrRevoked).length;
+    const revoked = total - active;
+    document.getElementById("statTotal").textContent = total;
+    document.getElementById("statActive").textContent = active;
+    document.getElementById("statRevoked").textContent = revoked;
+  }
+
+  /* ===== Get filtered list ===== */
+  function getFiltered() {
+    const search = searchInput.value.trim().toLowerCase();
+    const status = filterStatus.value;
+    const eventId = filterEvent.value;
+    return allQrDocs.filter(d => {
+      const data = d.data();
+      const name = (data.name || "").toLowerCase();
+      if (search && !name.includes(search)) return false;
+      if (status === "active" && data.qrRevoked) return false;
+      if (status === "revoked" && !data.qrRevoked) return false;
+      if (eventId !== "all" && data.eventId !== eventId && data.event !== eventId) return false;
+      return true;
+    });
+  }
+
+  /* ===== Render Grid ===== */
+  function renderGrid() {
+    const filtered = getFiltered();
+    qrGrid.innerHTML = "";
+    if (filtered.length === 0) {
+      qrGrid.innerHTML = '<div class="empty">لا توجد رموز QR مطابقة</div>';
+      countHint.textContent = "";
+      updateBulkButtons();
+      return;
+    }
+    countHint.textContent = "عرض " + filtered.length + " من " + allQrDocs.length + " رمز";
+
+    filtered.forEach(d => {
+      const data = d.data();
+      const isRevoked = !!data.qrRevoked;
+      const entryCode = data.entryCode || "";
+      const guestName = data.name || "بدون اسم";
+      const phone = data.phone || "";
+      const style = data.style || "";
+      const eventId = data.eventId || data.event || "";
+      const eventName = eventId ? (eventsMap[eventId] || eventId) : "";
+
+      const card = document.createElement("div");
+      card.className = "qr-card" + (selectedIds.has(d.id) ? " selected" : "");
+
+      // Checkbox
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.className = "qr-check";
+      cb.checked = selectedIds.has(d.id);
+      cb.addEventListener("change", () => {
+        if (cb.checked) selectedIds.add(d.id);
+        else selectedIds.delete(d.id);
+        card.classList.toggle("selected", cb.checked);
+        updateBulkButtons();
+      });
+      card.appendChild(cb);
+
+      // QR Canvas
+      const canvas = document.createElement("canvas");
+      card.appendChild(canvas);
+      if (entryCode) {
+        QRCode.toCanvas(canvas, entryCode, { width: 240, margin: 1, color: { dark: isRevoked ? "#999999" : "#2B2118", light: "#FFFFFF" } });
+      }
+
+      // Guest name
+      const nameEl = document.createElement("div");
+      nameEl.className = "guest-name";
+      nameEl.textContent = guestName;
+      card.appendChild(nameEl);
+
+      // Entry code
+      const codeEl = document.createElement("div");
+      codeEl.className = "entry-code";
+      codeEl.textContent = entryCode;
+      card.appendChild(codeEl);
+
+      // Phone
+      const phoneEl = document.createElement("div");
+      phoneEl.className = "phone";
+      phoneEl.textContent = phone;
+      card.appendChild(phoneEl);
+
+      // Event name
+      if (eventName) {
+        const eventEl = document.createElement("div");
+        eventEl.className = "event-name";
+        eventEl.textContent = "🎉 " + eventName;
+        card.appendChild(eventEl);
+      } else if (style) {
+        const styleEl = document.createElement("div");
+        styleEl.className = "event-name";
+        styleEl.textContent = "🎨 " + style;
+        card.appendChild(styleEl);
+      }
+
+      // Status badge
+      const badge = document.createElement("span");
+      badge.className = "badge " + (isRevoked ? "revoked" : "active");
+      badge.textContent = isRevoked ? "ملغى" : "فعّال";
+      card.appendChild(badge);
+
+      // Actions
+      const actions = document.createElement("div");
+      actions.className = "qr-card-actions";
+
+      // Download PNG
+      const dlBtn = document.createElement("button");
+      dlBtn.className = "btn btn-outline btn-sm";
+      dlBtn.textContent = "📥 تحميل";
+      dlBtn.addEventListener("click", () => {
+        const a = document.createElement("a");
+        a.download = (guestName.replace(/\s+/g, "-") || "qr") + "-" + entryCode + ".png";
+        a.href = canvas.toDataURL("image/png");
+        a.click();
+      });
+      actions.appendChild(dlBtn);
+
+      // Revoke / Restore
+      const toggleBtn = document.createElement("button");
+      toggleBtn.className = "btn btn-sm " + (isRevoked ? "btn-success" : "btn-danger");
+      toggleBtn.textContent = isRevoked ? "✅ تفعيل" : "❌ إلغاء";
+      toggleBtn.addEventListener("click", () => toggleQr(d.id, d.ref, isRevoked, guestName, entryCode));
+      actions.appendChild(toggleBtn);
+
+      card.appendChild(actions);
+      qrGrid.appendChild(card);
+    });
+
+    updateBulkButtons();
+  }
+
+  /* ===== Toggle QR (revoke/restore) ===== */
+  async function toggleQr(docId, docRef, isRevoked, guestName, entryCode) {
+    const action = isRevoked ? "restore" : "revoke";
+    try {
+      await updateDoc(docRef, { qrRevoked: !isRevoked });
+      // Log to qr_usages
+      await addDoc(collection(db, "qr_usages"), {
+        guestName: guestName,
+        entryCode: entryCode,
+        action: action,
+        success: true,
+        actor: user.email || user.uid,
+        timestamp: serverTimestamp()
+      });
+      showToast(isRevoked ? "تم تفعيل الرمز بنجاح" : "تم إلغاء الرمز بنجاح", "ok");
+    } catch (e) {
+      console.error(e);
+      showToast("حدث خطأ: " + e.message, "err");
+    }
+  }
+
+  /* ===== Bulk Actions ===== */
+  function updateBulkButtons() {
+    const activeSelected = [];
+    const revokedSelected = [];
+    selectedIds.forEach(id => {
+      const d = allQrDocs.find(q => q.id === id);
+      if (d) {
+        if (d.data().qrRevoked) revokedSelected.push(id);
+        else activeSelected.push(id);
+      }
+    });
+    bulkRevoke.disabled = activeSelected.length === 0;
+    bulkRevokeCount.textContent = activeSelected.length;
+    bulkRestore.disabled = revokedSelected.length === 0;
+    bulkRestoreCount.textContent = revokedSelected.length;
+
+    // Update select-all state
+    const visibleFiltered = getFiltered();
+    const allVisibleSelected = visibleFiltered.length > 0 && visibleFiltered.every(d => selectedIds.has(d.id));
+    const someVisibleSelected = visibleFiltered.some(d => selectedIds.has(d.id));
+    selectAllCb.checked = allVisibleSelected;
+    selectAllCb.indeterminate = someVisibleSelected && !allVisibleSelected;
+  }
+
+  async function bulkAction(actionType) {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    const newRevoked = actionType === "revoke";
+    let successCount = 0;
+    let failCount = 0;
+    for (const id of ids) {
+      const d = allQrDocs.find(q => q.id === id);
+      if (!d) continue;
+      const isRevoked = !!d.data().qrRevoked;
+      if (newRevoked && isRevoked) continue;
+      if (!newRevoked && !isRevoked) continue;
+      try {
+        await updateDoc(d.ref, { qrRevoked: newRevoked });
+        await addDoc(collection(db, "qr_usages"), {
+          guestName: d.data().name || "",
+          entryCode: d.data().entryCode || "",
+          action: actionType,
+          success: true,
+          actor: user.email || user.uid,
+          timestamp: serverTimestamp()
+        });
+        successCount++;
+      } catch (e) {
+        failCount++;
+      }
+    }
+    selectedIds.clear();
+    const msg = newRevoked
+      ? "تم إلغاء " + successCount + " رمز" + (failCount > 0 ? "، فشل " + failCount : "")
+      : "تم تفعيل " + successCount + " رمز" + (failCount > 0 ? "، فشل " + failCount : "");
+    showToast(msg, failCount > 0 ? "err" : "ok");
+  }
+
+  bulkRevoke.addEventListener("click", () => bulkAction("revoke"));
+  bulkRestore.addEventListener("click", () => bulkAction("restore"));
+
+  selectAllCb.addEventListener("change", () => {
+    const filtered = getFiltered();
+    if (selectAllCb.checked) {
+      filtered.forEach(d => selectedIds.add(d.id));
+    } else {
+      filtered.forEach(d => selectedIds.delete(d.id));
+    }
+    renderGrid();
+  });
+
+  /* ===== Search / Filter Events ===== */
+  searchInput.addEventListener("input", renderGrid);
+  filterStatus.addEventListener("change", renderGrid);
+  filterEvent.addEventListener("change", renderGrid);
+
+  /* ===== Load QR Data (realtime) ===== */
+  async function initQrData() {
+    // Initial load
+    const q = query(collection(db, "responses"), where("entryCode", "!=", null), orderBy("entryCode"));
+    const snap = await getDocs(q);
+    allQrDocs = snap.docs;
+    updateStats();
+    renderGrid();
+  }
+
+  // Also set up a real-time listener for live updates
+  const qListener = query(collection(db, "responses"), where("entryCode", "!=", null), orderBy("entryCode"));
+  onSnapshot(qListener, (snap) => {
+    allQrDocs = snap.docs;
+    updateStats();
+    renderGrid();
+  }, (err) => {
+    console.error("QR listener error:", err);
+    // Fallback: if real-time listener fails (e.g. index missing), we already loaded once above
+  });
+
+  /* ===== Load QR Usage Log (realtime) ===== */
+  function initLogListener() {
+    const qLog = query(collection(db, "qr_usages"), orderBy("timestamp", "desc"));
+    onSnapshot(qLog, (snap) => {
+      logBody.innerHTML = "";
+      const docs = snap.docs.slice(0, 200); // Show last 200
+      if (docs.length === 0) {
+        logBody.innerHTML = '<tr><td colspan="5" class="empty">لا توجد سجلات بعد</td></tr>';
+        return;
+      }
+      docs.forEach(d => {
+        const data = d.data();
+        const tr = document.createElement("tr");
+        tr.innerHTML =
+          "<td>" + escapeHtml(formatTime(data.timestamp)) + "</td>" +
+          "<td>" + escapeHtml(data.guestName || "—") + "</td>" +
+          "<td>" + actionLabel(data.action) + "</td>" +
+          "<td><span class=\"badge-sm " + (data.success ? "success" : "fail") + "\">" + (data.success ? "نجاح" : "فشل") + "</span></td>" +
+          "<td>" + escapeHtml(data.actor || "—") + "</td>";
+        logBody.appendChild(tr);
+      });
+    }, (err) => {
+      console.error("Log listener error:", err);
+      logBody.innerHTML = '<tr><td colspan="5" class="empty">حدث خطأ في تحميل السجل</td></tr>';
+    });
+  }
+
+  /* ===== Init ===== */
+  await loadEvents();
+  await initQrData();
+  initLogListener();
+
+});
+</script>
+</body>
+</html>

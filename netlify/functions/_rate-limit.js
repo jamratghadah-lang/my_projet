@@ -16,8 +16,8 @@
 // قبل الإصلاح: كانت الدالة تستقبل `db` مباشرة، فلو فشل `getAdminDb()`
 // (مثلاً متغيّر بيئة `FIREBASE_SERVICE_ACCOUNT_JSON` ناقص)، كان الخطأ
 // يُلقى قبل ما يدخل `checkRateLimit` وما يصير يلتقطه try/catch. الحل:
-// نستقبل `getDb` كـ function ونعالج أخطاءه داخلياً — لو فشل، نسمح بالطلب
-// ونتجاهل التحديد لهذي المرة فقط (fail-open) عشان ما نكسر تجربة الضيف.
+// نستقبل `getDb` كـ function ونعالج أخطاءه داخلياً — لو فشل، نرفض الطلب
+// (fail-closed) عشان نحمي الدوال الحساسة من إساءة الاستخدام.
 
 function getClientIp(event) {
   const h = event.headers || {};
@@ -34,8 +34,8 @@ async function checkRateLimit(getDb, event, bucketName, opts) {
     db = typeof getDb === "function" ? getDb() : getDb;
     if (!db) throw new Error("db is null");
   } catch (e) {
-    // لو ما قدرنا نوصل لقاعدة البيانات، نسمح بالطلب ونتجاهل التحديد.
-    return { allowed: true, count: 0, error: String(e) };
+    // Fail-closed: لو ما قدرنا نوصل لقاعدة البيانات، نرفض الطلب.
+    return { allowed: false, count: 0, error: String(e) };
   }
 
   const ip = getClientIp(event);
@@ -51,15 +51,14 @@ async function checkRateLimit(getDb, event, bucketName, opts) {
       if (count >= max) return { allowed: false, count };
       tx.set(ref, {
         count: count + 1,
-        expiresAt: admin.firestore.Timestamp.fromMillis(Date.now() + windowSeconds * 2000),
+        expiresAt: admin.firestore.Timestamp.fromMillis(Date.now() + windowSeconds * 1000),
       });
       return { allowed: true, count: count + 1 };
     });
     return result;
   } catch (e) {
-    // لو فشل الاتصال بقاعدة البيانات لأي سبب، ما نوقف تجربة الضيف —
-    // نسمح بالطلب ونتجاهل تحديد المعدل لهذي المرة فقط.
-    return { allowed: true, count: 0, error: String(e) };
+    // Fail-closed: لو فشل الاتصال بقاعدة البيانات، نرفض الطلب.
+    return { allowed: false, count: 0, error: String(e) };
   }
 }
 

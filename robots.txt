@@ -3,5 +3,6 @@ Allow: /
 Disallow: /admin/
 Disallow: /dashboard/
 Disallow: /rsvp/
+Disallow: /rsvp.html
 
 Sitemap: https://jamratghadah.com/sitemap.xml

@@ -12,25 +12,29 @@
 //     schedule = "0 * * * *"   ← كل ساعة
 
 const { resolveRecipients, fetchResponses, buildExcelBuffer, buildPdfBuffer, sendReportEmail, getAdminDb } = require("./_report-lib");
+const { safeEqual } = require("./_auth");
 
-// مفتاح Firebase API آمن للنشر (هو مفتاح عميل عام من الأساس، ليس سرّاً)، لكن
-// نفضّل قراءته من متغيّر البيئة لو ضُبط، لتفادي تكراره بمصادر متعددة.
-const FIREBASE_API_KEY = process.env.FIREBASE_API_KEY || "AIzaSyAAYOne0CTht9906nStecbqCHkb_CY6glw";
-const PROJECT_ID = process.env.FIREBASE_PROJECT_ID || "jamrat-ghadah";
+function verifyCronSecret(event) {
+  if (event.httpMethod === 'SCHEDULED') return true;
+  const provided = event.headers['x-cron-secret'] || '';
+  const expected = process.env.CRON_SECRET || '';
+  if (!expected || !safeEqual(provided, expected)) return false;
+  return true;
+}
 
-exports.handler = async () => {
+exports.handler = async (event) => {
+  if (!verifyCronSecret(event)) {
+    return { statusCode: 403, body: JSON.stringify({ error: 'Forbidden' }) };
+  }
+
   const provider = process.env.SMS_PROVIDER;
 
   try {
-    // 1) اقرأ جميع روابط الدعوات (مجموعة "couples" قراءتها عامة بقواعد الأمان،
-    // ما تحتاج صلاحية إدارية)
-    const couplesUrl = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/couples?key=${FIREBASE_API_KEY}&pageSize=500`;
-    const couplesRes = await fetch(couplesUrl);
-    if (!couplesRes.ok) {
-      return { statusCode: 200, body: JSON.stringify({ sent: false, error: "COUPLES_READ_FAILED" }) };
-    }
-    const couplesData = await couplesRes.json();
-    const couples = couplesData.documents || [];
+    // 1) اقرأ جميع روابط الدعوات (مجموعة "couples") عبر Admin SDK — القاعدة
+    // الآن read: if isAdmin() (تشددت بعد أن كانت عامة)، فلازم تُقرأ بصلاحية
+    // إدارية عبر خدمة السيرفر، مثل "responses" بالضبط تحتها.
+    const couplesSnap = await getAdminDb().collection("couples").get();
+    const couples = couplesSnap.docs.map((d) => ({ id: d.id, data: d.data() || {} }));
 
     // 2) اقرأ جميع الردود — تحتاج صلاحية إدارية لأن قواعد الأمان تشترط
     // تسجيل دخول لقراءة "responses"
@@ -49,15 +53,10 @@ exports.handler = async () => {
     const eventHost = process.env.URL || process.env.DEPLOY_URL || "https://jamratghadah.com";
 
     for (const couple of couples) {
-      // couple.name من Firestore REST API يكون المسار الكامل:
-      //   projects/{projectId}/databases/(default)/documents/couples/{slug}
-      // نوخذ آخر جزء منه كـ slug نظيف للعرض بالتقارير.
-      const fullName = couple.name || "";
-      const slug = fullName.split("/").pop() || fullName;
-      const template = couple.fields?.template?.stringValue;
+      const slug = couple.id;
+      const template = couple.data.template;
       if (!template) continue;
 
-      // اقرأ ملف JSON للقالب للحصول على التاريخ
       let jsonDate = null;
       try {
         const jsonRes = await fetch(`${eventHost}/content/rsvp/${encodeURIComponent(template)}.json`);
@@ -68,19 +67,16 @@ exports.handler = async () => {
       } catch { continue; }
       if (!jsonDate) continue;
 
-      // حلّل التاريخ (يدعم dd/mm/yyyy)
       const m = String(jsonDate).match(/(\d{1,2})\s*\/\s*(\d{1,2})\s*\/\s*(\d{4})/);
       if (!m) continue;
       const eventDate = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]), 18, 0, 0);
       if (isNaN(eventDate.getTime())) continue;
 
       const diff = eventDate.getTime() - now;
-      // لو المناسبة بعد 24 ساعة (±1 ساعة)
       if (Math.abs(diff - TARGET_MS) > WINDOW_MS) continue;
 
       eventsInWindow.push({ slug, template, jsonDate });
 
-      // 4) جمّع الضيوف المؤكدين لهذا القالب (لتذكير SMS فقط)
       if (provider) {
         const guests = [];
         for (const f of responseDocs) {
@@ -135,7 +131,7 @@ exports.handler = async () => {
 
     return { statusCode: 200, body: JSON.stringify({ sent: true, totalSmsSent, emailReportSent, eventsInWindow: eventsInWindow.length }) };
   } catch (err) {
-    return { statusCode: 200, body: JSON.stringify({ sent: false, error: String(err) }) };
+    return { statusCode: 200, body: JSON.stringify({ sent: false, error: 'error' }) };
   }
 };
 

@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+
+<html dir="rtl" lang="ar">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>التكاملات — لوحة تحكم جمرة غضى</title>
+<meta content="noindex, nofollow" name="robots"/>
+<style>
+  *{box-sizing:border-box}
+  body{font-family:Tahoma,Arial,sans-serif;background:#111;color:#eee;margin:0;padding:20px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px}
+  h1{color:#d4af37;font-size:20px;margin:0}
+  a.back{color:#aaa;text-decoration:none;font-size:14px}
+  .card{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:18px;margin-bottom:18px}
+  .card h2{font-size:15px;color:#d4af37;margin:0 0 4px}
+  .card .subtitle{font-size:12px;color:#999;margin:0 0 14px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:18px}
+  @media(max-width:500px){.grid{grid-template-columns:1fr}}
+
+  .btn{padding:10px 16px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;font-size:13px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-family:inherit}
+  .btn-gold{background:#d4af37;color:#111}
+  .btn-outline{background:transparent;border:1px solid #555;color:#ddd}
+  .btn-blue{background:#2196f3;color:#fff}
+  .btn:disabled{opacity:.45;cursor:default}
+  .btn-sm{padding:6px 10px;font-size:12px;border-radius:6px}
+
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:12.5px;color:#aaa;margin-bottom:5px}
+  .field input, .field select{
+    width:100%;padding:10px 12px;border-radius:8px;border:1px solid #444;background:#222;color:#fff;
+    font-family:inherit;font-size:14px;
+  }
+  .field input[readonly]{opacity:.6;cursor:default}
+  .field .hint{font-size:11.5px;color:#777;margin-top:4px}
+  .field .note{font-size:11.5px;color:#ffb74d;margin-top:4px}
+
+  .msg-status{font-size:13px;margin-top:8px;min-height:18px}
+  .msg-status.err{color:#e07a5f}
+  .msg-status.ok{color:#4caf50}
+
+  .card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+  .card-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:bold;white-space:nowrap}
+  .badge.enabled{background:rgba(76,175,80,.15);color:#4caf50;border:1px solid rgba(76,175,80,.3)}
+  .badge.disabled{background:rgba(170,170,170,.15);color:#aaa;border:1px solid rgba(170,170,170,.3)}
+
+  /* Toggle switch */
+  .toggle-wrap{display:flex;align-items:center;gap:8px;font-size:13px;color:#aaa}
+  .toggle{position:relative;width:44px;height:24px;flex-shrink:0}
+  .toggle input{opacity:0;width:0;height:0}
+  .toggle .slider{position:absolute;inset:0;background:#444;border-radius:12px;cursor:pointer;transition:.2s}
+  .toggle .slider::before{content:"";position:absolute;width:18px;height:18px;left:3px;bottom:3px;background:#eee;border-radius:50%;transition:.2s}
+  .toggle input:checked+.slider{background:#4caf50}
+  .toggle input:checked+.slider::before{transform:translateX(20px)}
+
+  .last-updated{font-size:11px;color:#666;margin-top:10px;text-align:left}
+
+  /* Connection Status Bar */
+  .status-bar{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:16px 20px;margin-bottom:20px}
+  .status-bar h3{font-size:14px;color:#d4af37;margin:0 0 12px}
+  .status-dots{display:flex;gap:24px;align-items:center;flex-wrap:wrap}
+  .status-item{display:flex;align-items:center;gap:8px;font-size:13px;color:#ccc}
+  .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+  .dot.green{background:#4caf50;box-shadow:0 0 6px rgba(76,175,80,.5)}
+  .dot.red{background:#e07a5f;box-shadow:0 0 6px rgba(224,122,95,.5)}
+  .dot.gray{background:#555}
+  .dot.yellow{background:#ffb74d;box-shadow:0 0 6px rgba(255,183,77,.5)}
+  .status-bar .refresh-info{font-size:11px;color:#666;margin-top:8px;text-align:left}
+  .status-bar .refresh-info button{background:none;border:none;color:#d4af37;cursor:pointer;font-size:11px;text-decoration:underline;font-family:inherit}
+  .metrics-summary{display:flex;gap:20px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid #333}
+  .metric-item{font-size:12px;color:#aaa}
+  .metric-item strong{color:#eee;font-size:15px;display:block;margin-bottom:2px}
+</style>
+</head>
+<body>
+<div class="topbar">
+<h1>🔗 التكاملات</h1>
+<a class="back" href="index.html">← رجوع للوحة</a>
+</div>
+<!-- Connection Status Overview -->
+<div class="status-bar" id="status-bar">
+<h3>📡 حالة الاتصال الفعلية</h3>
+<div class="status-dots">
+<div class="status-item"><span class="dot gray" id="dot-firebase"></span> Firebase</div>
+<div class="status-item"><span class="dot gray" id="dot-whatsapp"></span> WhatsApp</div>
+<div class="status-item"><span class="dot gray" id="dot-gemini"></span> Gemini AI</div>
+</div>
+<div class="metrics-summary" id="metrics-summary"></div>
+<div class="refresh-info" id="refresh-info">جارِ التحميل...</div>
+</div>
+<div class="grid">
+<!-- WhatsApp -->
+<div class="card" id="card-whatsapp">
+<div class="card-header">
+<div>
+<h2>واتساب (WhatsApp Meta API)</h2>
+<div class="subtitle">إرسال رسائل واتساب عبر Meta Business API</div>
+</div>
+<span class="badge disabled" id="badge-whatsapp">معطّل</span>
+</div>
+<div class="field"><label for="wa-phoneId">Phone Number ID</label><input dir="ltr" id="wa-phoneId" placeholder="100234567890" type="text"/></div>
+<div class="field"><label for="wa-token">Access Token</label><input dir="ltr" id="wa-token" placeholder="EAAxxxxxxxxxx" type="password"/></div>
+<div class="field"><label for="wa-bizId">Business Account ID</label><input dir="ltr" id="wa-bizId" placeholder="123456789012345" type="text"/></div>
+<div class="card-actions">
+<div class="toggle-wrap">
+<label class="toggle"><input id="wa-enabled" type="checkbox"/><span class="slider"></span></label>
+        تفعيل
+      </div>
+<button class="btn btn-blue btn-sm" onclick="window._testIntegration('whatsapp')">🧪 اختبار الاتصال</button>
+<button class="btn btn-gold btn-sm" onclick="window._saveIntegration('whatsapp')">💾 حفظ</button>
+</div>
+<div class="msg-status" id="msg-whatsapp"></div>
+<div class="last-updated" id="updated-whatsapp"></div>
+</div>
+<!-- SMS Msegat -->
+<div class="card" id="card-msegat">
+<div class="card-header">
+<div>
+<h2>SMS - Msegat</h2>
+<div class="subtitle">إرسال رسائل SMS عبر Msegat</div>
+</div>
+<span class="badge disabled" id="badge-msegat">معطّل</span>
+</div>
+<div class="field"><label for="msegat-key">API Key</label><input dir="ltr" id="msegat-key" placeholder="xxxxxxxxxx" type="password"/></div>
+<div class="field"><label for="msegat-sender">Sender Name</label><input dir="ltr" id="msegat-sender" placeholder="JAMRAT" type="text"/></div>
+<div class="card-actions">
+<div class="toggle-wrap">
+<label class="toggle"><input id="msegat-enabled" type="checkbox"/><span class="slider"></span></label>
+        تفعيل
+      </div>
+<button class="btn btn-blue btn-sm" onclick="window._testIntegration('msegat')">🧪 اختبار</button>
+<button class="btn btn-gold btn-sm" onclick="window._saveIntegration('msegat')">💾 حفظ</button>
+</div>
+<div class="msg-status" id="msg-msegat"></div>
+<div class="last-updated" id="updated-msegat"></div>
+</div>
+<!-- SMS Unifonic -->
+<div class="card" id="card-unifonic">
+<div class="card-header">
+<div>
+<h2>SMS - Unifonic</h2>
+<div class="subtitle">إرسال رسائل SMS عبر Unifonic</div>
+</div>
+<span class="badge disabled" id="badge-unifonic">معطّل</span>
+</div>
+<div class="field"><label for="unifonic-appId">App ID</label><input dir="ltr" id="unifonic-appId" placeholder="xxxxxxxxxx" type="text"/></div>
+<div class="field"><label for="unifonic-token">Auth Token</label><input dir="ltr" id="unifonic-token" placeholder="xxxxxxxxxx" type="password"/></div>
+<div class="card-actions">
+<div class="toggle-wrap">
+<label class="toggle"><input id="unifonic-enabled" type="checkbox"/><span class="slider"></span></label>
+        تفعيل
+      </div>
+<button class="btn btn-blue btn-sm" onclick="window._testIntegration('unifonic')">🧪 اختبار</button>
+<button class="btn btn-gold btn-sm" onclick="window._saveIntegration('unifonic')">💾 حفظ</button>
+</div>
+<div class="msg-status" id="msg-unifonic"></div>
+<div class="last-updated" id="updated-unifonic"></div>
+</div>
+<!-- SMS Twilio -->
+<div class="card" id="card-twilio">
+<div class="card-header">
+<div>
+<h2>SMS - Twilio</h2>
+<div class="subtitle">إرسال رسائل SMS عبر Twilio</div>
+</div>
+<span class="badge disabled" id="badge-twilio">معطّل</span>
+</div>
+<div class="field"><label for="twilio-sid">Account SID</label><input dir="ltr" id="twilio-sid" placeholder="ACxxxxxxxxxx" type="text"/></div>
+<div class="field"><label for="twilio-token">Auth Token</label><input dir="ltr" id="twilio-token" placeholder="xxxxxxxxxx" type="password"/></div>
+<div class="field"><label for="twilio-from">From Number</label><input dir="ltr" id="twilio-from" placeholder="+1234567890" type="text"/></div>
+<div class="card-actions">
+<div class="toggle-wrap">
+<label class="toggle"><input id="twilio-enabled" type="checkbox"/><span class="slider"></span></label>
+        تفعيل
+      </div>
+<button class="btn btn-blue btn-sm" onclick="window._testIntegration('twilio')">🧪 اختبار</button>
+<button class="btn btn-gold btn-sm" onclick="window._saveIntegration('twilio')">💾 حفظ</button>
+</div>
+<div class="msg-status" id="msg-twilio"></div>
+<div class="last-updated" id="updated-twilio"></div>
+</div>
+<!-- SMTP Email -->
+<div class="card" id="card-smtp">
+<div class="card-header">
+<div>
+<h2>البريد الإلكتروني (SMTP)</h2>
+<div class="subtitle">إرسال إشعارات عبر البريد الإلكتروني</div>
+</div>
+<span class="badge disabled" id="badge-smtp">معطّل</span>
+</div>
+<div class="field"><label for="smtp-host">Host</label><input dir="ltr" id="smtp-host" placeholder="smtp.example.com" type="text"/></div>
+<div class="field"><label for="smtp-port">Port</label><input dir="ltr" id="smtp-port" placeholder="587" type="text"/></div>
+<div class="field"><label for="smtp-user">User</label><input dir="ltr" id="smtp-user" placeholder="user@example.com" type="text"/></div>
+<div class="field"><label for="smtp-pass">Password</label><input dir="ltr" id="smtp-pass" placeholder="••••••••" type="password"/></div>
+<div class="field"><label for="smtp-from">From Email</label><input dir="ltr" id="smtp-from" placeholder="noreply@example.com" type="text"/></div>
+<div class="card-actions">
+<div class="toggle-wrap">
+<label class="toggle"><input id="smtp-enabled" type="checkbox"/><span class="slider"></span></label>
+        تفعيل
+      </div>
+<button class="btn btn-blue btn-sm" onclick="window._testIntegration('smtp')">🧪 اختبار الإرسال</button>
+<button class="btn btn-gold btn-sm" onclick="window._saveIntegration('smtp')">💾 حفظ</button>
+</div>
+<div class="msg-status" id="msg-smtp"></div>
+<div class="last-updated" id="updated-smtp"></div>
+</div>
+<!-- Cloudinary -->
+<div class="card" id="card-cloudinary">
+<div class="card-header">
+<div>
+<h2>Cloudinary</h2>
+<div class="subtitle">رفع وإدارة الصور والفيديوهات</div>
+</div>
+<span class="badge disabled" id="badge-cloudinary">معطّل</span>
+</div>
+<div class="field"><label for="cl-cloudName">Cloud Name</label><input dir="ltr" id="cl-cloudName" placeholder="your-cloud-name" type="text"/></div>
+<div class="field"><label for="cl-apiKey">API Key</label><input dir="ltr" id="cl-apiKey" placeholder="xxxxxxxxxx" type="text"/></div>
+<div class="field"><label for="cl-apiSecret">API Secret</label><input dir="ltr" id="cl-apiSecret" placeholder="xxxxxxxxxx" type="password"/></div>
+<div class="field"><label for="cl-preset">Upload Preset</label><input dir="ltr" id="cl-preset" placeholder="unsigned-preset" type="text"/></div>
+<div class="field"><div class="note">💡 يحتاج تفعيل API من لوحة تحكم Cloudinary</div></div>
+<div class="card-actions">
+<div class="toggle-wrap">
+<label class="toggle"><input id="cl-enabled" type="checkbox"/><span class="slider"></span></label>
+        تفعيل
+      </div>
+<button class="btn btn-gold btn-sm" onclick="window._saveIntegration('cloudinary')">💾 حفظ</button>
+</div>
+<div class="msg-status" id="msg-cloudinary"></div>
+<div class="last-updated" id="updated-cloudinary"></div>
+</div>
+<!-- Gemini AI -->
+<div class="card" id="card-gemini">
+<div class="card-header">
+<div>
+<h2>Gemini AI</h2>
+<div class="subtitle">مساعد الضيف الذكي — Google Gemini API</div>
+</div>
+<span class="badge disabled" id="badge-gemini">معطّل</span>
+</div>
+<div class="field"><label for="gem-apiKey">API Key</label><input dir="ltr" id="gem-apiKey" placeholder="AIza..." type="password"/></div>
+<div class="card-actions">
+<div class="toggle-wrap">
+<label class="toggle"><input id="gem-enabled" type="checkbox"/><span class="slider"></span></label>
+        تفعيل
+      </div>
+<button class="btn btn-blue btn-sm" onclick="window._testGemini()">🧪 اختبار الاتصال</button>
+<button class="btn btn-gold btn-sm" onclick="window._saveIntegration('gemini')">💾 حفظ</button>
+</div>
+<div class="msg-status" id="msg-gemini"></div>
+<div class="last-updated" id="updated-gemini"></div>
+</div>
+<!-- Firebase (read-only) -->
+<div class="card" id="card-firebase">
+<div class="card-header">
+<div>
+<h2>Firebase</h2>
+<div class="subtitle">قاعدة البيانات والمصادقة — تُدار من Firebase Console</div>
+</div>
+<span class="badge enabled" id="badge-firebase">متصل</span>
+</div>
+<div class="field"><label for="fb-projectId">Project ID</label><input dir="ltr" id="fb-projectId" readonly="" type="text"/></div>
+<div class="field"><label for="fb-status">الحالة</label><input dir="ltr" id="fb-status" readonly="" type="text"/></div>
+<div class="field"><div class="note">هذه الإعدادات تُدار من Firebase Console وليست قابلة للتعديل من هنا.</div></div>
+<div class="last-updated" id="updated-firebase"></div>
+</div>
+</div>
+<script type="module">
+import {
+  db, auth, requireLogin, app,
+  collection, getDocs, getDoc,
+  doc, setDoc, serverTimestamp,
+} from "../js/firebase-init.js";
+
+function escapeHtml(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function formatTime(ts) {
+  if (!ts) return '—';
+  const d = ts.toMillis ? new Date(ts.toMillis()) : new Date(ts);
+  return d.toLocaleString('ar-SA', {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit',
+  });
+}
+
+// Field definitions per integration
+const fieldMap = {
+  whatsapp: ['wa-phoneId', 'wa-token', 'wa-bizId'],
+  msegat: ['msegat-key', 'msegat-sender'],
+  unifonic: ['unifonic-appId', 'unifonic-token'],
+  twilio: ['twilio-sid', 'twilio-token', 'twilio-from'],
+  smtp: ['smtp-host', 'smtp-port', 'smtp-user', 'smtp-pass', 'smtp-from'],
+  cloudinary: ['cl-cloudName', 'cl-apiKey', 'cl-apiSecret', 'cl-preset'],
+  gemini: ['gem-apiKey'],
+};
+
+const keyMap = {
+  whatsapp: { 'wa-phoneId': 'phoneNumberId', 'wa-token': 'accessToken', 'wa-bizId': 'businessAccountId' },
+  msegat: { 'msegat-key': 'apiKey', 'msegat-sender': 'senderName' },
+  unifonic: { 'unifonic-appId': 'appId', 'unifonic-token': 'authToken' },
+  twilio: { 'twilio-sid': 'accountSid', 'twilio-token': 'authToken', 'twilio-from': 'fromNumber' },
+  smtp: { 'smtp-host': 'host', 'smtp-port': 'port', 'smtp-user': 'user', 'smtp-pass': 'password', 'smtp-from': 'fromEmail' },
+  cloudinary: { 'cl-cloudName': 'cloudName', 'cl-apiKey': 'apiKey', 'cl-apiSecret': 'apiSecret', 'cl-preset': 'uploadPreset' },
+  gemini: { 'gem-apiKey': 'apiKey' },
+};
+
+const enabledMap = {
+  whatsapp: 'wa-enabled',
+  msegat: 'msegat-enabled',
+  unifonic: 'unifonic-enabled',
+  twilio: 'twilio-enabled',
+  smtp: 'smtp-enabled',
+  cloudinary: 'cl-enabled',
+  gemini: 'gem-enabled',
+};
+
+// ===== Load existing configs =====
+requireLogin(async () => {
+  // Set Firebase read-only info
+  try {
+    const config = app.options || {};
+    document.getElementById('fb-projectId').value = config.projectId || 'jamrat-ghadah';
+    document.getElementById('fb-status').value = 'متصل ✅';
+  } catch {
+    document.getElementById('fb-status').value = 'غير معروف';
+  }
+
+  // Load integration configs from Firestore
+  try {
+    const snap = await getDocs(collection(db, "integration_configs"));
+    snap.forEach(d => {
+      const key = d.id;
+      const data = d.data();
+      populateCard(key, data);
+    });
+  } catch (e) {
+    console.error("Failed to load integration configs:", e);
+  }
+
+  // Fetch connection status & metrics
+  await fetchMetrics();
+  // Auto-refresh every 30 seconds
+  if (_metricsInterval) clearInterval(_metricsInterval);
+  _metricsInterval = setInterval(fetchMetrics, 30000);
+});
+
+function populateCard(key, data) {
+  // Populate fields
+  const fields = keyMap[key];
+  if (!fields) return;
+  Object.entries(fields).forEach(([elemId, dataKey]) => {
+    const el = document.getElementById(elemId);
+    if (el && data[dataKey] !== undefined) el.value = data[dataKey];
+  });
+
+  // Set enabled toggle
+  const enabledElemId = enabledMap[key];
+  if (enabledElemId && data.enabled !== undefined) {
+    document.getElementById(enabledElemId).checked = !!data.enabled;
+  }
+
+  // Update badge
+  updateBadge(key, data.enabled);
+
+  // Set last updated
+  if (data.updatedAt) {
+    const el = document.getElementById('updated-' + key);
+    if (el) el.textContent = 'آخر تحديث: ' + formatTime(data.updatedAt);
+  }
+}
+
+function updateBadge(key, enabled) {
+  const badge = document.getElementById('badge-' + key);
+  if (!badge) return;
+  if (key === 'firebase') return; // Firebase always shows enabled
+  badge.textContent = enabled ? 'مفعّل' : 'معطّل';
+  badge.className = 'badge ' + (enabled ? 'enabled' : 'disabled');
+}
+
+// Listen for toggle changes to update badge
+Object.entries(enabledMap).forEach(([key, elemId]) => {
+  document.getElementById(elemId).addEventListener('change', (e) => {
+    updateBadge(key, e.target.checked);
+  });
+});
+
+// ===== Connection Status & Metrics =====
+let _metricsInterval = null;
+
+async function fetchMetrics() {
+  try {
+    const idToken = await auth.currentUser.getIdToken();
+    const res = await fetch('/.netlify/functions/metrics', {
+      headers: { 'Authorization': `Bearer ${idToken}` },
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    updateStatusBar(data);
+    updateFirebaseRealStatus(data);
+    return data;
+  } catch (e) {
+    console.error('Metrics fetch error:', e);
+    document.getElementById('refresh-info').textContent = 'تعذّر تحميل حالة الاتصال';
+    return null;
+  }
+}
+
+function updateStatusBar(data) {
+  if (!data || !data.connections) return;
+
+  // Update dots
+  setDot('dot-firebase', data.connections.firebase);
+  setDot('dot-whatsapp', data.connections.whatsapp);
+  setDot('dot-gemini', data.connections.gemini);
+
+  // Update metrics summary
+  const summaryEl = document.getElementById('metrics-summary');
+  const parts = [];
+  if (data.events) {
+    parts.push(`<div class="metric-item"><strong>${data.events.active}</strong>مناسبات نشطة</div>`);
+    parts.push(`<div class="metric-item"><strong>${data.events.closed}</strong>مناسبات مغلقة</div>`);
+  }
+  if (data.messages) {
+    parts.push(`<div class="metric-item"><strong>${data.messages.sentToday}</strong>رسائل اليوم</div>`);
+    parts.push(`<div class="metric-item"><strong>${data.messages.sentThisWeek}</strong>هذا الأسبوع</div>`);
+    if (data.messages.successRate !== null) {
+      parts.push(`<div class="metric-item"><strong>${data.messages.successRate}%</strong>معدل النجاح</div>`);
+    }
+  }
+  if (data.ai) {
+    parts.push(`<div class="metric-item"><strong>${data.ai.usageCount}</strong>استخدامات AI</div>`);
+  }
+  summaryEl.innerHTML = parts.join('');
+
+  // Update refresh info
+  document.getElementById('refresh-info').innerHTML =
+    `آخر تحديث: ${new Date().toLocaleTimeString('ar-SA')} &nbsp; <button onclick="fetchMetrics()">تحديث الآن</button>`;
+}
+
+function setDot(dotId, status) {
+  const dot = document.getElementById(dotId);
+  if (!dot) return;
+  dot.className = 'dot';
+  if (status === 'connected') dot.classList.add('green');
+  else if (status === 'error') dot.classList.add('red');
+  else dot.classList.add('yellow'); // not_configured / unknown
+}
+
+function updateFirebaseRealStatus(data) {
+  if (!data || !data.connections) return;
+  const badge = document.getElementById('badge-firebase');
+  const statusInput = document.getElementById('fb-status');
+  if (!badge || !statusInput) return;
+  if (data.connections.firebase === 'connected') {
+    badge.textContent = 'متصل';
+    badge.className = 'badge enabled';
+    statusInput.value = 'متصل ✅';
+  } else {
+    badge.textContent = 'غير متصل';
+    badge.className = 'badge disabled';
+    statusInput.value = 'غير متصل ❌';
+  }
+}
+
+// ===== Gemini Test (via metrics) =====
+window._testGemini = async function() {
+  const msgEl = document.getElementById('msg-gemini');
+  msgEl.textContent = 'جارِ الاختبار...';
+  msgEl.className = 'msg-status';
+
+  try {
+    const idToken = await auth.currentUser.getIdToken();
+    const res = await fetch('/.netlify/functions/metrics', {
+      headers: { 'Authorization': `Bearer ${idToken}` },
+    });
+    const data = await res.json();
+    const status = data?.connections?.gemini;
+    if (status === 'connected') {
+      msgEl.textContent = 'الاتصال ناجح ✅';
+      msgEl.className = 'msg-status ok';
+    } else if (status === 'not_configured') {
+      msgEl.textContent = 'الخدمة غير مُعدّة — تأكد من حفظ مفتاح API أولاً';
+      msgEl.className = 'msg-status err';
+    } else {
+      msgEl.textContent = 'تعذّر الاتصال — تحقق من صحة مفتاح API';
+      msgEl.className = 'msg-status err';
+    }
+  } catch (e) {
+    msgEl.textContent = 'تعذّر الاتصال: ' + e.message;
+    msgEl.className = 'msg-status err';
+  }
+};
+
+// ===== Save Integration =====
+window._saveIntegration = async function(key) {
+  const msgEl = document.getElementById('msg-' + key);
+  const fields = keyMap[key];
+  if (!fields) return;
+
+  const enabledElemId = enabledMap[key];
+  const data = { updatedAt: serverTimestamp() };
+  if (enabledElemId) data.enabled = document.getElementById(enabledElemId).checked;
+
+  Object.entries(fields).forEach(([elemId, dataKey]) => {
+    data[dataKey] = document.getElementById(elemId).value;
+  });
+
+  msgEl.textContent = 'جارِ الحفظ...';
+  msgEl.className = 'msg-status';
+
+  try {
+    await setDoc(doc(db, "integration_configs", key), data);
+    msgEl.textContent = 'تم الحفظ بنجاح ✅';
+    msgEl.className = 'msg-status ok';
+    const el = document.getElementById('updated-' + key);
+    if (el) el.textContent = 'آخر تحديث: الآن';
+  } catch (e) {
+    msgEl.textContent = 'تعذّر الحفظ: ' + e.message;
+    msgEl.className = 'msg-status err';
+  }
+};
+
+// ===== Test Integration =====
+window._testIntegration = async function(key) {
+  const msgEl = document.getElementById('msg-' + key);
+  msgEl.textContent = 'جارِ الاختبار...';
+  msgEl.className = 'msg-status';
+
+  try {
+    const idToken = await auth.currentUser.getIdToken();
+    let endpoint = '';
+    const body = { _test: true };
+
+    if (key === 'whatsapp') {
+      endpoint = '/.netlify/functions/send-whatsapp';
+      body.phoneNumberId = document.getElementById('wa-phoneId').value;
+      body.accessToken = document.getElementById('wa-token').value;
+    } else if (key === 'smtp') {
+      endpoint = '/.netlify/functions/notify-rsvp';
+      body.host = document.getElementById('smtp-host').value;
+      body.port = document.getElementById('smtp-port').value;
+      body.user = document.getElementById('smtp-user').value;
+      body.password = document.getElementById('smtp-pass').value;
+      body.fromEmail = document.getElementById('smtp-from').value;
+    } else {
+      // SMS providers — test via send-bulk with _test flag
+      endpoint = '/.netlify/functions/send-bulk';
+      body.provider = key;
+      if (key === 'msegat') {
+        body.apiKey = document.getElementById('msegat-key').value;
+        body.senderName = document.getElementById('msegat-sender').value;
+      } else if (key === 'unifonic') {
+        body.appId = document.getElementById('unifonic-appId').value;
+        body.authToken = document.getElementById('unifonic-token').value;
+      } else if (key === 'twilio') {
+        body.accountSid = document.getElementById('twilio-sid').value;
+        body.authToken = document.getElementById('twilio-token').value;
+        body.fromNumber = document.getElementById('twilio-from').value;
+      }
+    }
+
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      msgEl.textContent = data.error || 'فشل الاختبار';
+      msgEl.className = 'msg-status err';
+    } else {
+      msgEl.textContent = 'الاتصال ناجح ✅';
+      msgEl.className = 'msg-status ok';
+    }
+  } catch (e) {
+    msgEl.textContent = 'تعذّر الاتصال: ' + e.message;
+    msgEl.className = 'msg-status err';
+  }
+};
+</script>
+</body>
+</html>

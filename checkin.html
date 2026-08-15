@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>تسجيل الحضور — دار جمرة غضى</title>
 <meta name="robots" content="noindex, nofollow">
 <style>
@@ -208,7 +208,7 @@
 <div id="gate">
   <div class="box">
     <p>أدخلي كلمة سر تسجيل الحضور الخاصة بهذه المناسبة (نفس اللي بلوحة التحكم)</p>
-    <input type="password" id="pwInput" placeholder="كلمة السر" autofocus autocomplete="off">
+    <input type="password" id="pwInput" placeholder="كلمة السر" autofocus autocomplete="current-password">
     <button class="btn" id="pwSubmit">دخول</button>
     <div id="gateError"></div>
   </div>
@@ -244,14 +244,13 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"
-  integrity="sha512-k/KAe4Yff9EUdYI5/IAHlwUswqeipP+Cp5qnrsUjTPCgl51La2/JhyyjNciztD7mWNKLSXci48m7cctATKfLlQ=="
+  integrity="sha512-r6rDA7W6ZeQhvl8S7yRVQUKVHdexq+GAlNkNNqVC7YyIV+NwqCTJe2hDWCiffTyRNOeGEzRRJ9ifvRm/HCzGYg=="
   crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
 <script>
 (function(){
   // ⚠️ عدّلي هذا الرابط لو دومين موقعك مختلف أو لو الدوال تحت مسار ثاني
   const CHECKIN_ENDPOINT = "/.netlify/functions/checkin";
-  const STORAGE_KEY = "jg_checkin_password";
   const COUNT_KEY = "jg_checkin_count_" + new Date().toISOString().slice(0,10);
 
   const gate = document.getElementById("gate");
@@ -273,6 +272,7 @@
   let html5Qr = null;
   let isBusy = false;
   let scannerRunning = false;
+  let checkinPassword = "";
 
   // ===== عداد اليوم (محلي بالجهاز فقط) =====
   function getCount(){ return parseInt(sessionStorage.getItem(COUNT_KEY) || "0", 10); }
@@ -282,7 +282,7 @@
   // ===== الدخول =====
   function tryEnter(pw){
     if(!pw){ gateError.textContent = "اكتبي كلمة السر أولاً"; return; }
-    sessionStorage.setItem(STORAGE_KEY, pw);
+    checkinPassword = pw;
     gateError.textContent = "";
     gate.style.display = "none";
     scanScreen.style.display = "flex";
@@ -292,7 +292,7 @@
   pwInput.addEventListener("keydown", (e) => { if(e.key === "Enter") tryEnter(pwInput.value.trim()); });
 
   logoutBtn.addEventListener("click", () => {
-    sessionStorage.removeItem(STORAGE_KEY);
+    checkinPassword = "";
     stopScanner();
     scanScreen.style.display = "none";
     gate.style.display = "flex";
@@ -300,8 +300,8 @@
     pwInput.focus();
   });
 
-  // دخول تلقائي لو كلمة السر محفوظة بهالجلسة
-  const savedPw = sessionStorage.getItem(STORAGE_KEY);
+  // لا نحفظ كلمة المرور ولا نعيد تعبئتها تلقائيًا بعد إعادة تحميل الصفحة.
+  const savedPw = "";
   if(savedPw){ tryEnter(savedPw); }
 
   // ===== استخراج entryCode من نص QR =====
@@ -330,7 +330,7 @@
     }
     isBusy = true;
     showBusy();
-    const pw = sessionStorage.getItem(STORAGE_KEY) || "";
+    const pw = checkinPassword;
     try{
       const res = await fetch(CHECKIN_ENDPOINT, {
         method: "POST",
@@ -354,12 +354,12 @@
 
       if(data.alreadyCheckedIn){
         const t = data.checkedInAt ? new Date(data.checkedInAt).toLocaleTimeString("ar-SA", {hour:"2-digit", minute:"2-digit"}) : "";
-        showResult("warn", "🔁", data.name || "—", "سجّل دخوله مسبقاً" + (t ? " — الساعة " + t : ""), (data.companions ? `عدد المرافقين: ${data.companions}` : ""));
+        showResult("warn", "🔁", data.name || "—", "سجّل دخوله مسبقاً" + (t ? " — الساعة " + t : ""), buildMetaLine(data));
         return;
       }
 
       bumpCount();
-      showResult("ok", "✅", data.name || "—", "تم تسجيل الدخول بنجاح", (data.companions ? `عدد المرافقين: ${data.companions}` : ""));
+      showResult("ok", "✅", data.name || "—", "تم تسجيل الدخول بنجاح", buildMetaLine(data));
     }catch(err){
       showResult("err", "📡", "تعذر الاتصال", "تأكدي من اتصال الإنترنت وحاولي مرة أخرى", "");
     }
@@ -372,6 +372,15 @@
     resultName.textContent = "جارِ التحقق…";
     resultMsg.textContent = "";
     resultMeta.textContent = "";
+  }
+
+  function buildMetaLine(data){
+    const parts = [];
+    if (data.companions) parts.push(`عدد المرافقين: ${data.companions}`);
+    if (data.table) parts.push(`طاولة: ${data.table}`);
+    if (data.seat) parts.push(`مقعد: ${data.seat}`);
+    if (data.gate) parts.push(`بوابة: ${data.gate}`);
+    return parts.join(" — ");
   }
 
   function showResult(kind, icon, name, msg, meta){

@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jamrat AI — إعدادات المساعد الذكي</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+  *{box-sizing:border-box}
+  body{font-family:Tahoma,Arial,sans-serif;background:#111;color:#eee;margin:0;padding:20px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px}
+  h1{color:#d4af37;font-size:20px;margin:0}
+  a.back{color:#aaa;text-decoration:none;font-size:14px}
+  .card{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:18px;margin-bottom:18px}
+  .card h2{font-size:15px;color:#d4af37;margin:0 0 4px}
+  .card .subtitle{font-size:12px;color:#999;margin:0 0 14px}
+
+  .btn{padding:10px 16px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;font-size:13px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-family:inherit}
+  .btn-gold{background:#d4af37;color:#111}
+  .btn-gold:disabled{opacity:.5;cursor:default}
+
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:12.5px;color:#aaa;margin-bottom:5px}
+  .field input,.field select{
+    width:100%;padding:10px 12px;border-radius:8px;border:1px solid #444;background:#222;color:#fff;
+    font-family:inherit;font-size:14px;
+  }
+  .field select{cursor:pointer}
+
+  .msg-status{font-size:13px;margin-top:8px;min-height:18px}
+  .msg-status.err{color:#e07a5f}
+  .msg-status.ok{color:#4caf50}
+
+  /* Toggle switch */
+  .toggle-wrap{display:flex;align-items:center;gap:8px;font-size:13px;color:#aaa}
+  .toggle{position:relative;width:44px;height:24px;flex-shrink:0}
+  .toggle input{opacity:0;width:0;height:0}
+  .toggle .slider{position:absolute;inset:0;background:#444;border-radius:12px;cursor:pointer;transition:.2s}
+  .toggle .slider::before{content:"";position:absolute;width:18px;height:18px;left:3px;bottom:3px;background:#eee;border-radius:50%;transition:.2s}
+  .toggle input:checked+.slider{background:#4caf50}
+  .toggle input:checked+.slider::before{transform:translateX(20px)}
+
+  .card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+
+  /* Checkbox */
+  .checkbox-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+  .checkbox-item{display:flex;align-items:center;gap:8px;font-size:13px;color:#ccc}
+  .checkbox-item input[type=checkbox]{width:18px;height:18px;accent-color:#d4af37;cursor:pointer;flex-shrink:0}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:18px}
+  @media(max-width:500px){.grid{grid-template-columns:1fr}}
+
+  .last-updated{font-size:11px;color:#666;margin-top:10px;text-align:left}
+  .loading{color:#999;font-size:14px;text-align:center;padding:40px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>🤖 إعدادات المساعد الذكي</h1>
+  <a class="back" href="index.html">← رجوع للوحة</a>
+</div>
+
+<div id="app">
+  <div class="loading">جارٍ التحميل...</div>
+</div>
+
+<script type="module">
+import { requireLogin, db, doc, getDoc, setDoc, serverTimestamp } from '../js/firebase-init.js';
+
+function escapeHtml(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+requireLogin(async (user) => {
+  const app = document.getElementById('app');
+
+  app.innerHTML = `
+    <div class="grid">
+
+      <!-- المساعد العام -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2>🌐 المساعد العام</h2>
+            <div class="subtitle">المساعد الذكي العام للموقع</div>
+          </div>
+          <div class="toggle-wrap">
+            <label class="toggle"><input type="checkbox" id="public-enabled"><span class="slider"></span></label>
+            تفعيل
+          </div>
+        </div>
+        <div class="field">
+          <label>الاسم</label>
+          <input type="text" id="public-name" value="جمرة AI">
+        </div>
+        <div class="field">
+          <label>النبرة</label>
+          <select id="public-tone">
+            <option value="friendly">ودود</option>
+            <option value="formal">رسمي</option>
+            <option value="concise">مختصر</option>
+            <option value="luxury">فاخم</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>اللغة الافتراضية</label>
+          <select id="public-lang">
+            <option value="ar">عربي</option>
+            <option value="en">English</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- مساعد المدعوين -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2>👥 مساعد المدعوين</h2>
+            <div class="subtitle">مساعد تلقائي للرد على المدعوين عبر واتساب</div>
+          </div>
+          <div class="toggle-wrap">
+            <label class="toggle"><input type="checkbox" id="guest-enabled"><span class="slider"></span></label>
+            تفعيل
+          </div>
+        </div>
+        <div class="checkbox-list">
+          <label class="checkbox-item"><input type="checkbox" id="guest-whatsapp"> WhatsApp مفعّل</label>
+          <label class="checkbox-item"><input type="checkbox" id="guest-resend"> إعادة إرسال الدعوة</label>
+          <label class="checkbox-item"><input type="checkbox" id="guest-location"> إرسال الموقع</label>
+          <label class="checkbox-item"><input type="checkbox" id="guest-rsvp"> تحديث RSVP</label>
+          <label class="checkbox-item"><input type="checkbox" id="guest-guestcount"> تحديث عدد الضيوف</label>
+          <label class="checkbox-item"><input type="checkbox" id="guest-eventinfo"> معلومات المناسبة</label>
+        </div>
+      </div>
+
+      <!-- مساعد المبيعات -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2>💰 مساعد المبيعات</h2>
+            <div class="subtitle">مساعد ذكي لترشيح الباقات وجمع بيانات العملاء</div>
+          </div>
+          <div class="toggle-wrap">
+            <label class="toggle"><input type="checkbox" id="sales-enabled"><span class="slider"></span></label>
+            تفعيل
+          </div>
+        </div>
+        <div class="checkbox-list">
+          <label class="checkbox-item"><input type="checkbox" id="sales-recommend"> ترشيح الباقات</label>
+          <label class="checkbox-item"><input type="checkbox" id="sales-leads"> جمع بيانات العملاء Leads</label>
+          <label class="checkbox-item"><input type="checkbox" id="sales-handoff"> التحويل لفريق المبيعات</label>
+        </div>
+      </div>
+
+      <!-- حماية التكلفة -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2>🛡️ حماية التكلفة</h2>
+            <div class="subtitle">تحديد سقف الاستخدام لمنع تجاوز التكاليف</div>
+          </div>
+        </div>
+        <div class="field">
+          <label>الحد الأقصى للرسائل/ساعة</label>
+          <input type="number" id="cost-msgPerHour" value="20" min="1">
+        </div>
+        <div class="field">
+          <label>الحد الأقصى لطول الرسالة (حرف)</label>
+          <input type="number" id="cost-maxMsgLen" value="500" min="50">
+        </div>
+        <div class="field">
+          <label>الحد الأقصى لسياق المحادثة (رسائل)</label>
+          <input type="number" id="cost-maxContext" value="10" min="1">
+        </div>
+        <div class="field">
+          <label>نموذج Gemini</label>
+          <select id="cost-model">
+            <option value="gemini-2.0-flash">gemini-2.0-flash</option>
+            <option value="gemini-2.0-flash-lite">gemini-2.0-flash-lite</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>الحد الأقصى للتوكنات</label>
+          <input type="number" id="cost-maxTokens" value="500" min="50">
+        </div>
+      </div>
+
+    </div>
+
+    <div style="margin-top:18px">
+      <button class="btn btn-gold" id="save-btn" onclick="window._saveSettings()">💾 حفظ الإعدادات</button>
+      <div class="msg-status" id="msg-status"></div>
+      <div class="last-updated" id="last-updated"></div>
+    </div>
+  `;
+
+  // تحميل الإعدادات الحالية
+  async function loadSettings() {
+    try {
+      const snap = await getDoc(doc(db, 'ai_settings', 'global'));
+      if (snap.exists()) {
+        const d = snap.data();
+        // المساعد العام
+        if (d.publicAssistant !== undefined) document.getElementById('public-enabled').checked = d.publicAssistant.enabled;
+        if (d.publicAssistant?.name) document.getElementById('public-name').value = d.publicAssistant.name;
+        if (d.publicAssistant?.tone) document.getElementById('public-tone').value = d.publicAssistant.tone;
+        if (d.publicAssistant?.defaultLang) document.getElementById('public-lang').value = d.publicAssistant.defaultLang;
+        // مساعد المدعوين
+        if (d.guestAssistant !== undefined) document.getElementById('guest-enabled').checked = d.guestAssistant.enabled;
+        if (d.guestAssistant?.whatsapp) document.getElementById('guest-whatsapp').checked = d.guestAssistant.whatsapp;
+        if (d.guestAssistant?.resendInvite) document.getElementById('guest-resend').checked = d.guestAssistant.resendInvite;
+        if (d.guestAssistant?.sendLocation) document.getElementById('guest-location').checked = d.guestAssistant.sendLocation;
+        if (d.guestAssistant?.updateRsvp) document.getElementById('guest-rsvp').checked = d.guestAssistant.updateRsvp;
+        if (d.guestAssistant?.updateGuestCount) document.getElementById('guest-guestcount').checked = d.guestAssistant.updateGuestCount;
+        if (d.guestAssistant?.eventInfo) document.getElementById('guest-eventinfo').checked = d.guestAssistant.eventInfo;
+        // مساعد المبيعات
+        if (d.salesAssistant !== undefined) document.getElementById('sales-enabled').checked = d.salesAssistant.enabled;
+        if (d.salesAssistant?.recommendPackages) document.getElementById('sales-recommend').checked = d.salesAssistant.recommendPackages;
+        if (d.salesAssistant?.collectLeads) document.getElementById('sales-leads').checked = d.salesAssistant.collectLeads;
+        if (d.salesAssistant?.handoffToSales) document.getElementById('sales-handoff').checked = d.salesAssistant.handoffToSales;
+        // حماية التكلفة
+        if (d.costProtection?.maxMessagesPerHour !== undefined) document.getElementById('cost-msgPerHour').value = d.costProtection.maxMessagesPerHour;
+        if (d.costProtection?.maxMessageLength !== undefined) document.getElementById('cost-maxMsgLen').value = d.costProtection.maxMessageLength;
+        if (d.costProtection?.maxContextMessages !== undefined) document.getElementById('cost-maxContext').value = d.costProtection.maxContextMessages;
+        if (d.costProtection?.geminiModel) document.getElementById('cost-model').value = d.costProtection.geminiModel;
+        if (d.costProtection?.maxTokens !== undefined) document.getElementById('cost-maxTokens').value = d.costProtection.maxTokens;
+        // آخر تحديث
+        if (d.updatedAt) {
+          const dt = d.updatedAt?.toDate ? d.updatedAt.toDate() : new Date(d.updatedAt);
+          document.getElementById('last-updated').textContent = 'آخر تحديث: ' + dt.toLocaleString('ar-SA');
+        }
+      }
+    } catch(e) {
+      console.error(e);
+    }
+  }
+
+  await loadSettings();
+
+  // حفظ الإعدادات
+  window._saveSettings = async function() {
+    const btn = document.getElementById('save-btn');
+    const msg = document.getElementById('msg-status');
+    btn.disabled = true;
+    msg.textContent = '';
+    msg.className = 'msg-status';
+    try {
+      const data = {
+        publicAssistant: {
+          enabled: document.getElementById('public-enabled').checked,
+          name: document.getElementById('public-name').value.trim() || 'جمرة AI',
+          tone: document.getElementById('public-tone').value,
+          defaultLang: document.getElementById('public-lang').value
+        },
+        guestAssistant: {
+          enabled: document.getElementById('guest-enabled').checked,
+          whatsapp: document.getElementById('guest-whatsapp').checked,
+          resendInvite: document.getElementById('guest-resend').checked,
+          sendLocation: document.getElementById('guest-location').checked,
+          updateRsvp: document.getElementById('guest-rsvp').checked,
+          updateGuestCount: document.getElementById('guest-guestcount').checked,
+          eventInfo: document.getElementById('guest-eventinfo').checked
+        },
+        salesAssistant: {
+          enabled: document.getElementById('sales-enabled').checked,
+          recommendPackages: document.getElementById('sales-recommend').checked,
+          collectLeads: document.getElementById('sales-leads').checked,
+          handoffToSales: document.getElementById('sales-handoff').checked
+        },
+        costProtection: {
+          maxMessagesPerHour: parseInt(document.getElementById('cost-msgPerHour').value) || 20,
+          maxMessageLength: parseInt(document.getElementById('cost-maxMsgLen').value) || 500,
+          maxContextMessages: parseInt(document.getElementById('cost-maxContext').value) || 10,
+          geminiModel: document.getElementById('cost-model').value,
+          maxTokens: parseInt(document.getElementById('cost-maxTokens').value) || 500
+        },
+        updatedBy: user.email,
+        updatedAt: serverTimestamp()
+      };
+      await setDoc(doc(db, 'ai_settings', 'global'), data, { merge: true });
+      msg.textContent = 'تم الحفظ بنجاح ✓';
+      msg.className = 'msg-status ok';
+      document.getElementById('last-updated').textContent = 'آخر تحديث: الآن';
+    } catch(e) {
+      msg.textContent = 'خطأ: ' + escapeHtml(e.message);
+      msg.className = 'msg-status err';
+    } finally {
+      btn.disabled = false;
+    }
+  };
+});
+</script>
+</body>
+</html>

@@ -7,14 +7,28 @@
 //
 // متغيرات البيئة المطلوبة:
 //   NOTIFY_EMAIL_TO (بريد المدير الافتراضي), SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM
+//   CRON_SECRET — سر لتوثيق النداءات غير المجدولة
 //
 // الجدولة في netlify.toml:
 //   [functions."daily-report"]
 //     schedule = "0 8 * * *"   ← 8 صباحًا كل يوم (بتوقيت UTC)
 
 const { resolveRecipients, fetchResponses, buildExcelBuffer, buildPdfBuffer, sendReportEmail } = require("./_report-lib");
+const { safeEqual } = require("./_auth");
 
-exports.handler = async () => {
+function verifyCronSecret(event) {
+  if (event.httpMethod === 'SCHEDULED') return true;
+  const provided = event.headers['x-cron-secret'] || '';
+  const expected = process.env.CRON_SECRET || '';
+  if (!expected || !safeEqual(provided, expected)) return false;
+  return true;
+}
+
+exports.handler = async (event) => {
+  if (!verifyCronSecret(event)) {
+    return { statusCode: 403, body: JSON.stringify({ error: 'Forbidden' }) };
+  }
+
   try {
     const { recipients, reportsCfg } = await resolveRecipients();
 
@@ -81,8 +95,8 @@ exports.handler = async () => {
       ],
     });
 
-    return { statusCode: 200, body: JSON.stringify({ ...result, total, yes, no, pending, recipients }) };
+    return { statusCode: 200, body: JSON.stringify({ ...result, total, yes, no, pending }) };
   } catch (err) {
-    return { statusCode: 200, body: JSON.stringify({ sent: false, error: String(err) }) };
+    return { statusCode: 200, body: JSON.stringify({ sent: false, error: 'error' }) };
   }
 };

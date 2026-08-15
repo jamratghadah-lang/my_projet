@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>سلة المحذوفات — لوحة تحكم جمرة غضى</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+  *{box-sizing:border-box}
+  body{font-family:Tahoma,Arial,sans-serif;background:#111;color:#eee;margin:0;padding:20px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px}
+  h1{color:#d4af37;font-size:20px;margin:0}
+  a.back{color:#aaa;text-decoration:none;font-size:14px}
+  .card{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:18px;margin-bottom:18px}
+  .card h2{font-size:15px;color:#d4af37;margin-top:0}
+
+  /* Stats */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px}
+  .stat{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:16px;text-align:center;position:relative;overflow:hidden}
+  .stat::before{content:"";position:absolute;top:0;right:0;width:4px;height:100%}
+  .stat.gold::before{background:#d4af37}
+  .stat.red::before{background:#c0392b}
+  .stat .num{font-size:30px;font-weight:bold;line-height:1}
+  .stat.gold .num{color:#d4af37}
+  .stat.red .num{color:#e07a5f}
+  .stat .label{font-size:11px;color:#999;margin-top:6px}
+
+  /* Toolbar */
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+  .search-wrap{flex:1;min-width:180px;position:relative}
+  .search-wrap input{width:100%;padding:10px 36px 10px 12px;border-radius:8px;border:1px solid #444;background:#222;color:#fff;font-family:inherit;font-size:14px}
+  .search-wrap .icon{position:absolute;right:10px;top:50%;transform:translateY(-50%);color:#888;font-size:16px;pointer-events:none}
+  select{padding:10px 12px;border-radius:8px;border:1px solid #444;background:#222;color:#fff;font-family:inherit;font-size:14px;cursor:pointer}
+  .btn{padding:10px 16px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;font-size:13px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-family:inherit}
+  .btn-danger{background:#c0392b;color:#fff}
+  .btn-outline{background:transparent;border:1px solid #555;color:#ddd}
+  .btn-green{background:#4caf50;color:#fff}
+  .btn:disabled{opacity:.45;cursor:default}
+  .btn-sm{padding:6px 10px;font-size:12px;border-radius:6px}
+  .empty{color:#777;text-align:center;padding:30px;font-size:14px}
+  .count-hint{font-size:12px;color:#888;margin-top:8px}
+
+  /* Trash List */
+  .trash-list{display:flex;flex-direction:column;gap:10px;max-height:600px;overflow-y:auto}
+  .trash-list::-webkit-scrollbar{width:6px}
+  .trash-list::-webkit-scrollbar-track{background:#1a1a1a}
+  .trash-list::-webkit-scrollbar-thumb{background:#444;border-radius:3px}
+  .trash-item{background:#222;border:1px solid #333;border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;transition:background .2s}
+  .trash-item:hover{background:#2a2a2a}
+  .trash-item-info{flex:1;min-width:200px}
+  .trash-item-info .name{font-size:14px;font-weight:bold;color:#eee;margin-bottom:4px}
+  .trash-item-info .meta{font-size:12px;color:#999}
+  .trash-item-actions{display:flex;gap:8px;align-items:center;flex-shrink:0}
+  .badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:bold;white-space:nowrap}
+  .badge.guest{background:rgba(76,175,80,.15);color:#4caf50;border:1px solid rgba(76,175,80,.3)}
+  .badge.event{background:rgba(212,175,55,.15);color:#d4af37;border:1px solid rgba(212,175,55,.3)}
+  .badge.template{background:rgba(33,150,243,.15);color:#2196f3;border:1px solid rgba(33,150,243,.3)}
+  .badge.other{background:rgba(170,170,170,.15);color:#aaa;border:1px solid rgba(170,170,170,.3)}
+  .days-hint{font-size:11px;color:#e07a5f;margin-top:2px}
+  @media(max-width:600px){.stat .num{font-size:22px}.trash-item{flex-direction:column;align-items:flex-start}.trash-item-actions{width:100%;justify-content:flex-end}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>🗑️ سلة المحذوفات</h1>
+  <a class="back" href="index.html">← رجوع للوحة</a>
+</div>
+
+<!-- Stats -->
+<div class="stats">
+  <div class="stat gold"><div class="num" id="statTotal">0</div><div class="label">إجمالي العناصر في السلة</div></div>
+  <div class="stat red"><div class="num" id="statOld">0</div><div class="label">عناصر أقدم من 30 يوم</div></div>
+</div>
+
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+    <h2 style="margin:0">العناصر المحذوفة</h2>
+    <button class="btn btn-danger btn-sm" id="emptyTrash">🗑️ إفراغ السلة بالكامل</button>
+  </div>
+
+  <div class="toolbar">
+    <div class="search-wrap">
+      <input type="text" id="searchInput" placeholder="بحث بالاسم...">
+      <span class="icon">🔍</span>
+    </div>
+    <select id="filterType">
+      <option value="all">كل الأنواع</option>
+      <option value="guest">ضيف</option>
+      <option value="event">فعالية</option>
+      <option value="template">قالب</option>
+      <option value="other">أخرى</option>
+    </select>
+  </div>
+
+  <div class="trash-list" id="trashList">
+    <div class="empty">جارِ التحميل...</div>
+  </div>
+  <div class="count-hint" id="countHint"></div>
+</div>
+
+<script type="module">
+import {
+  db, auth, requireLogin,
+  collection, query, orderBy, onSnapshot,
+  doc, setDoc, deleteDoc,
+} from "../js/firebase-init.js";
+
+let allItems = [];
+let unsub = null;
+
+const typeLabels = {
+  guest: 'ضيف',
+  event: 'فعالية',
+  template: 'قالب',
+  other: 'أخرى',
+};
+
+function escapeHtml(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function formatTime(ts) {
+  if (!ts) return '—';
+  const d = ts.toMillis ? new Date(ts.toMillis()) : new Date(ts);
+  return d.toLocaleString('ar-SA', {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit',
+  });
+}
+
+function daysSince(ts) {
+  if (!ts) return '—';
+  const d = ts.toMillis ? new Date(ts.toMillis()) : new Date(ts);
+  const diff = Math.floor((Date.now() - d.getTime()) / 86400000);
+  return diff;
+}
+
+requireLogin(() => {
+  const q = query(collection(db, "trash_items"), orderBy("deletedAt", "desc"));
+  unsub = onSnapshot(q, (snap) => {
+    allItems = [];
+    snap.forEach((d) => {
+      const r = d.data();
+      allItems.push({
+        id: d.id,
+        name: r.name || r.title || 'بدون اسم',
+        itemType: r.itemType || 'other',
+        originalCollection: r.originalCollection || '—',
+        originalId: r.originalId || '',
+        originalData: r.originalData || {},
+        deletedAt: r.deletedAt,
+        deletedBy: r.deletedBy || '—',
+      });
+    });
+    updateStats();
+    renderList();
+  }, () => {
+    document.getElementById("trashList").innerHTML = '<div class="empty">تعذّر تحميل البيانات</div>';
+  });
+});
+
+function updateStats() {
+  document.getElementById("statTotal").textContent = allItems.length;
+  document.getElementById("statOld").textContent = allItems.filter(i => {
+    const days = daysSince(i.deletedAt);
+    return days >= 30;
+  }).length;
+}
+
+function getFiltered() {
+  const search = document.getElementById("searchInput").value.trim().toLowerCase();
+  const typeFilter = document.getElementById("filterType").value;
+  return allItems.filter(i => {
+    if (typeFilter !== 'all' && i.itemType !== typeFilter) return false;
+    if (search && !i.name.toLowerCase().includes(search)) return false;
+    return true;
+  });
+}
+
+function renderList() {
+  const container = document.getElementById("trashList");
+  const list = getFiltered();
+  const hint = document.getElementById("countHint");
+
+  if (!list.length) {
+    container.innerHTML = '<div class="empty">السلة فارغة أو لا يوجد عناصر مطابقة</div>';
+    hint.textContent = '';
+    return;
+  }
+
+  container.innerHTML = list.map(item => {
+    const days = daysSince(item.deletedAt);
+    const typeLabel = typeLabels[item.itemType] || item.itemType;
+    const daysText = days >= 30 ? `<div class="days-hint">⚠️ منذ ${days} أيام — يمكن حذفه نهائيًا</div>` : `<div class="days-hint">منذ ${days} أيام</div>`;
+
+    return `<div class="trash-item">
+      <div class="trash-item-info">
+        <div class="name">${escapeHtml(item.name)}</div>
+        <div class="meta">
+          <span class="badge ${escapeHtml(item.itemType)}">${escapeHtml(typeLabel)}</span>
+          المجموعة: ${escapeHtml(item.originalCollection)} — حُذف: ${escapeHtml(formatTime(item.deletedAt))}
+        </div>
+        ${daysText}
+      </div>
+      <div class="trash-item-actions">
+        <button class="btn btn-green btn-sm" onclick="window._restoreItem(${JSON.stringify(item.id)})">♻️ استعادة</button>
+        <button class="btn btn-danger btn-sm" onclick="window._permanentDelete('${escapeHtml(item.id)}')">🗑️ حذف نهائي</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  hint.textContent = `عرض ${list.length} من أصل ${allItems.length} عنصر`;
+}
+
+// ===== Filter events =====
+document.getElementById("searchInput").addEventListener("input", renderList);
+document.getElementById("filterType").addEventListener("change", renderList);
+
+// ===== Restore Item =====
+window._restoreItem = async function(id) {
+  const item = allItems.find(i => i.id === id);
+  if (!item) return;
+  if (!confirm(`هل تريد استعادة "${item.name}" إلى مجموعته الأصلية؟`)) return;
+  try {
+    const idToken = await auth.currentUser.getIdToken();
+    const res = await fetch("/.netlify/functions/restore-trash-item", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${idToken}` },
+      body: JSON.stringify({ trashItemId: id }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || "فشلت الاستعادة");
+  } catch (e) {
+    alert('تعذّرت الاستعادة: ' + e.message);
+  }
+};
+
+// ===== Permanent Delete =====
+window._permanentDelete = async function(id) {
+  const item = allItems.find(i => i.id === id);
+  if (!item) return;
+  if (!confirm(`هل تريد حذف "${item.name}" نهائيًا؟ لا يمكن التراجع.`)) return;
+  try {
+    await deleteDoc(doc(db, "trash_items", id));
+  } catch (e) {
+    alert('تعذّر الحذف: ' + e.message);
+  }
+};
+
+// ===== Empty Trash =====
+document.getElementById("emptyTrash").addEventListener("click", async () => {
+  if (!allItems.length) { alert('السلة فارغة'); return; }
+  if (!confirm(`سيتم حذف ${allItems.length} عنصر نهائيًا. هل أنت متأكدة؟`)) return;
+  if (!confirm('تأكيد أخير: سيتم إفراغ السلة بالكامل ولا يمكن التراجع.')) return;
+  try {
+    const batchDeletes = allItems.map(item => deleteDoc(doc(db, "trash_items", item.id)));
+    await Promise.all(batchDeletes);
+  } catch (e) {
+    alert('تعذّر إفراغ السلة: ' + e.message);
+  }
+});
+
+// ===== Cleanup =====
+window.addEventListener("beforeunload", () => { if (unsub) unsub(); });
+</script>
+</body>
+</html>

@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+
+<html dir="rtl" lang="ar">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>إدارة الفعاليات — لوحة تحكم جمرة غضى</title>
+<meta content="noindex, nofollow" name="robots"/>
+<style>
+  *{box-sizing:border-box}
+  body{font-family:Tahoma,Arial,sans-serif;background:#111;color:#eee;margin:0;padding:20px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px}
+  h1{color:#d4af37;font-size:20px;margin:0}
+  a.back{color:#aaa;text-decoration:none;font-size:14px}
+  .card{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:18px;margin-bottom:18px}
+  .card h2{font-size:15px;color:#d4af37;margin-top:0}
+
+  /* ===== Stats ===== */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:18px}
+  .stat{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:16px;text-align:center;position:relative;overflow:hidden}
+  .stat::before{content:"";position:absolute;top:0;right:0;width:4px;height:100%}
+  .stat.total::before{background:#d4af37}
+  .stat.active::before{background:#4caf50}
+  .stat.ended::before{background:#888}
+  .stat.archived::before{background:#7a5fd4}
+  .stat .num{font-size:30px;font-weight:bold;line-height:1}
+  .stat.total .num{color:#d4af37}
+  .stat.active .num{color:#4caf50}
+  .stat.ended .num{color:#aaa}
+  .stat.archived .num{color:#9d85e8}
+  .stat .label{font-size:11px;color:#999;margin-top:6px}
+
+  /* ===== Toolbar ===== */
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+  .search-wrap{flex:1;min-width:180px;position:relative}
+  .search-wrap input{width:100%;padding:10px 36px 10px 12px;border-radius:8px;border:1px solid #444;background:#222;color:#fff;font-family:inherit;font-size:14px}
+  .search-wrap .icon{position:absolute;right:10px;top:50%;transform:translateY(-50%);color:#888;font-size:16px;pointer-events:none}
+  select{padding:10px 12px;border-radius:8px;border:1px solid #444;background:#222;color:#fff;font-family:inherit;font-size:14px;cursor:pointer}
+  .btn{padding:10px 16px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;font-size:13px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-family:inherit}
+  .btn-gold{background:#d4af37;color:#111}
+  .btn-outline{background:transparent;border:1px solid #555;color:#ddd}
+  .btn-danger{background:#c0392b;color:#fff}
+  .btn-purple{background:#5d43b0;color:#fff}
+  .btn-green{background:#2e7d32;color:#fff}
+  .btn:disabled{opacity:.45;cursor:default}
+  .btn-sm{padding:6px 10px;font-size:12px;border-radius:6px}
+  .row-actions{display:flex;gap:6px}
+
+  /* ===== Table ===== */
+  .table-wrap{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  thead th{text-align:right;padding:10px 8px;border-bottom:2px solid #333;color:#d4af37;white-space:nowrap}
+  tbody td{padding:10px 8px;border-bottom:1px solid #2a2a2a;white-space:nowrap}
+  tbody tr:hover{background:#222}
+  tbody tr.archived-row{opacity:.55}
+  tbody tr.selected-row{background:#2a2a1a}
+  .badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:bold;white-space:nowrap}
+  .badge.preparing{background:rgba(212,175,55,.15);color:#d4af37;border:1px solid rgba(212,175,55,.3)}
+  .badge.active{background:rgba(76,175,80,.15);color:#4caf50;border:1px solid rgba(76,175,80,.3)}
+  .badge.ended{background:rgba(170,170,170,.15);color:#aaa;border:1px solid rgba(170,170,170,.3)}
+  .badge.archived{background:rgba(93,67,176,.18);color:#9d85e8;border:1px solid rgba(93,67,176,.35)}
+  .empty{color:#777;text-align:center;padding:30px;font-size:14px}
+  .count-hint{font-size:12px;color:#888;margin-top:8px}
+  @media(max-width:600px){.stat .num{font-size:22px}}
+
+  /* ===== Modal ===== */
+  .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:999;align-items:center;justify-content:center;padding:16px}
+  .modal-bg.open{display:flex}
+  .modal{background:#1c1c1c;border:1px solid #333;border-radius:14px;padding:22px;width:100%;max-width:480px;max-height:88vh;overflow-y:auto}
+  .modal h3{margin:0 0 16px;color:#d4af37;font-size:16px}
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:12.5px;color:#aaa;margin-bottom:5px}
+  .field input,.field select,.field textarea{
+    width:100%;padding:10px 12px;border-radius:8px;border:1px solid #444;background:#222;color:#fff;
+    font-family:inherit;font-size:14px;
+  }
+  .field textarea{min-height:80px;resize:vertical}
+  .modal-actions{display:flex;gap:10px;margin-top:18px}
+  .modal-actions .btn{flex:1;justify-content:center}
+  .msg-status{font-size:13px;margin-top:10px;min-height:18px}
+  .msg-status.err{color:#e07a5f}
+  .msg-status.ok{color:#4caf50}
+
+  /* ===== Detail Panel ===== */
+  .detail-panel{display:none}
+  .detail-panel.visible{display:block}
+  .detail-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px}
+  .detail-header h2{margin:0}
+  .detail-section{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:18px;margin-bottom:16px}
+  .detail-section h3{font-size:14px;color:#d4af37;margin:0 0 14px;padding-bottom:8px;border-bottom:1px solid #2a2a2a}
+
+  /* ===== Checklist ===== */
+  .checklist{list-style:none;padding:0;margin:0}
+  .checklist li{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #2a2a2a;font-size:13px}
+  .checklist li:last-child{border-bottom:none}
+  .checklist li input[type=checkbox]{width:18px;height:18px;accent-color:#d4af37;cursor:pointer;flex-shrink:0}
+  .checklist li.done{color:#666;text-decoration:line-through}
+  .checklist-progress{margin-bottom:12px}
+  .checklist-progress .bar{width:100%;height:8px;background:#333;border-radius:4px;overflow:hidden}
+  .checklist-progress .bar-fill{height:100%;background:#d4af37;border-radius:4px;transition:width .3s}
+  .checklist-progress .label{font-size:12px;color:#999;margin-bottom:4px}
+
+  /* ===== Summary Cards ===== */
+  .summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:10px;margin-bottom:14px}
+  .summary-item{background:#222;border-radius:8px;padding:12px;text-align:center}
+  .summary-item .val{font-size:24px;font-weight:bold;color:#d4af37}
+  .summary-item .lbl{font-size:11px;color:#999;margin-top:4px}
+  .rate-bar{height:10px;background:#333;border-radius:5px;overflow:hidden;margin-top:8px}
+  .rate-bar .fill{height:100%;border-radius:5px;transition:width .3s}
+
+  /* ===== Send Summary ===== */
+  .send-channels{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+  .send-ch{background:#222;border-radius:8px;padding:10px 16px;text-align:center;min-width:90px}
+  .send-ch .ch-name{font-size:11px;color:#999}
+  .send-ch .ch-val{font-size:20px;font-weight:bold;color:#d4af37}
+
+  /* ===== Budget ===== */
+  .budget-header{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+  .budget-field{flex:1;min-width:140px}
+  .budget-field label{display:block;font-size:12px;color:#aaa;margin-bottom:4px}
+  .budget-field input{width:100%;padding:8px 10px;border-radius:6px;border:1px solid #444;background:#222;color:#fff;font-family:inherit;font-size:14px}
+  .budget-items-table{width:100%;border-collapse:collapse;font-size:13px}
+  .budget-items-table th{text-align:right;padding:8px;border-bottom:1px solid #333;color:#d4af37;font-size:12px}
+  .budget-items-table td{padding:8px;border-bottom:1px solid #2a2a2a}
+  .budget-items-table input{width:100%;padding:6px 8px;border-radius:6px;border:1px solid #444;background:#222;color:#fff;font-family:inherit;font-size:13px}
+  .budget-items-table .variance-pos{color:#e07a5f;font-weight:bold}
+  .budget-items-table .variance-neg{color:#4caf50;font-weight:bold}
+  .budget-total-row td{border-top:2px solid #d4af37;font-weight:bold;color:#d4af37}
+  .add-item-row td{border-bottom:none;padding-top:10px}
+</style>
+</head>
+<body>
+<div class="topbar">
+<h1>إدارة الفعاليات</h1>
+<a class="back" href="index.html">← رجوع للوحة</a>
+</div>
+<!-- ===== Stats ===== -->
+<div class="stats">
+<div class="stat total"><div class="num" id="statTotal">0</div><div class="label">إجمالي الفعاليات</div></div>
+<div class="stat active"><div class="num" id="statActive">0</div><div class="label">فعاليات نشطة</div></div>
+<div class="stat ended"><div class="num" id="statEnded">0</div><div class="label">فعاليات منتهية</div></div>
+<div class="stat archived"><div class="num" id="statArchived">0</div><div class="label">مؤرشفة</div></div>
+</div>
+<!-- ===== Events List Card ===== -->
+<div class="card" id="eventsListCard">
+<h2>قائمة الفعاليات</h2>
+<div class="toolbar">
+<div class="search-wrap">
+<input id="searchInput" placeholder="بحث بالاسم أو العميل..." type="text"/>
+<span class="icon">🔍</span>
+</div>
+<select id="filterStatus">
+<option value="all">كل الحالات</option>
+<option value="preparing">قيد التحضير</option>
+<option value="active">نشطة</option>
+<option value="ended">منتهية</option>
+<option value="closed">مغلقة</option>
+<option value="archived">مؤرشفة</option>
+</select>
+<button class="btn btn-gold" id="openAddModal">+ إضافة فعالية</button>
+</div>
+<div class="table-wrap">
+<table id="eventsTable">
+<thead>
+<tr>
+<th>#</th>
+<th>اسم الفعالية</th>
+<th>العميل / العميلة</th>
+<th>التاريخ</th>
+<th>الوقت</th>
+<th>الموقع</th>
+<th>الحالة</th>
+<th>إجراءات</th>
+</tr>
+</thead>
+<tbody id="eventsBody">
+<tr><td class="empty" colspan="8">جارِ التحميل...</td></tr>
+</tbody>
+</table>
+</div>
+<div class="count-hint" id="countHint"></div>
+</div>
+<!-- ===== Event Detail Panel ===== -->
+<div class="detail-panel" id="detailPanel">
+<div class="detail-header">
+<h2 id="detailTitle">تفاصيل الفعالية</h2>
+<button class="btn btn-outline btn-sm" id="closeDetail">إغلاق التفاصيل</button>
+</div>
+<!-- 4a. Close Event Checklist -->
+<div class="detail-section" id="checklistSection">
+<h3>قائمة إغلاق الفعالية</h3>
+<div class="checklist-progress">
+<div class="label" id="checklistLabel">0 / 7 مكتمل</div>
+<div class="bar"><div class="bar-fill" id="checklistBar" style="width:0%"></div></div>
+</div>
+<ul class="checklist" id="checklistItems"></ul>
+<div style="margin-top:14px">
+<button class="btn btn-green" disabled="" id="closeEventBtn">إغلاق الفعالية</button>
+</div>
+</div>
+<!-- 4b. Attendance Summary -->
+<div class="detail-section">
+<h3>ملخص الحضور</h3>
+<div class="summary-grid" id="attendanceSummary">
+<div class="summary-item"><div class="val" id="attGuests">0</div><div class="lbl">إجمالي المدعوين</div></div>
+<div class="summary-item"><div class="val" id="attConfirmed">0</div><div class="lbl">مؤكد الحضور</div></div>
+<div class="summary-item"><div class="val" id="attAttended">0</div><div class="lbl">حضر فعليًا</div></div>
+<div class="summary-item"><div class="val" id="attCheckin">0</div><div class="lbl">تشيك-إن فعلي</div></div>
+</div>
+<div style="margin-top:4px">
+<div style="display:flex;justify-content:space-between;font-size:12px;color:#999;margin-bottom:2px">
+<span>نسبة الحضور الفعلي</span>
+<span id="attRate">0%</span>
+</div>
+<div class="rate-bar"><div class="fill" id="attRateBar" style="width:0%;background:#4caf50"></div></div>
+</div>
+</div>
+<!-- 4c. Sending Summary -->
+<div class="detail-section">
+<h3>ملخص الإرسال</h3>
+<div class="summary-grid" id="sendSummary">
+<div class="summary-item"><div class="val" id="sendTotal">0</div><div class="lbl">إجمالي المرسل</div></div>
+<div class="summary-item"><div class="val" id="sendSuccess">0</div><div class="lbl">ناجح</div></div>
+<div class="summary-item"><div class="val" id="sendFail">0</div><div class="lbl">فاشل</div></div>
+</div>
+<div class="send-channels">
+<div class="send-ch"><div class="ch-val" id="sendWhatsapp">0</div><div class="ch-name">واتساب</div></div>
+<div class="send-ch"><div class="ch-val" id="sendEmail">0</div><div class="ch-name">إيميل</div></div>
+<div class="send-ch"><div class="ch-val" id="sendSms">0</div><div class="ch-name">SMS</div></div>
+</div>
+</div>
+<!-- 4d. Financial / Budget Tracking -->
+<div class="detail-section">
+<h3>تتبع الميزانية</h3>
+<div class="budget-header">
+<div class="budget-field">
+<label for="budgetEstimated">الميزانية المقدرة</label>
+<input dir="ltr" id="budgetEstimated" placeholder="0" type="number"/>
+</div>
+<div class="budget-field">
+<label for="budgetActual">الميزانية الفعلية</label>
+<input dir="ltr" id="budgetActual" placeholder="0" type="number"/>
+</div>
+<div class="budget-field" style="display:flex;align-items:flex-end">
+<button class="btn btn-outline btn-sm" id="saveBudgetBtn" style="width:100%">حفظ الميزانية</button>
+</div>
+</div>
+<div style="display:flex;justify-content:space-between;font-size:12px;color:#999;margin-bottom:2px">
+<span>الفرق الكلي</span>
+<span id="budgetVariance">0</span>
+</div>
+<div class="rate-bar" style="margin-bottom:16px"><div class="fill" id="budgetVarianceBar" style="width:50%;background:#4caf50"></div></div>
+<table class="budget-items-table" id="budgetItemsTable">
+<thead>
+<tr>
+<th>البند</th>
+<th>التكلفة المقدرة</th>
+<th>التكلفة الفعلية</th>
+<th>الفرق</th>
+<th>الفرق %</th>
+<th></th>
+</tr>
+</thead>
+<tbody id="budgetItemsBody"></tbody>
+</table>
+<div class="add-item-row" style="text-align:center;padding-top:10px">
+<button class="btn btn-outline btn-sm" id="addBudgetItemBtn">+ إضافة بند</button>
+</div>
+</div>
+</div>
+<!-- ===== Add/Edit Event Modal ===== -->
+<div class="modal-bg" id="eventModalBg">
+<div class="modal">
+<h3 id="eventModalTitle">إضافة فعالية</h3>
+<div class="field"><label for="evName">اسم الفعالية *</label><input id="evName" placeholder="مثال: حفل زفاف سارة" type="text"/></div>
+<div class="field"><label for="evClient">العميل / العميلة *</label><input id="evClient" placeholder="اسم العميل" type="text"/></div>
+<div class="field"><label for="evPhone">هاتف العميل</label><input dir="ltr" id="evPhone" placeholder="05xxxxxxxx" type="text"/></div>
+<div class="field"><label for="evDate">تاريخ الفعالية</label><input dir="ltr" id="evDate" type="date"/></div>
+<div class="field"><label for="evTime">الوقت</label><input dir="ltr" id="evTime" type="time"/></div>
+<div class="field"><label for="evLocation">الموقع</label><input id="evLocation" placeholder="اسم القاعة أو الموقع" type="text"/></div>
+<div class="field"><label for="evPackage">الباقة</label><select id="evPackage"><option value="">بدون تحديد</option></select></div>
+<div class="field"><label for="evQrOverride">QR لبطاقة الدخول</label><select id="evQrOverride"><option value="auto">تلقائي حسب الباقة</option><option value="on">تفعيل QR يدويًا لهذي المناسبة</option><option value="off">تعطيل QR يدويًا لهذي المناسبة</option></select></div>
+<div class="field"><label>إعدادات دعوة WhatsApp / Email</label><div style="font-size:11px;color:#777;margin-bottom:8px">هذه الإعدادات تخص هذه المناسبة فقط. موقع الدعوة التفاعلي لا يتغير.</div></div>
+<div class="field"><label for="evInviteVideo">فيديو الدعوة (رابط HTTPS مباشر)</label><input dir="ltr" id="evInviteVideo" placeholder="https://.../invitation.mp4" type="url"/></div>
+<div class="field"><label for="evEmailBg">خلفية بريد الدعوة (رابط صورة HTTPS)</label><input dir="ltr" id="evEmailBg" placeholder="https://.../background.jpg" type="url"/></div>
+<div class="field"><label for="evEmailFont">خط بريد الدعوة</label><select id="evEmailFont">
+<option value="Tahoma">Tahoma</option><option value="Arial">Arial</option><option value="Georgia">Georgia</option><option value="Trebuchet MS">Trebuchet MS</option>
+</select></div>
+<div class="field"><label for="evEmailHeadline">عنوان البريد</label><input id="evEmailHeadline" maxlength="120" placeholder="دعوة خاصة إليك 🤍" type="text"/></div>
+<div class="field"><label for="evEmailButtonText">كلمة زر مشاهدة الدعوة</label><input id="evEmailButtonText" maxlength="60" placeholder="مشاهدة الدعوة 🎥" type="text"/></div>
+<div class="field"><label for="evEmailBody">رسالة البريد</label><textarea id="evEmailBody" maxlength="1000" placeholder="يسعدنا دعوتك لمشاركتنا مناسبتنا..."></textarea></div>
+<div class="field"><label for="evNotes">ملاحظات</label><textarea id="evNotes" placeholder="ملاحظات إضافية..."></textarea></div>
+<div class="msg-status" id="evMsg"></div>
+<div class="modal-actions">
+<button class="btn btn-outline" id="evCancel">إلغاء</button>
+<button class="btn btn-gold" id="evSave">حفظ</button>
+</div>
+</div>
+</div>
+<script type="module">
+import { auth, db, requireLogin, collection, doc, addDoc, updateDoc, deleteDoc, getDoc, getDocs, query, where, orderBy, serverTimestamp, onSnapshot } from "../js/firebase-init.js";
+
+let allEvents = [];
+let selectedEventId = null;
+let editingEventId = null;
+let packageOptions = [];
+
+async function loadPackageOptions() {
+  try {
+    const snap = await getDoc(doc(db, "ai_knowledge", "packages"));
+    const data = snap.exists() ? snap.data() : {};
+    packageOptions = Array.isArray(data.packages) ? data.packages : (Array.isArray(data.items) ? data.items : []);
+    const sel = document.getElementById("evPackage");
+    sel.innerHTML = '<option value="">بدون تحديد</option>' + packageOptions.map((p, i) => {
+      const id = p.id || p.key || p.slug || `index:${i}`;
+      return `<option value="${escapeHtml(id)}">${escapeHtml(p.name || id)}</option>`;
+    }).join("");
+  } catch (e) {
+    packageOptions = [];
+  }
+}
+
+const CHECKLIST_DEFAULTS = [
+  "تأكيد جميع الضيوف",
+  "إرسال التذكير النهائي",
+  "تجهيز قائمة التسجيل (تشيك-إن)",
+  "مراجعة الحضور الفعلي",
+  "إرسال رسالة شكر بعد الفعالية",
+  "تسوية الميزانية المالية",
+  "أرشفة الفعالية"
+];
+
+function escapeHtml(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function formatNum(n) {
+  return Number(n || 0).toLocaleString("ar-SA");
+}
+
+// ===== requireLogin =====
+requireLogin(async () => {
+  await loadPackageOptions();
+  const q = query(collection(db, "events"), orderBy("createdAt", "desc"));
+  onSnapshot(q, (snap) => {
+    allEvents = [];
+    snap.forEach((d) => {
+      const r = d.data();
+      allEvents.push({
+        id: d.id,
+        name: r.name || "—",
+        client: r.client || "—",
+        phone: r.phone || "",
+        date: r.date || "",
+        time: r.time || "",
+        location: r.location || "",
+        notes: r.notes || "",
+        invitationDelivery: r.invitationDelivery || {},
+        status: r.status || "preparing",
+        guests: r.guests || 0,
+        confirmed: r.confirmed || 0,
+        attended: r.attended || 0,
+        closeChecklist: r.closeChecklist || null,
+        budgetEstimated: r.budgetEstimated || 0,
+        budgetActual: r.budgetActual || 0,
+        budgetItems: r.budgetItems || [],
+        createdAt: r.createdAt,
+      });
+    });
+    updateStats();
+    renderTable();
+    if (selectedEventId) loadDetail(selectedEventId);
+  }, () => {
+    document.getElementById("eventsBody").innerHTML = '<tr><td colspan="8" class="empty">تعذّر تحميل البيانات</td></tr>';
+  });
+});
+
+// ===== Stats =====
+function updateStats() {
+  document.getElementById("statTotal").textContent = allEvents.filter(e => e.status !== "archived").length;
+  document.getElementById("statActive").textContent = allEvents.filter(e => e.status === "active" || e.status === "preparing").length;
+  document.getElementById("statEnded").textContent = allEvents.filter(e => e.status === "ended").length;
+  document.getElementById("statArchived").textContent = allEvents.filter(e => e.status === "archived").length;
+}
+
+// ===== Filter + Search =====
+function getFiltered() {
+  const q = document.getElementById("searchInput").value.trim().toLowerCase();
+  const filter = document.getElementById("filterStatus").value;
+  return allEvents.filter(e => {
+    if (filter !== "all" && e.status !== filter) return false;
+    if (q && !e.name.toLowerCase().includes(q) && !e.client.toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+
+// ===== Status Map =====
+const statusMap = {
+  preparing: { cls: "preparing", text: "قيد التحضير" },
+  active: { cls: "active", text: "نشطة" },
+  ended: { cls: "ended", text: "منتهية" },
+  closed: { cls: "ended", text: "مغلقة" },
+  archived: { cls: "archived", text: "مؤرشفة" },
+};
+
+// ===== Render Table =====
+function renderTable() {
+  const body = document.getElementById("eventsBody");
+  const list = getFiltered();
+  const hint = document.getElementById("countHint");
+
+  if (!list.length) {
+    body.innerHTML = '<tr><td colspan="8" class="empty">لا يوجد فعاليات مطابقة</td></tr>';
+    hint.textContent = "";
+    return;
+  }
+
+  body.innerHTML = list.map((e, i) => {
+    const s = statusMap[e.status] || statusMap.preparing;
+    const isSelected = selectedEventId === e.id ? "selected-row" : "";
+    const isArchived = e.status === "archived" ? "archived-row" : "";
+    const isActive = (e.status !== "ended" && e.status !== "archived" && e.status !== "closed");
+    const closeBtnDisabled = (e.status === "ended" || e.status === "archived" || e.status === "closed") ? "disabled" : "";
+    const archiveBtnDisabled = e.status === "archived" ? "disabled" : "";
+    const closureLink = isActive ? `<a href="event-closure.html?event=${e.id}" class="btn btn-sm btn-outline" style="text-decoration:none">إغلاق المناسبة</a>` : "";
+    return `<tr class="${isSelected} ${isArchived}" data-id="${e.id}">
+      <td>${i + 1}</td>
+      <td><a href="#" class="event-name-link" data-id="${e.id}" style="color:#d4af37;text-decoration:none;font-weight:bold">${escapeHtml(e.name)}</a></td>
+      <td>${escapeHtml(e.client)}</td>
+      <td dir="ltr" style="text-align:right">${escapeHtml(e.date)}</td>
+      <td dir="ltr" style="text-align:right">${escapeHtml(e.time)}</td>
+      <td>${escapeHtml(e.location)}</td>
+      <td><span class="badge ${s.cls}">${s.text}</span></td>
+      <td class="row-actions">
+        <button class="btn btn-sm btn-outline editBtn" data-id="${e.id}">تعديل</button>
+        ${closureLink}
+        <button class="btn btn-sm btn-green closeBtn" data-id="${e.id}" ${closeBtnDisabled}>إغلاق</button>
+        <button class="btn btn-sm btn-purple archiveBtn" data-id="${e.id}" ${archiveBtnDisabled}>أرشفة</button>
+        <button class="btn btn-sm btn-danger deleteBtn" data-id="${e.id}">حذف</button>
+      </td>
+    </tr>`;
+  }).join("");
+
+  hint.textContent = `عرض ${list.length} من أصل ${allEvents.length} فعالية`;
+
+  // Bind events
+  body.querySelectorAll(".event-name-link").forEach(a => {
+    a.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      openDetail(a.dataset.id);
+    });
+  });
+  body.querySelectorAll(".editBtn").forEach(btn => {
+    btn.addEventListener("click", () => openEditModal(btn.dataset.id));
+  });
+  body.querySelectorAll(".closeBtn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      if (!confirm("تأكيد إغلاق الفعالية؟")) return;
+      updateDoc(doc(db, "events", btn.dataset.id), { status: "ended" });
+    });
+  });
+  body.querySelectorAll(".archiveBtn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      if (!confirm("تأكيد أرشفة الفعالية؟")) return;
+      updateDoc(doc(db, "events", btn.dataset.id), { status: "archived" });
+    });
+  });
+  body.querySelectorAll(".deleteBtn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      if (!confirm("تأكيد حذف هذه الفعالية نهائيًا؟ ما فيه تراجع.")) return;
+      btn.disabled = true;
+      try {
+        await deleteDoc(doc(db, "events", btn.dataset.id));
+        if (selectedEventId === btn.dataset.id) {
+          selectedEventId = null;
+          document.getElementById("detailPanel").classList.remove("visible");
+        }
+      } catch (e) {
+        alert("تعذّر الحذف");
+      }
+      btn.disabled = false;
+    });
+  });
+}
+
+document.getElementById("searchInput").addEventListener("input", renderTable);
+document.getElementById("filterStatus").addEventListener("change", renderTable);
+
+// ===================== Add/Edit Modal =====================
+const eventModalBg = document.getElementById("eventModalBg");
+
+document.getElementById("openAddModal").addEventListener("click", () => {
+  editingEventId = null;
+  document.getElementById("eventModalTitle").textContent = "إضافة فعالية";
+  ["evName","evClient","evPhone","evDate","evTime","evLocation","evInviteVideo","evEmailBg","evEmailHeadline","evEmailButtonText","evEmailBody","evNotes"].forEach(id => document.getElementById(id).value = "");
+  document.getElementById("evPackage").value = "";
+  document.getElementById("evQrOverride").value = "auto";
+  document.getElementById("evMsg").textContent = "";
+  eventModalBg.classList.add("open");
+});
+
+document.getElementById("evCancel").addEventListener("click", () => eventModalBg.classList.remove("open"));
+
+eventModalBg.addEventListener("click", (e) => {
+  if (e.target === eventModalBg) eventModalBg.classList.remove("open");
+});
+
+function openEditModal(id) {
+  const ev = allEvents.find(e => e.id === id);
+  if (!ev) return;
+  editingEventId = id;
+  document.getElementById("eventModalTitle").textContent = "تعديل فعالية";
+  document.getElementById("evName").value = ev.name;
+  document.getElementById("evClient").value = ev.client;
+  document.getElementById("evPhone").value = ev.phone;
+  document.getElementById("evDate").value = ev.date;
+  document.getElementById("evTime").value = ev.time;
+  document.getElementById("evLocation").value = ev.location;
+  document.getElementById("evPackage").value = ev.packageId || "";
+  document.getElementById("evQrOverride").value = ev.qrOverride || "auto";
+  document.getElementById("evInviteVideo").value = ev.invitationDelivery?.videoUrl || "";
+  document.getElementById("evEmailBg").value = ev.invitationDelivery?.emailBgUrl || "";
+  document.getElementById("evEmailFont").value = ev.invitationDelivery?.emailFont || "Tahoma";
+  document.getElementById("evEmailHeadline").value = ev.invitationDelivery?.emailHeadline || "دعوة خاصة إليك 🤍";
+  document.getElementById("evEmailButtonText").value = ev.invitationDelivery?.emailButtonText || "مشاهدة الدعوة 🎥";
+  document.getElementById("evEmailBody").value = ev.invitationDelivery?.emailBody || "يسعدنا دعوتك لمشاركتنا مناسبتنا 🤍";
+  document.getElementById("evNotes").value = ev.notes;
+  document.getElementById("evMsg").textContent = "";
+  eventModalBg.classList.add("open");
+}
+
+document.getElementById("evSave").addEventListener("click", async () => {
+  const name = document.getElementById("evName").value.trim().slice(0, 200);
+  const client = document.getElementById("evClient").value.trim().slice(0, 200);
+  const phone = document.getElementById("evPhone").value.trim().slice(0, 30);
+  const date = document.getElementById("evDate").value;
+  const time = document.getElementById("evTime").value;
+  const location = document.getElementById("evLocation").value.trim().slice(0, 300);
+  const notes = document.getElementById("evNotes").value.trim().slice(0, 2000);
+  const videoUrl = document.getElementById("evInviteVideo").value.trim().slice(0, 1000);
+  const emailBgUrl = document.getElementById("evEmailBg").value.trim().slice(0, 1000);
+  const emailFont = ["Tahoma","Arial","Georgia","Trebuchet MS"].includes(document.getElementById("evEmailFont").value) ? document.getElementById("evEmailFont").value : "Tahoma";
+  const emailHeadline = document.getElementById("evEmailHeadline").value.trim().slice(0, 120);
+  const emailButtonText = document.getElementById("evEmailButtonText").value.trim().slice(0, 60);
+  const emailBody = document.getElementById("evEmailBody").value.trim().slice(0, 1000);
+  const invitationDelivery = { videoUrl, emailBgUrl, emailFont, emailHeadline, emailButtonText, emailBody };
+  const packageId = document.getElementById("evPackage").value.trim();
+  const qrOverride = ["auto","on","off"].includes(document.getElementById("evQrOverride").value) ? document.getElementById("evQrOverride").value : "auto";
+  const selectedPackage = packageOptions.find((p, i) => String(p.id || p.key || p.slug || `index:${i}`) === packageId);
+  const packageName = selectedPackage ? (selectedPackage.name || "") : "";
+  const msgEl = document.getElementById("evMsg");
+
+  if (!name) { msgEl.textContent = "اسم الفعالية مطلوب"; msgEl.className = "msg-status err"; return; }
+  if (!client) { msgEl.textContent = "اسم العميل مطلوب"; msgEl.className = "msg-status err"; return; }
+
+  const btn = document.getElementById("evSave");
+  btn.disabled = true;
+  try {
+    if (editingEventId) {
+      await updateDoc(doc(db, "events", editingEventId), { name, client, phone, date, time, location, notes, packageId, packageName, qrOverride, invitationDelivery });
+      msgEl.textContent = "تم التعديل"; msgEl.className = "msg-status ok";
+    } else {
+      await addDoc(collection(db, "events"), {
+        name, client, phone, date, time, location, notes, packageId, packageName, qrOverride, invitationDelivery,
+        status: "preparing",
+        guests: 0, confirmed: 0, attended: 0,
+        closeChecklist: null,
+        budgetEstimated: 0, budgetActual: 0, budgetItems: [],
+        createdAt: serverTimestamp(),
+      });
+      msgEl.textContent = "تمت الإضافة"; msgEl.className = "msg-status ok";
+    }
+    setTimeout(() => eventModalBg.classList.remove("open"), 500);
+  } catch (e) {
+    msgEl.textContent = "تعذّرت العملية"; msgEl.className = "msg-status err";
+  }
+  btn.disabled = false;
+});
+
+// ===================== Event Detail Panel =====================
+function openDetail(id) {
+  selectedEventId = id;
+  document.getElementById("detailPanel").classList.add("visible");
+  document.getElementById("detailPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+  renderTable(); // to highlight selected row
+  loadDetail(id);
+}
+
+document.getElementById("closeDetail").addEventListener("click", () => {
+  selectedEventId = null;
+  document.getElementById("detailPanel").classList.remove("visible");
+  renderTable();
+});
+
+async function loadDetail(id) {
+  const ev = allEvents.find(e => e.id === id);
+  if (!ev) return;
+
+  document.getElementById("detailTitle").textContent = escapeHtml(ev.name) + " — " + escapeHtml(ev.client);
+
+  // --- 4a. Checklist ---
+  renderChecklist(ev);
+
+  // --- 4b. Attendance ---
+  document.getElementById("attGuests").textContent = formatNum(ev.guests);
+  document.getElementById("attConfirmed").textContent = formatNum(ev.confirmed);
+  document.getElementById("attAttended").textContent = formatNum(ev.attended);
+
+  // Fetch checkin count
+  let checkinCount = 0;
+  if (ev.date) {
+    try {
+      const checkinQ = query(collection(db, "checkins"), where("date", "==", ev.date));
+      const checkinSnap = await getDocs(checkinQ);
+      checkinCount = checkinSnap.size;
+    } catch (e) { /* collection may not exist */ }
+  }
+  document.getElementById("attCheckin").textContent = formatNum(checkinCount);
+
+  const totalInvited = ev.guests || 0;
+  const actualAttended = ev.attended || 0;
+  const rate = totalInvited > 0 ? Math.round((actualAttended / totalInvited) * 100) : 0;
+  document.getElementById("attRate").textContent = rate + "%";
+  document.getElementById("attRateBar").style.width = rate + "%";
+  document.getElementById("attRateBar").style.background = rate >= 70 ? "#4caf50" : rate >= 40 ? "#d4af37" : "#e07a5f";
+
+  // --- 4c. Sending Summary ---
+  let sendTotal = 0, sendSuccess = 0, sendFail = 0;
+  let sendByWhatsapp = 0, sendByEmail = 0, sendBySms = 0;
+  try {
+    const sendQ = query(collection(db, "send_logs"), where("eventId", "==", id));
+    const sendSnap = await getDocs(sendQ);
+    sendSnap.forEach(d => {
+      const r = d.data();
+      const status = r.status || "";
+      const channel = r.channel || "";
+      sendTotal++;
+      if (status === "success" || status === "sent") sendSuccess++;
+      else sendFail++;
+      if (channel === "whatsapp") sendByWhatsapp++;
+      else if (channel === "email") sendByEmail++;
+      else if (channel === "sms") sendBySms++;
+    });
+  } catch (e) { /* collection may not exist */ }
+  document.getElementById("sendTotal").textContent = formatNum(sendTotal);
+  document.getElementById("sendSuccess").textContent = formatNum(sendSuccess);
+  document.getElementById("sendFail").textContent = formatNum(sendFail);
+  document.getElementById("sendWhatsapp").textContent = formatNum(sendByWhatsapp);
+  document.getElementById("sendEmail").textContent = formatNum(sendByEmail);
+  document.getElementById("sendSms").textContent = formatNum(sendBySms);
+
+  // --- 4d. Budget ---
+  document.getElementById("budgetEstimated").value = ev.budgetEstimated || 0;
+  document.getElementById("budgetActual").value = ev.budgetActual || 0;
+  renderBudgetVariance(ev.budgetEstimated, ev.budgetActual);
+  renderBudgetItems(ev.budgetItems || [], id);
+}
+
+// --- 4a. Checklist Rendering ---
+function renderChecklist(ev) {
+  const list = ev.closeChecklist || CHECKLIST_DEFAULTS.map(t => ({ text: t, done: false }));
+  // Ensure all defaults exist
+  const merged = CHECKLIST_DEFAULTS.map(def => {
+    const existing = list.find(item => item.text === def);
+    return existing || { text: def, done: false };
+  });
+
+  const ul = document.getElementById("checklistItems");
+  ul.innerHTML = merged.map((item, i) => {
+    const doneClass = item.done ? "done" : "";
+    const checked = item.done ? "checked" : "";
+    return `<li class="${doneClass}">
+      <input type="checkbox" data-idx="${i}" ${checked}>
+      <span>${escapeHtml(item.text)}</span>
+    </li>`;
+  }).join("");
+
+  const doneCount = merged.filter(i => i.done).length;
+  const total = merged.length;
+  const pct = Math.round((doneCount / total) * 100);
+  document.getElementById("checklistLabel").textContent = `${doneCount} / ${total} مكتمل`;
+  document.getElementById("checklistBar").style.width = pct + "%";
+  document.getElementById("closeEventBtn").disabled = doneCount < total;
+
+  // Bind checkbox changes
+  ul.querySelectorAll("input[type=checkbox]").forEach(cb => {
+    cb.addEventListener("change", async () => {
+      const idx = parseInt(cb.dataset.idx);
+      merged[idx].done = cb.checked;
+      try {
+        await updateDoc(doc(db, "events", ev.id), { closeChecklist: merged });
+      } catch (e) {
+        alert("تعذّر حفظ القائمة");
+      }
+    });
+  });
+
+  // Close event button
+  document.getElementById("closeEventBtn").onclick = async () => {
+    if (!confirm("تأكيد إغلاق الفعالية نهائيًا؟")) return;
+    try {
+      await updateDoc(doc(db, "events", ev.id), { status: "ended" });
+    } catch (e) {
+      alert("تعذّر إغلاق الفعالية");
+    }
+  };
+}
+
+// --- 4d. Budget Variance ---
+function renderBudgetVariance(estimated, actual) {
+  const est = Number(estimated) || 0;
+  const act = Number(actual) || 0;
+  const variance = act - est;
+  const pct = est > 0 ? Math.round((variance / est) * 100) : 0;
+  const sign = variance > 0 ? "+" : "";
+  const varianceEl = document.getElementById("budgetVariance");
+  varianceEl.textContent = sign + formatNum(variance) + (est > 0 ? ` (${sign}${pct}%)` : "");
+  varianceEl.style.color = variance > 0 ? "#e07a5f" : variance < 0 ? "#4caf50" : "#aaa";
+
+  const bar = document.getElementById("budgetVarianceBar");
+  if (est > 0) {
+    const usagePct = Math.min(100, Math.round((act / est) * 100));
+    bar.style.width = usagePct + "%";
+    bar.style.background = act > est ? "#e07a5f" : "#4caf50";
+  } else {
+    bar.style.width = act > 0 ? "100%" : "0%";
+    bar.style.background = "#4caf50";
+  }
+}
+
+// --- 4d. Budget Items ---
+function renderBudgetItems(items, eventId) {
+  const tbody = document.getElementById("budgetItemsBody");
+  if (!items || !items.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty" style="padding:14px">لا توجد بنود بعد</td></tr>';
+    return;
+  }
+
+  let totalEst = 0, totalAct = 0;
+  let rows = items.map((item, i) => {
+    const est = Number(item.estimated) || 0;
+    const act = Number(item.actual) || 0;
+    totalEst += est;
+    totalAct += act;
+    const variance = act - est;
+    const pct = est > 0 ? ((variance / est) * 100).toFixed(1) : "0";
+    const varClass = variance > 0 ? "variance-pos" : variance < 0 ? "variance-neg" : "";
+    const sign = variance > 0 ? "+" : "";
+    return `<tr>
+      <td><input type="text" value="${escapeHtml(item.name)}" data-idx="${i}" data-field="name"></td>
+      <td><input type="number" value="${est}" data-idx="${i}" data-field="estimated" dir="ltr"></td>
+      <td><input type="number" value="${act}" data-idx="${i}" data-field="actual" dir="ltr"></td>
+      <td class="${varClass}">${sign}${formatNum(variance)}</td>
+      <td class="${varClass}">${sign}${pct}%</td>
+      <td><button class="btn btn-sm btn-danger delBudgetItem" data-idx="${i}">حذف</button></td>
+    </tr>`;
+  }).join("");
+
+  const totalVariance = totalAct - totalEst;
+  const totalPct = totalEst > 0 ? ((totalVariance / totalEst) * 100).toFixed(1) : "0";
+  const totalVarClass = totalVariance > 0 ? "variance-pos" : totalVariance < 0 ? "variance-neg" : "";
+  const totalSign = totalVariance > 0 ? "+" : "";
+  rows += `<tr class="budget-total-row">
+    <td>الإجمالي</td>
+    <td>${formatNum(totalEst)}</td>
+    <td>${formatNum(totalAct)}</td>
+    <td class="${totalVarClass}">${totalSign}${formatNum(totalVariance)}</td>
+    <td class="${totalVarClass}">${totalSign}${totalPct}%</td>
+    <td></td>
+  </tr>`;
+
+  tbody.innerHTML = rows;
+
+  // Bind input changes
+  tbody.querySelectorAll("input").forEach(inp => {
+    inp.addEventListener("change", async () => {
+      const idx = parseInt(inp.dataset.idx);
+      const field = inp.dataset.field;
+      if (field === "estimated" || field === "actual") {
+        items[idx][field] = Number(inp.value) || 0;
+      } else {
+        items[idx][field] = inp.value;
+      }
+      try {
+        await updateDoc(doc(db, "events", eventId), { budgetItems: items });
+      } catch (e) { /* silent */ }
+    });
+  });
+
+  // Delete item
+  tbody.querySelectorAll(".delBudgetItem").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const idx = parseInt(btn.dataset.idx);
+      items.splice(idx, 1);
+      try {
+        await updateDoc(doc(db, "events", eventId), { budgetItems: items });
+      } catch (e) { /* silent */ }
+    });
+  });
+}
+
+// --- 4d. Add Budget Item ---
+document.getElementById("addBudgetItemBtn").addEventListener("click", async () => {
+  if (!selectedEventId) return;
+  const ev = allEvents.find(e => e.id === selectedEventId);
+  if (!ev) return;
+  const items = [...(ev.budgetItems || []), { name: "", estimated: 0, actual: 0 }];
+  try {
+    await updateDoc(doc(db, "events", selectedEventId), { budgetItems: items });
+  } catch (e) { /* silent */ }
+});
+
+// --- 4d. Save Budget Totals ---
+document.getElementById("saveBudgetBtn").addEventListener("click", async () => {
+  if (!selectedEventId) return;
+  const estimated = Number(document.getElementById("budgetEstimated").value) || 0;
+  const actual = Number(document.getElementById("budgetActual").value) || 0;
+  try {
+    await updateDoc(doc(db, "events", selectedEventId), { budgetEstimated: estimated, budgetActual: actual });
+  } catch (e) {
+    alert("تعذّر حفظ الميزانية");
+  }
+});
+
+// --- 4d. Live variance update on input ---
+document.getElementById("budgetEstimated").addEventListener("input", () => {
+  const est = Number(document.getElementById("budgetEstimated").value) || 0;
+  const act = Number(document.getElementById("budgetActual").value) || 0;
+  renderBudgetVariance(est, act);
+});
+document.getElementById("budgetActual").addEventListener("input", () => {
+  const est = Number(document.getElementById("budgetEstimated").value) || 0;
+  const act = Number(document.getElementById("budgetActual").value) || 0;
+  renderBudgetVariance(est, act);
+});
+</script>
+</body>
+</html>

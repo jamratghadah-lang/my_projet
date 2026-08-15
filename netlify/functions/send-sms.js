@@ -2,7 +2,7 @@
 // إرسال SMS جماعي للضيوف. يقرأ بيانات الاتصال بالمزوّد من متغيرات البيئة في Netlify
 // (Site settings → Environment variables) — لا يوجد أي مفتاح مكتوب هنا في الكود.
 //
-// ⚠️ يتطلب تسجيل دخول: يقرأ Authorization: Bearer <Firebase ID Token> ويتحقق
+// ⚠️ يتطلب تسجيل دخول إداري: يقرأ Authorization: Bearer <Firebase ID Token> ويتحقق
 // منه بصلاحية إدارية، عشان محد يقدر يستخدم هذا الرابط للإرسال العشوائي
 // أو استنزاف رصيد SMS.
 //
@@ -28,44 +28,70 @@
 // مطلوب أيضًا للتحقق من التوكن:
 //   FIREBASE_SERVICE_ACCOUNT_JSON
 
-const { verifyAuth } = require("./_auth");
+const { requireAdmin, getAdminApp } = require("./_auth");
+const { checkRateLimit } = require("./_rate-limit");
+
+const ALLOWED_ORIGINS = ["https://jamratghadah.com", "https://admin.jamratghadah.com"];
+function corsHeaders(event) {
+  const origin = (event.headers.origin || "").toLowerCase();
+  const allowed = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    "Access-Control-Allow-Origin": allowed,
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+  };
+}
 
 exports.handler = async (event) => {
-  if (event.httpMethod !== "POST") {
-    return { statusCode: 405, body: "Method Not Allowed" };
+  if (event.httpMethod === "OPTIONS") {
+    return { statusCode: 204, headers: corsHeaders(event), body: "" };
   }
 
+  if (event.httpMethod !== "POST") {
+    return { statusCode: 405, headers: corsHeaders(event), body: "Method Not Allowed" };
+  }
+
+  const cors = corsHeaders(event);
+
   // التحقق من صلاحية المستخدم قبل أي معالجة
-  const uid = await verifyAuth(event);
-  if (!uid) {
-    return { statusCode: 401, body: JSON.stringify({ error: "غير مصرح — سجّلي دخول بلوحة التحكم أولاً" }) };
+  const admin = await requireAdmin(event);
+  if (!admin) {
+    return { statusCode: 401, headers: cors, body: JSON.stringify({ error: "غير مصرح — سجّلي دخول بلوحة التحكم أولاً" }) };
+  }
+
+  // Rate limiting: 10 requests per 300 seconds
+  const getDb = () => { const a = getAdminApp(); return a ? a.firestore() : null; };
+  const rl = await checkRateLimit(getDb, event, "send-sms", { max: 10, windowSeconds: 300 });
+  if (!rl.allowed) {
+    return { statusCode: 429, headers: cors, body: JSON.stringify({ error: "طلبات كثيرة — حاولي بعد دقائق" }) };
   }
 
   let payload;
   try {
     payload = JSON.parse(event.body || "{}");
   } catch {
-    return { statusCode: 400, body: "Invalid JSON" };
+    return { statusCode: 400, headers: cors, body: "Invalid JSON" };
   }
 
   const { guests, message } = payload;
   // guests: [{ name, phone }]  — phone بصيغة دولية مثل 9665xxxxxxxx
   if (!Array.isArray(guests) || !guests.length || !message) {
-    return { statusCode: 400, body: "guests[] و message مطلوبين" };
+    return { statusCode: 400, headers: cors, body: "guests[] و message مطلوبين" };
   }
 
   // حماية إضافية: حد أقصى لعدد المستلمين وحجم الرسالة لمنع الاستنزاف
   if (guests.length > 500) {
-    return { statusCode: 400, body: JSON.stringify({ error: "حد أقصى 500 ضيف لكل طلب إرسال" }) };
+    return { statusCode: 400, headers: cors, body: JSON.stringify({ error: "حد أقصى 500 ضيف لكل طلب إرسال" }) };
   }
   if (String(message).length > 1000) {
-    return { statusCode: 400, body: JSON.stringify({ error: "نص الرسالة أطول من 1000 حرف" }) };
+    return { statusCode: 400, headers: cors, body: JSON.stringify({ error: "نص الرسالة أطول من 1000 حرف" }) };
   }
 
   const provider = process.env.SMS_PROVIDER; // "msegat" | "unifonic" | "twilio"
   if (!provider) {
     return {
       statusCode: 501,
+      headers: cors,
       body: JSON.stringify({
         error: "لم يتم اختيار مزوّد SMS بعد. أضيفي SMS_PROVIDER ومتغيرات المزوّد في Netlify Environment Variables.",
       }),
@@ -122,12 +148,13 @@ exports.handler = async (event) => {
       }
       results.push({ phone: guest.phone, ok: res.ok, status: res.status });
     } catch (err) {
-      results.push({ phone: guest.phone, ok: false, error: String(err) });
+      results.push({ phone: guest.phone, ok: false, error: "error" });
     }
   }
 
   return {
     statusCode: 200,
+    headers: cors,
     body: JSON.stringify({ sent: results.length, results }),
   };
 };

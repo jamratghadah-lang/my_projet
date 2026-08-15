@@ -21,11 +21,11 @@
     const phone = cleanPhone(settings.whatsapp_number);
     const label = v.title ? `${v.number} (${v.title})` : v.number;
     const text = "مرحبا، أبي أطلب الفيديو رقم " + label;
-    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, "_blank");
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
   }
 
   function orderVideoPayment(settings) {
-    window.open(settings.payment_link, "_blank");
+    window.open(settings.payment_link, "_blank", "noopener,noreferrer");
   }
 
   function openVideoModal(url) {

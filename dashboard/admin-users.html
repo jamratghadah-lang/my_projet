@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+
+<html dir="rtl" lang="ar">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>إدارة المستخدمين — لوحة تحكم جمرة غضى</title>
+<meta content="noindex, nofollow" name="robots"/>
+<style>
+  *{box-sizing:border-box}
+  body{font-family:Tahoma,Arial,sans-serif;background:#111;color:#eee;margin:0;padding:20px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px}
+  h1{color:#d4af37;font-size:20px;margin:0}
+  a.back{color:#aaa;text-decoration:none;font-size:14px}
+  .card{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:18px;margin-bottom:18px}
+  .card h2{font-size:15px;color:#d4af37;margin-top:0}
+
+  /* Stats */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px}
+  .stat{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:16px;text-align:center;position:relative;overflow:hidden}
+  .stat::before{content:"";position:absolute;top:0;right:0;width:4px;height:100%}
+  .stat.gold::before{background:#d4af37}
+  .stat.green::before{background:#4caf50}
+  .stat.red::before{background:#c0392b}
+  .stat .num{font-size:30px;font-weight:bold;line-height:1}
+  .stat.gold .num{color:#d4af37}
+  .stat.green .num{color:#4caf50}
+  .stat.red .num{color:#e07a5f}
+  .stat .label{font-size:11px;color:#999;margin-top:6px}
+
+  /* Toolbar */
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+  .search-wrap{flex:1;min-width:180px;position:relative}
+  .search-wrap input{width:100%;padding:10px 36px 10px 12px;border-radius:8px;border:1px solid #444;background:#222;color:#fff;font-family:inherit;font-size:14px}
+  .search-wrap .icon{position:absolute;right:10px;top:50%;transform:translateY(-50%);color:#888;font-size:16px;pointer-events:none}
+  select{padding:10px 12px;border-radius:8px;border:1px solid #444;background:#222;color:#fff;font-family:inherit;font-size:14px;cursor:pointer}
+  .btn{padding:10px 16px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;font-size:13px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-family:inherit}
+  .btn-gold{background:#d4af37;color:#111}
+  .btn-outline{background:transparent;border:1px solid #555;color:#ddd}
+  .btn-danger{background:#c0392b;color:#fff}
+  .btn-green{background:#4caf50;color:#fff}
+  .btn-blue{background:#2196f3;color:#fff}
+  .btn:disabled{opacity:.45;cursor:default}
+  .btn-sm{padding:6px 10px;font-size:12px;border-radius:6px}
+
+  /* Table */
+  .table-wrap{overflow-x:auto;max-height:600px;overflow-y:auto}
+  .table-wrap::-webkit-scrollbar{width:6px;height:6px}
+  .table-wrap::-webkit-scrollbar-track{background:#1a1a1a}
+  .table-wrap::-webkit-scrollbar-thumb{background:#444;border-radius:3px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  thead th{text-align:right;padding:10px 8px;border-bottom:2px solid #333;color:#d4af37;white-space:nowrap;position:sticky;top:0;background:#1c1c1c;z-index:1}
+  tbody td{padding:10px 8px;border-bottom:1px solid #2a2a2a;white-space:nowrap}
+  tbody tr:hover{background:#222}
+  .empty{color:#777;text-align:center;padding:30px;font-size:14px}
+  .count-hint{font-size:12px;color:#888;margin-top:8px}
+  .row-actions{display:flex;gap:6px}
+
+  /* Badges */
+  .badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:bold;white-space:nowrap}
+  .role-admin{background:rgba(212,175,55,.15);color:#d4af37;border:1px solid rgba(212,175,55,.3)}
+  .role-staff{background:rgba(33,150,243,.15);color:#2196f3;border:1px solid rgba(33,150,243,.3)}
+  .role-checkin{background:rgba(76,175,80,.15);color:#4caf50;border:1px solid rgba(76,175,80,.3)}
+  .role-sender{background:rgba(156,39,176,.15);color:#ce93d8;border:1px solid rgba(156,39,176,.3)}
+  .status-active{background:rgba(76,175,80,.15);color:#4caf50;border:1px solid rgba(76,175,80,.3)}
+  .status-disabled{background:rgba(224,122,95,.15);color:#e07a5f;border:1px solid rgba(224,122,95,.3)}
+
+  /* Modal */
+  .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:999;align-items:center;justify-content:center;padding:16px}
+  .modal-bg.open{display:flex}
+  .modal{background:#1c1c1c;border:1px solid #333;border-radius:14px;padding:22px;width:100%;max-width:440px;max-height:88vh;overflow-y:auto}
+  .modal h3{margin:0 0 16px;color:#d4af37;font-size:16px}
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:12.5px;color:#aaa;margin-bottom:5px}
+  .field input, .field select{
+    width:100%;padding:10px 12px;border-radius:8px;border:1px solid #444;background:#222;color:#fff;
+    font-family:inherit;font-size:14px;
+  }
+  .field .hint{font-size:11.5px;color:#777;margin-top:4px}
+  .modal-actions{display:flex;gap:10px;margin-top:18px}
+  .modal-actions .btn{flex:1;justify-content:center}
+  .msg-status{font-size:13px;margin-top:10px;min-height:18px}
+  .msg-status.err{color:#e07a5f}
+  .msg-status.ok{color:#4caf50}
+
+  /* Roles legend */
+  .legend-list{list-style:none;padding:0;margin:0}
+  .legend-list li{padding:10px 0;border-bottom:1px solid #2a2a2a;display:flex;align-items:flex-start;gap:10px}
+  .legend-list li:last-child{border-bottom:none}
+  .legend-list .role-badge{flex-shrink:0;margin-top:2px}
+  .legend-list .desc{font-size:13px;color:#ccc;line-height:1.6}
+  @media(max-width:600px){.stat .num{font-size:22px}.toolbar{flex-direction:column}.toolbar>*{width:100%}}
+</style>
+</head>
+<body>
+<div class="topbar">
+<h1>👥 إدارة المستخدمين</h1>
+<a class="back" href="index.html">← رجوع للوحة</a>
+</div>
+<!-- Stats -->
+<div class="stats">
+<div class="stat gold"><div class="num" id="statTotal">0</div><div class="label">إجمالي المستخدمين</div></div>
+<div class="stat green"><div class="num" id="statActive">0</div><div class="label">مستخدمين نشطين</div></div>
+<div class="stat red"><div class="num" id="statDisabled">0</div><div class="label">مستخدمين معطّلين</div></div>
+</div>
+<!-- Users Table -->
+<div class="card">
+<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+<h2 style="margin:0">قائمة المستخدمين</h2>
+<button class="btn btn-gold btn-sm" id="openAddModal">➕ إضافة مستخدم</button>
+</div>
+<div class="toolbar">
+<div class="search-wrap">
+<input id="searchInput" placeholder="بحث بالاسم أو البريد..." type="text"/>
+<span class="icon">🔍</span>
+</div>
+<select id="filterRole">
+<option value="all">كل الأدوار</option>
+<option value="admin">مدير</option>
+<option value="staff">موظف</option>
+<option value="checkin">مسجل دخول</option>
+<option value="sender">مرسل</option>
+</select>
+<select id="filterStatus">
+<option value="all">كل الحالات</option>
+<option value="active">نشط</option>
+<option value="disabled">معطّل</option>
+</select>
+</div>
+<div class="table-wrap">
+<table id="usersTable">
+<thead>
+<tr>
+<th>#</th>
+<th>الاسم</th>
+<th>البريد</th>
+<th>الدور</th>
+<th>الحالة</th>
+<th>آخر نشاط</th>
+<th>تاريخ الإنشاء</th>
+<th>إجراءات</th>
+</tr>
+</thead>
+<tbody id="usersBody">
+<tr><td class="empty" colspan="8">جارِ التحميل...</td></tr>
+</tbody>
+</table>
+</div>
+<div class="count-hint" id="countHint"></div>
+</div>
+<!-- Roles Legend -->
+<div class="card">
+<h2>وصف الأدوار</h2>
+<ul class="legend-list">
+<li>
+<span class="badge role-admin role-badge">مدير</span>
+<div class="desc">وصول كامل لكل الصفحات والإعدادات — يشمل إدارة المستخدمين، التكاملات، النسخ الاحتياطي، وسجل العمليات.</div>
+</li>
+<li>
+<span class="badge role-staff role-badge">موظف</span>
+<div class="desc">إدارة الضيوف والفعاليات والقوالب — يمكنه إضافة وتعديل الضيوف، وإرسال الرسائل.</div>
+</li>
+<li>
+<span class="badge role-checkin role-badge">مسجل دخول</span>
+<div class="desc">تسجيل دخول الضيوف فقط — يستخدم صفحة الماسح الضوئي (QR) لتسجيل الحضور.</div>
+</li>
+<li>
+<span class="badge role-sender role-badge">مرسل</span>
+<div class="desc">إرسال الرسائل فقط — يمكنه الوصول لصفحة التذكيرات وإرسال الرسائل الجماعية.</div>
+</li>
+</ul>
+</div>
+<!-- Add/Edit Modal -->
+<div class="modal-bg" id="userModalBg">
+<div class="modal">
+<h3 id="modalTitle">➕ إضافة مستخدم</h3>
+<div class="field"><label for="modalName">الاسم الكامل *</label><input id="modalName" placeholder="اسم المستخدم" type="text"/></div>
+<div class="field"><label for="modalEmail">البريد الإلكتروني *</label><input dir="ltr" id="modalEmail" placeholder="user@example.com" type="email"/></div>
+<div class="field">
+<label for="modalUid">UID *</label>
+<input dir="ltr" id="modalUid" placeholder="XXXXXXXXXXXXXXXXXXXX" type="text"/>
+<div class="hint">UID من Firebase Auth — يُنسخ من Firebase Console</div>
+</div>
+<div class="field">
+<label for="modalRole">الدور</label>
+<select id="modalRole">
+<option value="admin">مدير</option>
+<option selected="" value="staff">موظف</option>
+<option value="checkin">مسجل دخول</option>
+<option value="sender">مرسل</option>
+</select>
+</div>
+<div class="field">
+<label for="modalStatus">الحالة</label>
+<select id="modalStatus">
+<option selected="" value="active">نشط</option>
+<option value="disabled">معطّل</option>
+</select>
+</div>
+<div class="msg-status" id="modalMsg"></div>
+<div class="modal-actions">
+<button class="btn btn-outline" id="modalCancel">إلغاء</button>
+<button class="btn btn-gold" id="modalSave">حفظ</button>
+</div>
+</div>
+</div>
+<script type="module">
+import {
+  db, auth, requireLogin,
+  collection, query, orderBy, onSnapshot,
+  doc, setDoc, deleteDoc, serverTimestamp,
+} from "../js/firebase-init.js";
+
+let allUsers = [];
+let unsub = null;
+let editingId = null;
+
+function escapeHtml(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+const roleLabels = {
+  admin: 'مدير',
+  staff: 'موظف',
+  checkin: 'مسجل دخول',
+  sender: 'مرسل',
+};
+
+const statusLabels = {
+  active: 'نشط',
+  disabled: 'معطّل',
+};
+
+function formatTime(ts) {
+  if (!ts) return '—';
+  const d = ts.toMillis ? new Date(ts.toMillis()) : new Date(ts);
+  return d.toLocaleString('ar-SA', {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit',
+  });
+}
+
+requireLogin(() => {
+  const q = query(collection(db, "users"), orderBy("createdAt", "desc"));
+  unsub = onSnapshot(q, (snap) => {
+    allUsers = [];
+    snap.forEach(d => {
+      const r = d.data();
+      allUsers.push({
+        id: d.id,
+        name: r.name || '—',
+        email: r.email || '—',
+        uid: r.uid || '',
+        role: r.role || 'staff',
+        status: r.status || 'active',
+        lastActivity: r.lastActivity,
+        createdAt: r.createdAt,
+      });
+    });
+    updateStats();
+    renderTable();
+  }, () => {
+    document.getElementById("usersBody").innerHTML = '<tr><td colspan="8" class="empty">تعذّر تحميل البيانات</td></tr>';
+  });
+});
+
+function updateStats() {
+  document.getElementById("statTotal").textContent = allUsers.length;
+  document.getElementById("statActive").textContent = allUsers.filter(u => u.status === 'active').length;
+  document.getElementById("statDisabled").textContent = allUsers.filter(u => u.status === 'disabled').length;
+}
+
+function getFiltered() {
+  const search = document.getElementById("searchInput").value.trim().toLowerCase();
+  const roleFilter = document.getElementById("filterRole").value;
+  const statusFilter = document.getElementById("filterStatus").value;
+  return allUsers.filter(u => {
+    if (roleFilter !== 'all' && u.role !== roleFilter) return false;
+    if (statusFilter !== 'all' && u.status !== statusFilter) return false;
+    if (search) {
+      const matchName = u.name.toLowerCase().includes(search);
+      const matchEmail = u.email.toLowerCase().includes(search);
+      if (!matchName && !matchEmail) return false;
+    }
+    return true;
+  });
+}
+
+function renderTable() {
+  const body = document.getElementById("usersBody");
+  const list = getFiltered();
+  const hint = document.getElementById("countHint");
+
+  if (!list.length) {
+    body.innerHTML = '<tr><td colspan="8" class="empty">لا يوجد مستخدمين مطابقين</td></tr>';
+    hint.textContent = '';
+    return;
+  }
+
+  const currentUser = auth.currentUser;
+
+  body.innerHTML = list.map((u, i) => {
+    const roleLabel = roleLabels[u.role] || u.role;
+    const statusLabel = statusLabels[u.status] || u.status;
+    const isSelf = currentUser && u.uid === currentUser.uid;
+
+    return `<tr>
+      <td>${i + 1}</td>
+      <td>${escapeHtml(u.name)}</td>
+      <td dir="ltr" style="text-align:right;font-size:12px">${escapeHtml(u.email)}</td>
+      <td><span class="badge role-${escapeHtml(u.role)}">${escapeHtml(roleLabel)}</span></td>
+      <td><span class="badge status-${escapeHtml(u.status)}">${escapeHtml(statusLabel)}</span></td>
+      <td style="font-size:12px;color:#999">${escapeHtml(formatTime(u.lastActivity))}</td>
+      <td style="font-size:12px;color:#999">${escapeHtml(formatTime(u.createdAt))}</td>
+      <td>
+        <div class="row-actions">
+          <button class="btn btn-outline btn-sm" onclick="window._editUser('${escapeHtml(u.id)}')">✏️</button>
+          <button class="btn btn-sm ${u.status === 'active' ? 'btn-danger' : 'btn-green'}" onclick="window._toggleUser('${escapeHtml(u.id)}','${escapeHtml(u.status)}')" ${isSelf ? 'disabled title="لا يمكن تعطيل حسابك"' : ''}>${u.status === 'active' ? '🔒 تعطيل' : '✅ تفعيل'}</button>
+          <button class="btn btn-danger btn-sm" onclick="window._deleteUser('${escapeHtml(u.id)}','${escapeHtml(u.name)}')" ${isSelf ? 'disabled title="لا يمكنك حذف حسابك"' : ''}>🗑️</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  hint.textContent = `عرض ${list.length} من أصل ${allUsers.length} مستخدم`;
+}
+
+// ===== Filter events =====
+document.getElementById("searchInput").addEventListener("input", renderTable);
+document.getElementById("filterRole").addEventListener("change", renderTable);
+document.getElementById("filterStatus").addEventListener("change", renderTable);
+
+// ===== Modal controls =====
+const modalBg = document.getElementById("userModalBg");
+const modalTitle = document.getElementById("modalTitle");
+const modalName = document.getElementById("modalName");
+const modalEmail = document.getElementById("modalEmail");
+const modalUid = document.getElementById("modalUid");
+const modalRole = document.getElementById("modalRole");
+const modalStatus = document.getElementById("modalStatus");
+const modalMsg = document.getElementById("modalMsg");
+
+function openModal(editId) {
+  editingId = editId || null;
+  modalMsg.textContent = '';
+  modalMsg.className = 'msg-status';
+
+  if (editingId) {
+    const u = allUsers.find(x => x.id === editingId);
+    if (!u) return;
+    modalTitle.textContent = '✏️ تعديل مستخدم';
+    modalName.value = u.name;
+    modalEmail.value = u.email;
+    modalUid.value = u.uid;
+    modalRole.value = u.role;
+    modalStatus.value = u.status;
+  } else {
+    modalTitle.textContent = '➕ إضافة مستخدم';
+    modalName.value = '';
+    modalEmail.value = '';
+    modalUid.value = '';
+    modalRole.value = 'staff';
+    modalStatus.value = 'active';
+  }
+  modalBg.classList.add('open');
+}
+
+function closeModal() {
+  modalBg.classList.remove('open');
+  editingId = null;
+}
+
+document.getElementById("openAddModal").addEventListener("click", () => openModal(null));
+document.getElementById("modalCancel").addEventListener("click", closeModal);
+modalBg.addEventListener("click", (e) => { if (e.target === modalBg) closeModal(); });
+
+// ===== Save =====
+document.getElementById("modalSave").addEventListener("click", async () => {
+  const name = modalName.value.trim();
+  const email = modalEmail.value.trim();
+  const uid = modalUid.value.trim();
+  const role = modalRole.value;
+  const status = modalStatus.value;
+
+  if (!name || !email || !uid) {
+    modalMsg.textContent = 'جميع الحقول مطلوبة';
+    modalMsg.className = 'msg-status err';
+    return;
+  }
+
+  const docData = {
+    name,
+    email,
+    uid,
+    role,
+    status,
+    updatedAt: serverTimestamp(),
+  };
+
+  try {
+    if (editingId) {
+      // Update existing
+      await setDoc(doc(db, "users", editingId), docData, { merge: true });
+      modalMsg.textContent = 'تم تحديث المستخدم بنجاح ✅';
+      modalMsg.className = 'msg-status ok';
+      setTimeout(closeModal, 800);
+    } else {
+      // Add new — use uid as doc ID
+      docData.createdAt = serverTimestamp();
+      await setDoc(doc(db, "users", uid), docData);
+      modalMsg.textContent = 'تم إضافة المستخدم بنجاح ✅';
+      modalMsg.className = 'msg-status ok';
+      setTimeout(closeModal, 800);
+    }
+  } catch (e) {
+    modalMsg.textContent = 'تعذّر الحفظ: ' + e.message;
+    modalMsg.className = 'msg-status err';
+  }
+});
+
+// ===== Edit User =====
+window._editUser = function(id) { openModal(id); };
+
+// ===== Toggle User Status =====
+window._toggleUser = async function(id, currentStatus) {
+  const newStatus = currentStatus === 'active' ? 'disabled' : 'active';
+  const actionText = newStatus === 'active' ? 'تفعيل' : 'تعطيل';
+  if (!confirm(`هل تريد ${actionText} هذا المستخدم؟`)) return;
+  try {
+    await setDoc(doc(db, "users", id), { status: newStatus, updatedAt: serverTimestamp() }, { merge: true });
+  } catch (e) {
+    alert('تعذّر التحديث: ' + e.message);
+  }
+};
+
+// ===== Delete User =====
+window._deleteUser = async function(id, name) {
+  if (!confirm(`هل تريد حذف المستخدم "${name}" نهائيًا؟`)) return;
+  try {
+    await deleteDoc(doc(db, "users", id));
+  } catch (e) {
+    alert('تعذّر الحذف: ' + e.message);
+  }
+};
+
+// ===== Cleanup =====
+window.addEventListener("beforeunload", () => { if (unsub) unsub(); });
+</script>
+</body>
+</html>

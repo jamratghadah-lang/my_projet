@@ -7,11 +7,11 @@
   function orderPackageWhatsapp(pkg, settings) {
     const phone = cleanPhone(settings.whatsapp_number);
     const text = "مرحبا، أبي أطلب الباقة " + pkg.name;
-    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, "_blank");
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
   }
 
   function orderPackagePayment(settings) {
-    window.open(settings.payment_link, "_blank");
+    window.open(settings.payment_link, "_blank", "noopener,noreferrer");
   }
 
   function renderPackage(grid, pkg, settings) {

@@ -10,11 +10,25 @@
   .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
   h1{color:#d4af37;font-size:20px;margin:0}
   button.logout{background:none;border:1px solid #444;color:#ccc;padding:6px 14px;border-radius:6px;cursor:pointer}
-  .grid{display:grid;grid-template-columns:1fr;gap:14px;max-width:420px}
-  .tile{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:18px;text-decoration:none;color:#eee;display:block}
-  .tile h2{margin:0 0 6px;font-size:16px;color:#d4af37}
-  .tile p{margin:0;font-size:13px;color:#999}
-  .tile.soon{opacity:.5;pointer-events:none}
+  .section-title{color:#888;font-size:12px;margin:20px 0 10px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #222;padding-bottom:6px}
+  .grid{display:grid;grid-template-columns:1fr;gap:14px;max-width:460px}
+  .tile{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:18px;text-decoration:none;color:#eee;display:block;transition:border-color .2s}
+  .tile:hover{border-color:#555}
+  .tile h2{margin:0 0 6px;font-size:15px;color:#d4af37}
+  .tile p{margin:0;font-size:12px;color:#999;line-height:1.6}
+  .tile .badge-new{display:inline-block;background:rgba(76,175,80,.15);color:#4caf50;font-size:10px;padding:2px 8px;border-radius:20px;margin-right:6px;vertical-align:middle}
+  .footer-links{max-width:460px;margin-top:22px;display:flex;gap:10px;justify-content:center}
+  .footer-links a{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:#1c1c1c;border:1px solid #333;color:#666;text-decoration:none;font-size:15px;transition:border-color .2s}
+  .footer-links a:hover{border-color:#555}
+  .notif-badge{position:relative}
+  .notif-badge .dot{position:absolute;top:-2px;right:-2px;width:8px;height:8px;border-radius:50%;background:#e07a5f}
+
+  @media (max-width: 700px){
+    .container,.page,.content,.main-content{width:100%;max-width:100%;padding-left:12px;padding-right:12px;}
+    .grid{grid-template-columns:1fr !important;}
+    .card{min-width:0;}
+    table{display:block;max-width:100%;overflow-x:auto;white-space:nowrap;}
+  }
 </style>
 </head>
 <body>
@@ -24,35 +38,144 @@
 </div>
 
 <div class="grid">
+  <!-- ═══ إدارة المدعوين والفعاليات ═══ -->
+  <div class="section-title">إدارة المدعوين والفعاليات</div>
+
   <a class="tile" href="guests.html">
-    <h2>📋 إدارة المدعوين</h2>
-    <p>أعداد لحظية، بحث وفلترة، وتصدير لـ Excel و PDF</p>
+    <h2>إدارة المدعوين</h2>
+    <p>أعداد لحظية، بحث وفلترة، استيراد/تصدير، وإرسال جماعي</p>
   </a>
-  <a class="tile" href="reminders.html">
-    <h2>📨 تذكير الضيوف</h2>
-    <p>واتساب يدوي أو SMS جماعي قبل يومين من المناسبة</p>
-  </a>
-  <a class="tile" href="qrcodes.html">
-    <h2>🔗 الدعوات ورموز QR</h2>
-    <p>إنشاء وتحميل رمز QR لأي رابط دعوة</p>
+  <a class="tile" href="events.html">
+    <h2><span class="badge-new">جديد</span>إدارة الفعاليات</h2>
+    <p>إنشاء فعاليات، قائمة إغلاق، ملخص حضور وإرسال، تتبع ميزانية</p>
   </a>
   <a class="tile" href="couples.html">
-    <h2>💌 الروابط المخصصة بأسماء العروسين</h2>
+    <h2>الروابط المخصصة بأسماء العروسين</h2>
     <p>مثال: jamratghadah.com/sara-ahmed بدل اسم القالب</p>
   </a>
+
+  <!-- ═══ QR وتسجيل الدخول ═══ -->
+  <div class="section-title">رموز QR وتسجيل الدخول</div>
+
+  <a class="tile" href="qr-central.html">
+    <h2><span class="badge-new">جديد</span>إدارة QR المركزية</h2>
+    <p>عرض كل رموز QR، إلغاء/استعادة، سجل الاستخدام</p>
+  </a>
+  <a class="tile" href="qrcodes.html">
+    <h2>الدعوات ورموز QR</h2>
+    <p>إنشاء وتحميل رمز QR لأي رابط دعوة</p>
+  </a>
+
+  <!-- ═══ الإرسال والتذكير ═══ -->
+  <div class="section-title">الإرسال والتذكير</div>
+
+  <a class="tile" href="templates.html">
+    <h2><span class="badge-new">جديد</span>مكتبة قوالب الرسائل</h2>
+    <p>إنشاء وحفظ قوالب دعوات وتذكير وشكر لكل مناسبة</p>
+  </a>
+  <a class="tile" href="send-log.html">
+    <h2><span class="badge-new">جديد</span>سجل الإرسال</h2>
+    <p>عرض تاريخ كل رسالة مرسلة بالتفصيل مع فلترة وتصدير</p>
+  </a>
+  <a class="tile" href="reminders.html">
+    <h2>تذكير الضيوف</h2>
+    <p>واتساب يدوي أو SMS جماعي قبل يومين من المناسبة</p>
+  </a>
+
+  <!-- ═══ التنبيهات والتقارير ═══ -->
+  <div class="section-title">التنبيهات والتقارير</div>
+
+  <a class="tile notif-badge" href="notification-center.html">
+    <h2><span class="badge-new">جديد</span>مركز الإشعارات</h2>
+    <p>صندوق الوارد للتنبيهات والإشعارات الداخلية</p>
+  </a>
   <a class="tile" href="notifications.html">
-    <h2>✉️ إعدادات التنبيهات والتقارير</h2>
-    <p>تنبيه فوري لكل رد، تقرير يومي، وتذكير تلقائي قبل المناسبة</p>
+    <h2>إعدادات التنبيهات والتقارير</h2>
+    <p>تنبيه فوري لكل رد، تقرير يومي، وتذكير تلقائي</p>
+  </a>
+
+  <!-- ═══ التصميم ═══ -->
+  <div class="section-title">التصميم</div>
+
+  <a class="tile" href="invitation-editor.html">
+    <h2><span class="badge-new">جديد</span>محرر الدعوات</h2>
+    <p>تخصيص نصوص وألوان الدعوات مع معاينة حيّة</p>
+  </a>
+
+  <!-- ═══ الإدارة والصيانة ═══ -->
+  <div class="section-title">الإدارة والصيانة</div>
+
+  <a class="tile" href="admin-users.html">
+    <h2><span class="badge-new">جديد</span>إدارة المستخدمين</h2>
+    <p>إضافة مستخدمين بأدوار مختلفة (مدير، موظف، مسجل دخول، مرسل)</p>
+  </a>
+  <a class="tile" href="operation-log.html">
+    <h2><span class="badge-new">جديد</span>سجل العمليات</h2>
+    <p>سجل تدقيق كامل لكل التغييرات والإجراءات</p>
+  </a>
+  <a class="tile" href="trash.html">
+    <h2><span class="badge-new">جديد</span>سلة المحذوفات</h2>
+    <p>استعادة العناصر المحذوفة أو حذفها نهائيًا</p>
+  </a>
+  <a class="tile" href="archive.html">
+    <h2><span class="badge-new">جديد</span>أرشيف المناسبات</h2>
+    <p>سجل المناسبات المغلقة مع تقارير PDF</p>
+  </a>
+  <a class="tile" href="backup.html">
+    <h2><span class="badge-new">جديد</span>النسخ الاحتياطي</h2>
+    <p>إنشاء واستعادة نسخ احتياطية لقاعدة البيانات</p>
+  </a>
+  <a class="tile" href="integrations.html">
+    <h2><span class="badge-new">جديد</span>التكاملات</h2>
+    <p>إعدادات واتساب، SMS، بريد إلكتروني، Cloudinary، Firebase</p>
+  </a>
+
+  <!-- ═══ الذكاء الاصطناعي ═══ -->
+  <div class="section-title">الذكاء الاصطناعي</div>
+
+  <a class="tile" href="ai-assistant.html">
+    <h2><span class="badge-new">جديد</span>Jamrat AI — إعدادات المساعد</h2>
+    <p>تشغيل/إيقاف المساعد، النبرة، اللغة، وحماية التكلفة</p>
+  </a>
+  <a class="tile" href="ai-knowledge.html">
+    <h2><span class="badge-new">جديد</span>إدارة المعرفة</h2>
+    <p>الباقات، الأسئلة الشائعة، التواصل، السياسات</p>
+  </a>
+  <a class="tile" href="ai-conversations.html">
+    <h2><span class="badge-new">جديد</span>سجل محادثات AI</h2>
+    <p>عرض كل محادثات المساعد الذكي</p>
+  </a>
+  <a class="tile" href="ai-analytics.html">
+    <h2><span class="badge-new">جديد</span>إحصائيات AI</h2>
+    <p>استخدام المساعد، أكثر الأسئلة، Leads، التكلفة</p>
   </a>
 </div>
 
-<div style="max-width:420px;margin-top:22px;text-align:center">
-  <a href="guide.html" title="دليل الموقع الكامل" style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:#1c1c1c;border:1px solid #333;color:#666;text-decoration:none;font-size:15px">📖</a>
+<div class="footer-links">
+  <a href="guide.html" title="دليل الموقع الكامل">📖</a>
 </div>
 
 <script type="module">
-import { auth, signOut, requireLogin } from "../js/firebase-init.js";
-requireLogin(() => {});
+import { auth, signOut, requireLogin, db, collection, query, where, getDocs, onSnapshot } from "../js/firebase-init.js";
+requireLogin(() => {
+  // تحقق من وجود إشعارات غير مقروءة لإظهار نقطة حمراء
+  try {
+    const q = query(collection(db, "dashboard_notifications"), where("read", "==", false));
+    onSnapshot(q, (snap) => {
+      const tile = document.querySelector('a[href="notification-center.html"]');
+      if (tile) {
+        let dot = tile.querySelector('.dot');
+        if (snap.size > 0) {
+          tile.classList.add('notif-badge');
+          if (!dot) { dot = document.createElement('span'); dot.className = 'dot'; tile.appendChild(dot); }
+        } else {
+          tile.classList.remove('notif-badge');
+          if (dot) dot.remove();
+        }
+      }
+    });
+  } catch {}
+});
 document.getElementById("logoutBtn").addEventListener("click", async () => {
   await signOut(auth);
   window.location.href = "login.html";

@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jamrat AI — سجل المحادثات</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+  *{box-sizing:border-box}
+  body{font-family:Tahoma,Arial,sans-serif;background:#111;color:#eee;margin:0;padding:20px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px}
+  h1{color:#d4af37;font-size:20px;margin:0}
+  a.back{color:#aaa;text-decoration:none;font-size:14px}
+  .card{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:18px;margin-bottom:18px}
+  .card h2{font-size:15px;color:#d4af37;margin:0 0 4px}
+  .card .subtitle{font-size:12px;color:#999;margin:0 0 14px}
+
+  .btn{padding:10px 16px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;font-size:13px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-family:inherit}
+  .btn-gold{background:#d4af37;color:#111}
+  .btn-outline{background:transparent;border:1px solid #555;color:#ddd}
+
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:12.5px;color:#aaa;margin-bottom:5px}
+  .field input,.field select{
+    width:100%;padding:10px 12px;border-radius:8px;border:1px solid #444;background:#222;color:#fff;
+    font-family:inherit;font-size:14px;
+  }
+
+  .msg-status{font-size:13px;margin-top:8px;min-height:18px}
+  .msg-status.err{color:#e07a5f}
+  .msg-status.ok{color:#4caf50}
+
+  /* Filter bar */
+  .filter-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:14px}
+  .filter-bar .field{margin-bottom:0;flex:1;min-width:140px}
+  .filter-bar .field.phone-field{min-width:180px}
+
+  /* Table */
+  .table-wrap{overflow-x:auto;max-height:600px;overflow-y:auto}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  thead th{text-align:right;padding:10px 8px;border-bottom:2px solid #333;color:#d4af37;white-space:nowrap;position:sticky;top:0;background:#1c1c1c;z-index:2}
+  tbody td{padding:10px 8px;border-bottom:1px solid #2a2a2a;white-space:nowrap;cursor:pointer}
+  tbody tr:hover{background:#222}
+  tbody tr.expanded{background:#252520}
+  .empty{color:#777;text-align:center;padding:30px;font-size:14px}
+  .loading{color:#999;font-size:14px;text-align:center;padding:40px}
+  .count-hint{font-size:12px;color:#888;margin-top:8px}
+
+  /* Expanded conversation */
+  .conv-detail{display:none}
+  .conv-detail.visible{display:block}
+  .conv-detail-inner{background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:16px;margin-top:8px}
+  .conv-msg{margin-bottom:10px;padding:10px 14px;border-radius:8px;max-width:85%}
+  .conv-msg.user{background:#1e3a1e;margin-left:auto;border:1px solid #2e5a2e}
+  .conv-msg.assistant{background:#2a2a1a;margin-right:auto;border:1px solid #3a3a2a}
+  .conv-msg .msg-role{font-size:10px;color:#999;margin-bottom:3px}
+  .conv-msg .msg-text{font-size:13px;color:#ddd;line-height:1.6;white-space:pre-wrap;word-break:break-word}
+  .conv-msg .msg-meta{font-size:10px;color:#666;margin-top:4px}
+  .conv-expand-btn{background:none;border:none;color:#888;cursor:pointer;font-size:16px;padding:2px 6px;border-radius:4px}
+  .conv-expand-btn:hover{background:#333}
+
+  .badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:bold;white-space:nowrap}
+  .badge.whatsapp{background:rgba(37,211,102,.15);color:#25d366;border:1px solid rgba(37,211,102,.3)}
+  .badge.web{background:rgba(33,150,243,.15);color:#2196f3;border:1px solid rgba(33,150,243,.3)}
+  .badge.tool{background:rgba(212,175,55,.15);color:#d4af37;border:1px solid rgba(212,175,55,.3)}
+
+  /* Custom scrollbar */
+  .table-wrap::-webkit-scrollbar{width:6px;height:6px}
+  .table-wrap::-webkit-scrollbar-track{background:#1c1c1c}
+  .table-wrap::-webkit-scrollbar-thumb{background:#444;border-radius:3px}
+  .table-wrap::-webkit-scrollbar-thumb:hover{background:#555}
+
+  @media(max-width:600px){
+    .filter-bar .field{min-width:120px}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>💬 سجل المحادثات</h1>
+  <a class="back" href="index.html">← رجوع للوحة</a>
+</div>
+
+<div id="app"><div class="loading">جارٍ التحميل...</div></div>
+
+<script type="module">
+import { requireLogin, db, collection, query, orderBy, where, onSnapshot } from '../js/firebase-init.js';
+
+function escapeHtml(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function formatTime(d){
+  if(!d) return '—';
+  const dt = d?.toDate ? d.toDate() : new Date(d);
+  return dt.toLocaleString('ar-SA', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+}
+
+function truncate(s, len=60){
+  if(!s) return '';
+  return s.length > len ? s.substring(0, len) + '...' : s;
+}
+
+requireLogin(async (user) => {
+  const app = document.getElementById('app');
+
+  app.innerHTML = `
+    <!-- فلتر -->
+    <div class="card">
+      <h2>🔍 فلتر البحث</h2>
+      <div class="filter-bar">
+        <div class="field"><label>من تاريخ</label><input type="date" id="filter-from"></div>
+        <div class="field"><label>إلى تاريخ</label><input type="date" id="filter-to"></div>
+        <div class="field"><label>المنصة</label>
+          <select id="filter-platform">
+            <option value="">الكل</option>
+            <option value="whatsapp">WhatsApp</option>
+            <option value="web">Web</option>
+          </select>
+        </div>
+        <div class="field"><label>النية</label>
+          <select id="filter-intent">
+            <option value="">الكل</option>
+            <option value="greeting">تحية</option>
+            <option value="packages_info">معلومات الباقات</option>
+            <option value="package_recommend">ترشيح باقة</option>
+            <option value="rsvp_update">تحديث حضور</option>
+            <option value="event_info">معلومات المناسبة</option>
+            <option value="location">الموقع</option>
+            <option value="pricing">الأسعار</option>
+            <option value="lead">عميل محتمل</option>
+            <option value="unknown">غير معروف</option>
+          </select>
+        </div>
+        <div class="field phone-field"><label>بحث برقم الهاتف</label><input type="text" id="filter-phone" dir="ltr" placeholder="05xxxxxxxx"></div>
+      </div>
+    </div>
+
+    <!-- جدول المحادثات -->
+    <div class="card">
+      <h2>المحادثات</h2>
+      <div class="subtitle">سجل محادثات المساعد الذكي — محدث لحظياً</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th></th>
+            <th>الوقت</th>
+            <th>المنصة</th>
+            <th>الهاتف</th>
+            <th>الاسم</th>
+            <th>النية</th>
+            <th>رسالة المستخدم</th>
+            <th>رد المساعد</th>
+            <th>الأداة</th>
+          </tr></thead>
+          <tbody id="conv-tbody"><tr><td colspan="9" class="empty">جارٍ التحميل...</td></tr></tbody>
+        </table>
+      </div>
+      <div class="count-hint" id="count-hint"></div>
+    </div>
+  `;
+
+  // تعيين تواريخ افتراضية
+  const today = new Date();
+  const weekAgo = new Date(today); weekAgo.setDate(weekAgo.getDate() - 7);
+  document.getElementById('filter-to').value = today.toISOString().split('T')[0];
+  document.getElementById('filter-from').value = weekAgo.toISOString().split('T')[0];
+
+  // استماع للمحادثات بشكل لحظي
+  let allConversations = [];
+  const INTENT_LABELS = {
+    greeting: 'تحية',
+    packages_info: 'معلومات الباقات',
+    package_recommend: 'ترشيح باقة',
+    rsvp_update: 'تحديث حضور',
+    event_info: 'معلومات المناسبة',
+    location: 'الموقع',
+    pricing: 'الأسعار',
+    lead: 'عميل محتمل',
+    unknown: 'غير معروف'
+  };
+
+  function applyFilters() {
+    const fromStr = document.getElementById('filter-from').value;
+    const toStr = document.getElementById('filter-to').value;
+    const platform = document.getElementById('filter-platform').value;
+    const intent = document.getElementById('filter-intent').value;
+    const phone = document.getElementById('filter-phone').value.trim();
+
+    return allConversations.filter(c => {
+      if (fromStr) {
+        const d = c.timestamp?.toDate ? c.timestamp.toDate() : new Date(c.timestamp);
+        if (d < new Date(fromStr)) return false;
+      }
+      if (toStr) {
+        const d = c.timestamp?.toDate ? c.timestamp.toDate() : new Date(c.timestamp);
+        if (d > new Date(toStr + 'T23:59:59')) return false;
+      }
+      if (platform && c.platform !== platform) return false;
+      if (intent && c.intent !== intent) return false;
+      if (phone && !(c.phone || '').includes(phone)) return false;
+      return true;
+    });
+  }
+
+  function renderConversations(filtered) {
+    const tb = document.getElementById('conv-tbody');
+    const hint = document.getElementById('count-hint');
+
+    if (!filtered.length) {
+      tb.innerHTML = '<tr><td colspan="9" class="empty">لا توجد محادثات مطابقة</td></tr>';
+      hint.textContent = '0 محادثة';
+      return;
+    }
+
+    hint.textContent = allConversations.length + ' محادثة إجمالي — عرض ' + filtered.length;
+
+    let html = '';
+    filtered.forEach((c, idx) => {
+      const lastUserMsg = (c.messages || []).filter(m => m.role === 'user').slice(-1)[0];
+      const lastAsstMsg = (c.messages || []).filter(m => m.role === 'assistant').slice(-1)[0];
+      const toolUsed = c.toolUsed || c.tool || '';
+      const intentLabel = INTENT_LABELS[c.intent] || c.intent || '—';
+
+      html += `<tr id="row-${idx}" onclick="window._toggleConv(${idx})">
+        <td><button class="conv-expand-btn" id="expand-btn-${idx}">▶</button></td>
+        <td>${formatTime(c.timestamp)}</td>
+        <td><span class="badge ${c.platform || 'web'}">${escapeHtml(c.platform || 'web')}</span></td>
+        <td dir="ltr">${escapeHtml(c.phone || '—')}</td>
+        <td>${escapeHtml(c.guestName || c.userName || '—')}</td>
+        <td>${escapeHtml(intentLabel)}</td>
+        <td>${escapeHtml(truncate(lastUserMsg?.content))}</td>
+        <td>${escapeHtml(truncate(lastAsstMsg?.content))}</td>
+        <td>${toolUsed ? '<span class="badge tool">'+escapeHtml(toolUsed)+'</span>' : '—'}</td>
+      </tr>
+      <tr id="detail-row-${idx}" style="display:none">
+        <td colspan="9" style="padding:0;background:#1a1a1a">
+          <div class="conv-detail" id="conv-detail-${idx}"></div>
+        </td>
+      </tr>`;
+    });
+
+    tb.innerHTML = html;
+
+    // حفظ البيانات المصفاة لتوسيع الصفوف
+    window._filteredData = filtered;
+  }
+
+  window._toggleConv = function(idx) {
+    const detailRow = document.getElementById('detail-row-' + idx);
+    const detailDiv = document.getElementById('conv-detail-' + idx);
+    const btn = document.getElementById('expand-btn-' + idx);
+    const isVisible = detailRow.style.display !== 'none';
+
+    if (isVisible) {
+      detailRow.style.display = 'none';
+      btn.textContent = '▶';
+      return;
+    }
+
+    const c = window._filteredData[idx];
+    if (!c || !c.messages || !c.messages.length) {
+      detailDiv.innerHTML = '<div style="padding:12px;color:#888">لا توجد رسائل</div>';
+    } else {
+      detailDiv.innerHTML = '<div class="conv-detail-inner">' +
+        c.messages.map(m => {
+          const role = m.role === 'user' ? 'المستخدم' : 'المساعد';
+          const cls = m.role === 'user' ? 'user' : 'assistant';
+          return `<div class="conv-msg ${cls}">
+            <div class="msg-role">${escapeHtml(role)}${m.timestamp ? ' — ' + formatTime(m.timestamp) : ''}</div>
+            <div class="msg-text">${escapeHtml(m.content)}</div>
+            ${m.toolUsed ? '<div class="msg-meta">🔧 الأداة: ' + escapeHtml(m.toolUsed) + '</div>' : ''}
+          </div>`;
+        }).join('') + '</div>';
+    }
+
+    detailRow.style.display = 'table-row';
+    btn.textContent = '▼';
+  };
+
+  // الاشتراك في التحديثات اللحظية
+  const q = query(collection(db, 'ai_conversations'), orderBy('timestamp', 'desc'));
+  onSnapshot(q, (snap) => {
+    allConversations = [];
+    snap.forEach(d => allConversations.push({id:d.id, ...d.data()}));
+    const filtered = applyFilters();
+    renderConversations(filtered);
+  }, (err) => {
+    console.error(err);
+    document.getElementById('conv-tbody').innerHTML = '<tr><td colspan="9" class="empty">خطأ في تحميل المحادثات</td></tr>';
+  });
+
+  // إعادة الفلترة عند تغيير أي فلتر
+  ['filter-from','filter-to','filter-platform','filter-intent','filter-phone'].forEach(id => {
+    document.getElementById(id).addEventListener('change', () => {
+      renderConversations(applyFilters());
+    });
+    document.getElementById(id).addEventListener('input', () => {
+      // للبحث الفوري برقم الهاتف
+      if (id === 'filter-phone') renderConversations(applyFilters());
+    });
+  });
+});
+</script>
+</body>
+</html>

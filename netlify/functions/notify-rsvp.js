@@ -13,8 +13,9 @@
 
 const { resolveRecipients, sendReportEmail, escapeHtml, getAdminDb } = require("./_report-lib");
 const { checkRateLimit } = require("./_rate-limit");
+const { verifyRsvpToken } = require("./submit-rsvp");
 
-exports.handler = async (event) => {
+async function handle(event) {
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
   }
@@ -33,7 +34,11 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: "Invalid JSON" };
   }
 
-  const { guestName, phone, status, guests, style, responseId } = payload;
+  const { guestName, phone, status, guests, style, responseId, token } = payload;
+  const tokenData = verifyRsvpToken(token);
+  if (!tokenData) {
+    return { statusCode: 403, body: JSON.stringify({ sent: false, reason: "INVALID_RSVP_TOKEN" }) };
+  }
 
   // تحقق أساسي من الحقول لمنع إساءة الاستخدام (رسائل فارغة/ضخمة/بأحرف
   // تحكم لمسار التحكم). هذي الدالة يستدعيها نموذج RSVP العلني بدون تسجيل دخول،
@@ -48,6 +53,12 @@ exports.handler = async (event) => {
   const cleanGuests = cleanStr(guests, 10);
   const cleanStyle = cleanStr(style, 60);
   const cleanResponseId = cleanStr(responseId, 120);
+  const expectedResponseId = tokenData.eventCode && tokenData.guestCode
+    ? `${tokenData.eventCode}_${tokenData.guestCode}`
+    : tokenData.code;
+  if (!cleanResponseId || cleanResponseId !== expectedResponseId) {
+    return { statusCode: 403, body: JSON.stringify({ sent: false, reason: "INVALID_RESPONSE_ID" }) };
+  }
 
   try {
     const { recipients, reportsCfg } = await resolveRecipients();
@@ -95,6 +106,21 @@ exports.handler = async (event) => {
     const result = await sendReportEmail({ to: recipients, subject, text: textBody, html: htmlBody });
     return { statusCode: 200, body: JSON.stringify(result) };
   } catch (err) {
-    return { statusCode: 200, body: JSON.stringify({ sent: false, error: String(err) }) };
+    return { statusCode: 200, body: JSON.stringify({ sent: false, error: "notification delivery failed" }) };
   }
+};
+
+
+const ALLOWED_ORIGINS = new Set(["https://jamratghadah.com", "https://admin.jamratghadah.com"]);
+exports.handler = async (event) => {
+  const origin = String(event.headers?.origin || "").toLowerCase();
+  const headers = {
+    "Access-Control-Allow-Origin": ALLOWED_ORIGINS.has(origin) ? origin : "https://jamratghadah.com",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Content-Type": "application/json; charset=utf-8",
+  };
+  if (event.httpMethod === "OPTIONS") return { statusCode: 204, headers, body: "" };
+  const result = await handle(event);
+  return { ...result, headers: { ...headers, ...(result.headers || {}) } };
 };

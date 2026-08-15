@@ -61,12 +61,25 @@ export {
 
 // حماية أي صفحة لوحة تحكم: يستدعيها كل ملف Dashboard في بداية تنفيذه
 // لو ما فيه تسجيل دخول، يرجع المستخدم لصفحة login.html
-export function requireLogin(onReady) {
-  onAuthStateChanged(auth, (user) => {
+export function requireLogin(onReady, allowedRoles = ["staff", "admin", "super_admin"]) {
+  onAuthStateChanged(auth, async (user) => {
     if (!user) {
       window.location.href = "login.html";
-    } else {
-      onReady(user);
+      return;
+    }
+    try {
+      const snap = await getDoc(doc(db, "users", user.uid));
+      const role = snap.exists() ? String(snap.data().role || "") : "";
+      if (!allowedRoles.includes(role)) {
+        await signOut(auth);
+        window.location.href = "login.html?error=unauthorized";
+        return;
+      }
+      onReady(user, role);
+    } catch (err) {
+      console.error("Dashboard authorization failed");
+      await signOut(auth);
+      window.location.href = "login.html?error=unauthorized";
     }
   });
 }

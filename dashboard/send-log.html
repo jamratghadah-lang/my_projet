@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>سجل الإرسال — لوحة تحكم جمرة غضى</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+  *{box-sizing:border-box}
+  body{font-family:Tahoma,Arial,sans-serif;background:#111;color:#eee;margin:0;padding:20px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px}
+  h1{color:#d4af37;font-size:20px;margin:0}
+  a.back{color:#aaa;text-decoration:none;font-size:14px}
+  .card{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:18px;margin-bottom:18px}
+  .card h2{font-size:15px;color:#d4af37;margin-top:0}
+
+  /* ===== Stats ===== */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:18px}
+  .stat{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:16px;text-align:center;position:relative;overflow:hidden}
+  .stat::before{content:"";position:absolute;top:0;right:0;width:4px;height:100%}
+  .stat.total::before{background:#d4af37}
+  .stat.sent::before{background:#4caf50}
+  .stat.failed::before{background:#e07a5f}
+  .stat.pending::before{background:#888}
+  .stat .num{font-size:30px;font-weight:bold;line-height:1}
+  .stat.total .num{color:#d4af37}
+  .stat.sent .num{color:#4caf50}
+  .stat.failed .num{color:#e07a5f}
+  .stat.pending .num{color:#aaa}
+  .stat .label{font-size:11px;color:#999;margin-top:6px}
+
+  /* ===== Toolbar ===== */
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+  .search-wrap{flex:1;min-width:180px;position:relative}
+  .search-wrap input{width:100%;padding:10px 36px 10px 12px;border-radius:8px;border:1px solid #444;background:#222;color:#fff;font-family:inherit;font-size:14px}
+  .search-wrap .icon{position:absolute;right:10px;top:50%;transform:translateY(-50%);color:#888;font-size:16px;pointer-events:none}
+  select{padding:10px 12px;border-radius:8px;border:1px solid #444;background:#222;color:#fff;font-family:inherit;font-size:14px;cursor:pointer}
+  input[type="date"]{padding:10px 12px;border-radius:8px;border:1px solid #444;background:#222;color:#fff;font-family:inherit;font-size:14px;cursor:pointer}
+  input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.7)}
+  .btn{padding:10px 16px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;font-size:13px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-family:inherit}
+  .btn-gold{background:#d4af37;color:#111}
+  .btn-outline{background:transparent;border:1px solid #555;color:#ddd}
+  .btn-excel{background:#1d6f42;color:#fff}
+  .btn:disabled{opacity:.45;cursor:default}
+  .btn-sm{padding:6px 10px;font-size:12px;border-radius:6px}
+  .toolbar2{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;padding-top:10px;border-top:1px solid #2a2a2a}
+
+  /* ===== Table ===== */
+  .table-wrap{overflow-x:auto;max-height:600px;overflow-y:auto}
+  .table-wrap::-webkit-scrollbar{width:6px;height:6px}
+  .table-wrap::-webkit-scrollbar-track{background:#1c1c1c}
+  .table-wrap::-webkit-scrollbar-thumb{background:#444;border-radius:3px}
+  .table-wrap::-webkit-scrollbar-thumb:hover{background:#555}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  thead th{text-align:right;padding:10px 8px;border-bottom:2px solid #333;color:#d4af37;white-space:nowrap;position:sticky;top:0;background:#1c1c1c;z-index:2}
+  tbody td{padding:10px 8px;border-bottom:1px solid #2a2a2a;white-space:nowrap}
+  tbody tr:hover{background:#222}
+  .badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:bold;white-space:nowrap;display:inline-block}
+  .badge.sent{background:rgba(76,175,80,.15);color:#4caf50;border:1px solid rgba(76,175,80,.3)}
+  .badge.failed{background:rgba(224,122,95,.15);color:#e07a5f;border:1px solid rgba(224,122,95,.3)}
+  .badge.pending{background:rgba(170,170,170,.15);color:#aaa;border:1px solid rgba(170,170,170,.3)}
+  .badge.whatsapp{background:rgba(37,211,102,.12);color:#25d366;border:1px solid rgba(37,211,102,.3)}
+  .badge.email{background:rgba(212,175,55,.12);color:#d4af37;border:1px solid rgba(212,175,55,.3)}
+  .badge.sms{background:rgba(66,133,244,.12);color:#4285f4;border:1px solid rgba(66,133,244,.3)}
+  .badge.both{background:rgba(156,39,176,.12);color:#ba68c8;border:1px solid rgba(156,39,176,.3)}
+  .badge.type-invite{background:rgba(212,175,55,.1);color:#d4af37;border:1px solid rgba(212,175,55,.25)}
+  .badge.type-reminder{background:rgba(66,133,244,.1);color:#6ea8fe;border:1px solid rgba(66,133,244,.25)}
+  .badge.type-thank_you{background:rgba(76,175,80,.1);color:#66bb6a;border:1px solid rgba(76,175,80,.25)}
+  .badge.type-custom{background:rgba(156,39,176,.1);color:#ba68c8;border:1px solid rgba(156,39,176,.25)}
+  .empty{color:#777;text-align:center;padding:40px;font-size:14px}
+  .count-hint{font-size:12px;color:#888;margin-top:8px}
+  .fail-reason{color:#e07a5f;font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis}
+  @media(max-width:600px){.stat .num{font-size:22px}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>📨 سجل الإرسال</h1>
+  <a class="back" href="index.html">← رجوع للوحة</a>
+</div>
+
+<!-- ===== Live Stats ===== -->
+<div class="stats">
+  <div class="stat total"><div class="num" id="statTotal">0</div><div class="label">إجمالي الرسائل</div></div>
+  <div class="stat sent"><div class="num" id="statSent">0</div><div class="label">مرسلة بنجاح</div></div>
+  <div class="stat failed"><div class="num" id="statFailed">0</div><div class="label">فاشلة</div></div>
+  <div class="stat pending"><div class="num" id="statPending">0</div><div class="label">قيد الانتظار</div></div>
+</div>
+
+<div class="card">
+  <h2>سجل الرسائل المُرسلة</h2>
+
+  <div class="toolbar">
+    <div class="search-wrap">
+      <input type="text" id="searchInput" placeholder="بحث باسم الضيف أو المستلم...">
+      <span class="icon">🔍</span>
+    </div>
+  </div>
+
+  <div class="toolbar2">
+    <select id="filterStatus">
+      <option value="all">كل الحالات</option>
+      <option value="sent">مرسلة بنجاح</option>
+      <option value="failed">فاشلة</option>
+      <option value="pending">قيد الانتظار</option>
+    </select>
+    <select id="filterChannel">
+      <option value="all">كل القنوات</option>
+      <option value="whatsapp">واتساب</option>
+      <option value="email">إيميل</option>
+      <option value="sms">رسالة نصية</option>
+      <option value="both">الاثنان</option>
+    </select>
+    <select id="filterType">
+      <option value="all">كل الأنواع</option>
+      <option value="invite">دعوة</option>
+      <option value="reminder">تذكير</option>
+      <option value="thank_you">شكر</option>
+      <option value="custom">مخصص</option>
+    </select>
+    <input type="date" id="dateFrom" title="من تاريخ">
+    <input type="date" id="dateTo" title="إلى تاريخ">
+    <button class="btn btn-excel" id="exportExcel">📊 تصدير Excel</button>
+  </div>
+
+  <div class="table-wrap">
+    <table id="logTable">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>الوقت</th>
+          <th>الضيف/المستلم</th>
+          <th>النوع</th>
+          <th>القناة</th>
+          <th>الحالة</th>
+          <th>سبب الفشل</th>
+        </tr>
+      </thead>
+      <tbody id="logBody">
+        <tr><td colspan="7" class="empty">جارِ التحميل...</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="count-hint" id="countHint"></div>
+</div>
+
+<!-- ===== Library for export ===== -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<script type="module">
+import {
+  db, requireLogin,
+  collection, query, orderBy, onSnapshot,
+} from "../js/firebase-init.js";
+
+let allLogs = [];
+let unsub = null;
+
+requireLogin(() => {
+  const q = query(collection(db, "send_logs"), orderBy("time", "desc"));
+  unsub = onSnapshot(q, (snap) => {
+    allLogs = [];
+    snap.forEach((d) => {
+      const r = d.data();
+      const ts = r.time ? (r.time.toMillis ? r.time.toMillis() : new Date(r.time).getTime()) : null;
+      allLogs.push({
+        id: d.id,
+        time: ts,
+        timeFormatted: ts ? new Date(ts).toLocaleString("ar-SA", {
+          year: "numeric", month: "2-digit", day: "2-digit",
+          hour: "2-digit", minute: "2-digit", second: "2-digit",
+        }) : "—",
+        guestName: r.guestName || r.guest_name || r.name || "—",
+        recipient: r.recipient || r.to || "—",
+        type: r.type || "custom",
+        channel: r.channel || "whatsapp",
+        status: r.status || "pending",
+        failReason: r.failReason || r.error || r.reason || "",
+      });
+    });
+    updateStats();
+    renderTable();
+  }, () => {
+    document.getElementById("logBody").innerHTML = '<tr><td colspan="7" class="empty">تعذّر تحميل البيانات</td></tr>';
+  });
+});
+
+// ===== Labels Maps =====
+const typeLabels = {
+  invite: "دعوة",
+  reminder: "تذكير",
+  thank_you: "شكر",
+  custom: "مخصص",
+};
+
+const channelLabels = {
+  whatsapp: "واتساب",
+  email: "إيميل",
+  sms: "رسالة نصية",
+  both: "الاثنان",
+};
+
+const statusLabels = {
+  sent: { text: "مرسل", cls: "sent" },
+  failed: { text: "فشل", cls: "failed" },
+  pending: { text: "قيد الانتظار", cls: "pending" },
+};
+
+// ===== Stats =====
+function updateStats() {
+  document.getElementById("statTotal").textContent = allLogs.length;
+  document.getElementById("statSent").textContent = allLogs.filter(l => l.status === "sent").length;
+  document.getElementById("statFailed").textContent = allLogs.filter(l => l.status === "failed").length;
+  document.getElementById("statPending").textContent = allLogs.filter(l => l.status === "pending").length;
+}
+
+// ===== XSS Protection =====
+function escapeHtml(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// ===== Filter =====
+function getFiltered() {
+  const search = document.getElementById("searchInput").value.trim().toLowerCase();
+  const statusFilter = document.getElementById("filterStatus").value;
+  const channelFilter = document.getElementById("filterChannel").value;
+  const typeFilter = document.getElementById("filterType").value;
+  const dateFrom = document.getElementById("dateFrom").value;
+  const dateTo = document.getElementById("dateTo").value;
+
+  return allLogs.filter(l => {
+    if (statusFilter !== "all" && l.status !== statusFilter) return false;
+    if (channelFilter !== "all" && l.channel !== channelFilter) return false;
+    if (typeFilter !== "all" && l.type !== typeFilter) return false;
+    if (search) {
+      const guestMatch = l.guestName.toLowerCase().includes(search);
+      const recipientMatch = l.recipient.toLowerCase().includes(search);
+      if (!guestMatch && !recipientMatch) return false;
+    }
+    if (dateFrom && l.time) {
+      const from = new Date(dateFrom).getTime();
+      if (l.time < from) return false;
+    }
+    if (dateTo && l.time) {
+      const to = new Date(dateTo).getTime() + 86400000; // include full day
+      if (l.time >= to) return false;
+    }
+    return true;
+  });
+}
+
+// ===== Render Table =====
+function renderTable() {
+  const body = document.getElementById("logBody");
+  const list = getFiltered();
+  const hint = document.getElementById("countHint");
+
+  if (!list.length) {
+    body.innerHTML = '<tr><td colspan="7" class="empty">لا يوجد سجلات مطابقة</td></tr>';
+    hint.textContent = "";
+    return;
+  }
+
+  body.innerHTML = list.map((l, i) => {
+    const st = statusLabels[l.status] || statusLabels.pending;
+    const typeCls = `type-${l.type}`;
+    return `<tr>
+      <td>${i + 1}</td>
+      <td>${escapeHtml(l.timeFormatted)}</td>
+      <td>${escapeHtml(l.guestName)}</td>
+      <td><span class="badge ${typeCls}">${escapeHtml(typeLabels[l.type] || l.type)}</span></td>
+      <td><span class="badge ${l.channel}">${escapeHtml(channelLabels[l.channel] || l.channel)}</span></td>
+      <td><span class="badge ${st.cls}">${st.text}</span></td>
+      <td class="fail-reason">${escapeHtml(l.status === "failed" ? l.failReason : "")}</td>
+    </tr>`;
+  }).join("");
+
+  hint.textContent = `عرض ${list.length} من أصل ${allLogs.length} سجل`;
+}
+
+// ===== Filter Events =====
+document.getElementById("searchInput").addEventListener("input", renderTable);
+document.getElementById("filterStatus").addEventListener("change", renderTable);
+document.getElementById("filterChannel").addEventListener("change", renderTable);
+document.getElementById("filterType").addEventListener("change", renderTable);
+document.getElementById("dateFrom").addEventListener("change", renderTable);
+document.getElementById("dateTo").addEventListener("change", renderTable);
+
+// ===== Export to Excel =====
+document.getElementById("exportExcel").addEventListener("click", () => {
+  const list = getFiltered();
+  if (!list.length) return;
+  const rows = list.map((l, i) => ({
+    "#": i + 1,
+    "الوقت": l.timeFormatted,
+    "الضيف/المستلم": l.guestName,
+    "النوع": typeLabels[l.type] || l.type,
+    "القناة": channelLabels[l.channel] || l.channel,
+    "الحالة": (statusLabels[l.status] || statusLabels.pending).text,
+    "سبب الفشل": l.status === "failed" ? l.failReason : "",
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws["!cols"] = [
+    { wch: 5 },
+    { wch: 22 },
+    { wch: 25 },
+    { wch: 14 },
+    { wch: 14 },
+    { wch: 14 },
+    { wch: 30 },
+  ];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "سجل الإرسال");
+  XLSX.writeFile(wb, "سجل-الإرسال.xlsx");
+});
+
+// ===== Cleanup =====
+window.addEventListener("beforeunload", () => { if (unsub) unsub(); });
+</script>
+</body>
+</html>

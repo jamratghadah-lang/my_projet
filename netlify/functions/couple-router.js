@@ -12,10 +12,10 @@
 //
 // إدارة الروابط (إضافة/حذف) تصير من dashboard/couples.html
 
-// مفتاح Firebase API آمن للنشر (هو مفتاح عميل عام من الأساس، ليس سرّاً)، لكن
-// نفضّل قراءته من متغيّر البيئة لو ضُبط، لتفادي تكراره بمصادر متعددة.
-const FIREBASE_API_KEY = process.env.FIREBASE_API_KEY || "AIzaSyAAYOne0CTht9906nStecbqCHkb_CY6glw";
-const PROJECT_ID = process.env.FIREBASE_PROJECT_ID || "jamrat-ghadah";
+// قراءة "couples" الآن تتطلب صلاحية إدارية بقواعد الأمان (read: if isAdmin())،
+// فهذي الدالة تقرأها عبر Firebase Admin SDK (نفس أسلوب guest-wall.js) بدل
+// REST API بمفتاح عام، اللي كان يعتمد على القاعدة القديمة العامة.
+const { getAdminApp } = require("./_auth");
 
 function notFoundPage() {
   return (
@@ -37,15 +37,15 @@ exports.handler = async (event) => {
   }
 
   try {
-    const docUrl =
-      `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/couples/${encodeURIComponent(slug)}` +
-      `?key=${FIREBASE_API_KEY}`;
-    const docRes = await fetch(docUrl);
-    if (!docRes.ok) {
+    const app = getAdminApp();
+    if (!app) {
       return { statusCode: 404, headers: { "Content-Type": "text/html; charset=utf-8" }, body: notFoundPage() };
     }
-    const docData = await docRes.json();
-    const template = docData.fields && docData.fields.template && docData.fields.template.stringValue;
+    const docSnap = await app.firestore().collection("couples").doc(slug).get();
+    if (!docSnap.exists) {
+      return { statusCode: 404, headers: { "Content-Type": "text/html; charset=utf-8" }, body: notFoundPage() };
+    }
+    const template = docSnap.data()?.template;
     if (!template) {
       return { statusCode: 404, headers: { "Content-Type": "text/html; charset=utf-8" }, body: notFoundPage() };
     }

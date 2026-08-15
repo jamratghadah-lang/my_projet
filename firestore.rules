@@ -2,71 +2,287 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ─── الدوال المساعدة ───
+    // ─── Helper Functions ───
     function isSignedIn() {
       return request.auth != null;
     }
-    function isOwner(uid) {
-      return isSignedIn() && request.auth.uid == uid;
+    function isAdmin() {
+      return isSignedIn() && (request.auth.token.role == 'admin' || request.auth.token.role == 'super_admin');
+    }
+    function isStaff() {
+      return isSignedIn() && (
+        request.auth.token.role == 'staff' ||
+        request.auth.token.role == 'admin' ||
+        request.auth.token.role == 'super_admin' ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['staff', 'admin', 'super_admin'])
+      );
+    }
+    function isOwnerOrAdmin() {
+      return isSignedIn() && (request.auth.uid == resource.data.uid || isAdmin());
     }
 
-    // ─── responses: ردود المدعوين ───
+    // ─── responses: guest RSVPs ───
     match /responses/{responseId} {
-      allow create: if true
+      // Public RSVP submissions still go server-side through submit-rsvp.js
+      // (never trust an unauthenticated browser to forge guestId/entryCode/phone).
+      // Manual guest add / CSV import from dashboard/guests.html is admin-only,
+      // and the write may ONLY contain the known safe fields below.
+      allow create: if isAdmin()
         && request.resource.data.keys().hasOnly([
-             "name","phone","status","guests","style","eventSlug","entryCode",
-             "personalCode","guestId","eventCode","companions","createdAt",
-             "email","source","archived"
+             "name","phone","email","guests","status",
+             "table","seat","gate",
+             "style","source","archived","entryCode","createdAt"
            ])
-        && request.resource.data.name is string && request.resource.data.name.size() < 200
-        && request.resource.data.status in ["yes", "no", "pending"]
-        && request.resource.data.size() < 30;
-      allow read, delete: if isSignedIn();
-      // مسموح فقط للوحة التحكم (المالكة)، عشان تفعّل ميزة الأرشفة بدون فتح
-      // التعديل لأي زائر غير مسجل دخول.
-      allow update: if isSignedIn();
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.source == "manual"
+        && request.resource.data.archived == false;
+      allow delete: if isAdmin();
+      // Archiving / QR revoke-toggle from dashboard/guests.html and
+      // dashboard/qr-central.html: admin-only, and the write may ONLY touch
+      // the "archived" or "qrRevoked" fields — every other field stays unchanged.
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["archived","qrRevoked"])
+        && (!("archived" in request.resource.data.diff(resource.data).affectedKeys()) || request.resource.data.archived is bool)
+        && (!("qrRevoked" in request.resource.data.diff(resource.data).affectedKeys()) || request.resource.data.qrRevoked is bool);
+      allow read: if isAdmin();
     }
 
-    // ─── couples: روابط الدعوات المخصصة ───
+    // ─── couples: custom invitation links ───
     match /couples/{slug} {
-      allow read: if true;
-      allow create, update, delete: if isSignedIn();
+      // Dashboard (dashboard/couples.html) needs to list/read these to manage
+      // links and check for slug duplicates; public browsers never read this
+      // directly — public invitation lookups go through couple-router.js
+      // (Admin SDK) instead.
+      allow read: if isAdmin();
+      allow create, update, delete: if isAdmin();
     }
 
-    // ─── settings: إعدادات لوحة التحكم ───
+    // ─── settings: dashboard settings ───
     match /settings/{docId} {
-      allow read: if true;
-      allow write: if isSignedIn();
+      allow read: if isAdmin();
+      allow create, update: if isAdmin();
+      allow delete: if false;
     }
 
-    // ─── entry_card_locks: أقفال البطاقة الرقمية ───
+    // ─── entry_card_locks: digital card locks ───
     match /entry_card_locks/{slug} {
-      // أول ضيف يطالب بالقفل لهالبطاقة
-      allow create: if request.resource.data.keys().hasOnly(["slug","guestName","deviceId","claimedAt"])
-        && request.resource.data.deviceId is string
-        && request.resource.data.deviceId.size() > 0
-        && request.resource.data.deviceId.size() < 100;
-      // تحديث القفل مسموح فقط لنفس الجهاز اللي أخذه أول مرة (يمنع أي جهاز
-      // ثاني من "سرقة" القفل عبر الكتابة المباشرة على القاعدة)
-      allow update: if request.resource.data.keys().hasOnly(["slug","guestName","deviceId","claimedAt"])
-        && request.resource.data.deviceId == resource.data.deviceId;
-      allow read, delete: if isSignedIn();
+      // Lock claims are atomic and server-side so a guest cannot read or overwrite
+      // another device's lock from the browser.
+      allow create, update, delete: if isAdmin();
+      allow read: if isAdmin();
     }
 
-    // ─── guest_wall: تعليقات حائط الضيوف ───
+    // ─── guest_wall: guest wall comments ───
     match /guest_wall/{commentId} {
-      allow create: if true;
-      allow read: if true;
-      allow update, delete: if isSignedIn();
+      // Public guest-wall reads/writes go through the server function so the
+      // browser cannot enumerate every event's messages directly.
+      allow create, read: if false;
+      allow update, delete: if isAdmin();
     }
 
-    // ─── checkins: سجل تسجيل الدخول يوم المناسبة ───
-    // إنشاء: مفتوح (التطبيق يرسل بدون login)
-    // القراءة والحذف: فقط لوحة التحكم المُسجّلة
+    // ─── checkins: event day check-in log ───
     match /checkins/{checkinId} {
-      allow create: if true;
-      allow read, delete: if isSignedIn();
+      // Check-ins are written by the server-side check-in function only.
+      allow create: if false;
+      allow read: if isStaff();
+      allow delete: if isAdmin();
       allow update: if false;
+    }
+
+    // ─── events: event management ───
+    match /events/{eventId} {
+      allow read: if isStaff();
+      allow create, update: if isStaff()
+        && request.resource.data.keys().hasOnly([
+             "name","client","phone","date","time","location","status","type",
+             "guests","confirmed","attended","notes",
+             "budgetEstimated","budgetActual","budgetItems",
+             "closureChecklist","closeChecklist","closureSummary","createdAt","updatedAt","closedAt",
+             "packageId","packageName","qrOverride","invitationDelivery"
+           ]);
+      allow delete: if isAdmin();
+    }
+
+    // ─── events/{eventId}/budget: event budget subcollection ───
+    match /events/{eventId}/budget/{budgetItemId} {
+      allow read: if isStaff();
+      allow create, update, delete: if isStaff();
+    }
+
+    // ─── events/{eventId}/customization: invitation editor overrides ───
+    match /events/{eventId}/customization/{docId} {
+      allow read: if isStaff();
+      allow create, update: if isStaff()
+        && request.resource.data.keys().hasOnly([
+             "eventName","date","location","welcomeMessage",
+             "backgroundImage","colorScheme","colorSchemeData","updatedAt"
+           ]);
+      allow delete: if isStaff();
+    }
+
+    // ─── guest_edit_logs: guest edit audit log ───
+    match /guest_edit_logs/{logId} {
+      allow create: if isStaff()
+        && request.resource.data.keys().hasOnly([
+             "guestId","guestName","field","oldValue","newValue",
+             "userId","userName","time"
+           ]);
+      allow read: if isStaff();
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // ─── send_logs: message send log ───
+    match /send_logs/{logId} {
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly([
+             "eventId","guestId","guestName","recipient",
+             "type","channel","status","failReason","time"
+           ]);
+      allow read: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    // ─── templates: message template library ───
+    match /templates/{templateId} {
+      allow read: if isAdmin();
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly([
+             "eventId","eventName","name","type","lang","text","createdAt","updatedAt"
+           ]);
+      allow delete: if isAdmin();
+    }
+
+    // ─── scheduled_messages: scheduled messages per event ───
+    match /scheduled_messages/{msgId} {
+      allow read: if isAdmin();
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly([
+             "eventId","channel","content","templateId","guestIds",
+             "scheduleAt","status","result","createdAt","executedAt"
+           ]);
+      allow delete: if isAdmin();
+    }
+
+    // ─── operation_logs: system audit log ───
+    match /operation_logs/{logId} {
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly([
+             "eventId","text","userId","userName",
+             "entity","entityId","action",
+             "oldValue","newValue","ipAddress","time","timestamp","type",
+             "guestRef","oldStatus","newStatus","oldCount","newCount","restored","collections","performedBy"
+           ]);
+      allow read: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    // ─── trash_items: trash / temporary archive ───
+    match /trash_items/{itemId} {
+      allow read: if isAdmin();
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly([
+             "originalCollection","originalId","name","itemType",
+             "originalData","deletedAt","restoredAt"
+           ]);
+      allow delete: if isAdmin();
+    }
+
+    // ─── qr_usages: QR code usage tracking ───
+    match /qr_usages/{usageId} {
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly([
+             "guestId","eventId","guestName","entryCode","action",
+             "success","reason","actor","actorName","ipAddress","time","timestamp"
+           ]);
+      allow read: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    // ─── integration_configs: integration settings ───
+    match /integration_configs/{configId} {
+      // Integration configs may contain sensitive provider settings.
+      allow read, create, update, delete: if isAdmin();
+    }
+
+    // ─── dashboard_notifications: dashboard notifications ───
+    match /dashboard_notifications/{notifId} {
+      allow create: if isStaff();
+      allow read: if isStaff();
+      allow update: if isStaff();
+      allow delete: if isStaff();
+    }
+
+    // ─── backups: backup data ───
+    match /backups/{backupId} {
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly([
+             "fileName","size","collections","createdAt","createdBy"
+           ]);
+      allow read: if isAdmin();
+      allow delete: if isAdmin();
+      allow update: if false;
+    }
+
+    // ─── users: user management ───
+    match /users/{userId} {
+      allow create: if isAdmin()
+        && request.resource.data.uid == userId;
+      // Users may read their own profile; full user directory is admin-only.
+      allow read: if isAdmin() || (isSignedIn() && request.auth.uid == userId);
+      allow update: if isAdmin()
+        || (isSignedIn()
+            && request.auth.uid == userId
+            && !("role" in request.resource.data.diff(resource.data).affectedKeys()));
+      allow delete: if isAdmin();
+    }
+
+    // ─── ai_knowledge: AI assistant knowledge base ───
+    match /ai_knowledge/{docId} {
+      // Public-facing functions use Admin SDK; dashboard reads are staff-only.
+      allow read: if isStaff();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ─── ai_settings: AI assistant settings ───
+    match /ai_settings/{docId} {
+      allow read: if isAdmin();
+      allow create, update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // ─── ai_conversations: AI conversation log ───
+    match /ai_conversations/{convId} {
+      // Written by Netlify Functions via Firebase Admin SDK only.
+      allow create, update, delete: if false;
+      allow read: if isAdmin();
+    }
+
+    // ─── ai_leads: potential leads ───
+    match /ai_leads/{leadId} {
+      // Written by Netlify Functions via Firebase Admin SDK only.
+      allow create: if false;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // ─── ai_analytics_daily: daily analytics ───
+    match /ai_analytics_daily/{dayId} {
+      // Analytics are server-generated; dashboard reads are admin-only.
+      allow read: if isAdmin();
+      allow create, update, delete: if false;
+    }
+
+    // ─── ai_pending_sessions: WhatsApp confirmation/disambiguation state ───
+    // Server-only; never writable from the browser.
+    match /ai_pending_sessions/{sessionId} {
+      allow read, write: if false;
+    }
+
+    // ─── ai_rate_limits: usage rate limits (Admin SDK only) ───
+    match /ai_rate_limits/{limitId} {
+      allow read, write: if false;
     }
 
     // ─── deny by default ───

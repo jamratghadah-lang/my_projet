@@ -1,10 +1,12 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+
+<html dir="rtl" lang="ar">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>إعدادات التنبيهات — لوحة تحكم جمرة غضى</title>
-<meta name="robots" content="noindex, nofollow">
+<meta content="noindex, nofollow" name="robots"/>
 <style>
   *{box-sizing:border-box}
   body{font-family:Tahoma,Arial,sans-serif;background:#111;color:#eee;margin:0;padding:20px}
@@ -34,85 +36,84 @@
   .badge-off{font-size:11px;padding:2px 8px;border-radius:20px;background:rgba(170,170,170,.15);color:#aaa;border:1px solid rgba(170,170,170,.3)}
   .hint{color:#777;font-size:12px;line-height:1.7;margin-top:4px}
   .test-btn{background:#333;color:#d4af37;border:1px solid #444;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:12px;margin-top:8px}
+
+  @media (max-width: 700px){
+    .container,.page,.content,.main-content{width:100%;max-width:100%;padding-left:12px;padding-right:12px;}
+    .grid{grid-template-columns:1fr !important;}
+    .card{min-width:0;}
+    table{display:block;max-width:100%;overflow-x:auto;white-space:nowrap;}
+  }
 </style>
 </head>
 <body>
-
 <div class="topbar">
-  <h1>✉️ إعدادات التنبيهات والتقارير</h1>
-  <a class="back" href="index.html">← رجوع للوحة</a>
+<h1>✉️ إعدادات التنبيهات والتقارير</h1>
+<a class="back" href="index.html">← رجوع للوحة</a>
 </div>
-
 <div class="card">
-  <h2>الميزات النشطة</h2>
-  <div class="feature">
-    <span class="icon">🔔</span>
-    <div class="info">
-      <h3>تنبيه فوري لكل رد جديد <span id="badgeInstant" class="badge-off">غير مُفعّل</span></h3>
-      <p>يُرسل إيميل إشعار فوري إلى بريدك عند تسجيل كل ضيف لرده (حضور أو اعتذار)، يحتوي على الاسم، الهاتف، الحالة، وعدد المرافقين.</p>
-    </div>
-  </div>
-  <div class="feature">
-    <span class="icon">📊</span>
-    <div class="info">
-      <h3>تقرير ملخص يومي <span id="badgeDaily" class="badge-off">غير مُفعّل</span></h3>
-      <p>يُرسل كل صباح تقرير ملخص بالبريد يحتوي على إحمالي الردود، المؤكدين، المعتذرين، وأحدث 10 ردود.</p>
-    </div>
-  </div>
-  <div class="feature">
-    <span class="icon">⏰</span>
-    <div class="info">
-      <h3>تذكير تلقائي قبل 24 ساعة <span id="badgeReminder" class="badge-off">غير مُفعّل</span></h3>
-      <p>يفحص النظام كل ساعة مواعيد المناسبات. قبل 24 ساعة من أي مناسبة، يُرسل تلقائيًا رسالة SMS تذكير لكل الضيوف المؤكدين.</p>
-    </div>
-  </div>
+<h2>الميزات النشطة</h2>
+<div class="feature">
+<span class="icon">🔔</span>
+<div class="info">
+<h3>تنبيه فوري لكل رد جديد <span class="badge-off" id="badgeInstant">غير مُفعّل</span></h3>
+<p>يُرسل إيميل إشعار فوري إلى بريدك عند تسجيل كل ضيف لرده (حضور أو اعتذار)، يحتوي على الاسم، الهاتف، الحالة، وعدد المرافقين.</p>
 </div>
-
+</div>
+<div class="feature">
+<span class="icon">📊</span>
+<div class="info">
+<h3>تقرير ملخص يومي <span class="badge-off" id="badgeDaily">غير مُفعّل</span></h3>
+<p>يُرسل كل صباح تقرير ملخص بالبريد يحتوي على إحمالي الردود، المؤكدين، المعتذرين، وأحدث 10 ردود.</p>
+</div>
+</div>
+<div class="feature">
+<span class="icon">⏰</span>
+<div class="info">
+<h3>تذكير تلقائي قبل 24 ساعة <span class="badge-off" id="badgeReminder">غير مُفعّل</span></h3>
+<p>يفحص النظام كل ساعة مواعيد المناسبات. قبل 24 ساعة من أي مناسبة، يُرسل تلقائيًا رسالة SMS تذكير لكل الضيوف المؤكدين.</p>
+</div>
+</div>
+</div>
 <div class="card">
-  <h2>إعدادات البريد (SMTP)</h2>
-  <p class="desc">تُضاف القيم في Netlify Environment Variables — مو من هنا — عشان الأمان. هنا بس تتحقق إنها مفعّلة وتجرب الإرسال.</p>
-
-  <div class="row">
-    <div>
-      <label>بريد الاستلام (NOTIFY_EMAIL_TO)</label>
-      <input type="email" id="notifyEmail" dir="ltr" placeholder="you@example.com">
-    </div>
-    <div>
-      <label>خادم SMTP (SMTP_HOST)</label>
-      <input type="text" id="smtpHost" dir="ltr" placeholder="smtp.gmail.com">
-    </div>
-  </div>
-  <div class="row">
-    <div>
-      <label>المنفذ (SMTP_PORT)</label>
-      <input type="text" id="smtpPort" dir="ltr" placeholder="587">
-    </div>
-    <div>
-      <label>المُرسِل (SMTP_FROM)</label>
-      <input type="text" id="smtpFrom" dir="ltr" placeholder="you@example.com">
-    </div>
-  </div>
-
-  <button id="saveBtn">حفظ الإعدادات</button>
-  <button class="test-btn" id="testBtn">إرسال إيميل تجريبي</button>
-  <span id="status"></span>
-  <div class="hint" id="envHint"></div>
+<h2>إعدادات البريد (SMTP)</h2>
+<p class="desc">تُضاف القيم في Netlify Environment Variables — مو من هنا — عشان الأمان. هنا بس تتحقق إنها مفعّلة وتجرب الإرسال.</p>
+<div class="row">
+<div>
+<label for="notifyEmail">بريد الاستلام (NOTIFY_EMAIL_TO)</label>
+<input dir="ltr" id="notifyEmail" placeholder="you@example.com" type="email"/>
 </div>
-
+<div>
+<label for="smtpHost">خادم SMTP (SMTP_HOST)</label>
+<input dir="ltr" id="smtpHost" placeholder="smtp.gmail.com" type="text"/>
+</div>
+</div>
+<div class="row">
+<div>
+<label for="smtpPort">المنفذ (SMTP_PORT)</label>
+<input dir="ltr" id="smtpPort" placeholder="587" type="text"/>
+</div>
+<div>
+<label for="smtpFrom">المُرسِل (SMTP_FROM)</label>
+<input dir="ltr" id="smtpFrom" placeholder="you@example.com" type="text"/>
+</div>
+</div>
+<button id="saveBtn">حفظ الإعدادات</button>
+<button class="test-btn" id="testBtn">إرسال إيميل تجريبي</button>
+<span id="status"></span>
+<div class="hint" id="envHint"></div>
+</div>
 <div class="card">
-  <h2>📩 إرسال التقرير الآن</h2>
-  <p class="desc">يولّد تقرير Excel وPDF فوري بأحدث الردود، ويرسله لبريد العميلة و/أو المدير حسب إعدادات "التقارير والبريد الإلكتروني" بلوحة تحكم /admin. تأكدي من ضبط بريد العميلة هناك إن رغبتِ إرسال التقرير لها.</p>
-  <button id="sendNowBtn">📤 إرسال التقرير الآن</button>
-  <span id="sendNowStatus"></span>
+<h2>📩 إرسال التقرير الآن</h2>
+<p class="desc">يولّد تقرير Excel وPDF فوري بأحدث الردود، ويرسله لبريد العميلة و/أو المدير حسب إعدادات "التقارير والبريد الإلكتروني" بلوحة تحكم /admin. تأكدي من ضبط بريد العميلة هناك إن رغبتِ إرسال التقرير لها.</p>
+<button id="sendNowBtn">📤 إرسال التقرير الآن</button>
+<span id="sendNowStatus"></span>
 </div>
-
 <div class="card">
-  <h2>إعدادات التذكير (SMS)</h2>
-  <p class="desc">التذكير التلقائي يستخدم نفس مزوّد SMS المُعدّ في صفحة "تذكير الضيوف". تأكدي من اختيار المزوّد وإضافة مفاتيحه في Netlify.</p>
-  <div id="smsStatus"><span class="badge-off">غير مُفعّل</span></div>
-  <div class="hint" style="margin-top:8px">المزوّد الحالي: <span id="smsProviderName" style="color:#d4af37">—</span></div>
+<h2>إعدادات التذكير (SMS)</h2>
+<p class="desc">التذكير التلقائي يستخدم نفس مزوّد SMS المُعدّ في صفحة "تذكير الضيوف". تأكدي من اختيار المزوّد وإضافة مفاتيحه في Netlify.</p>
+<div id="smsStatus"><span class="badge-off">غير مُفعّل</span></div>
+<div class="hint" style="margin-top:8px">المزوّد الحالي: <span id="smsProviderName" style="color:#d4af37">—</span></div>
 </div>
-
 <script type="module">
 import {
   auth, db, requireLogin,
@@ -175,9 +176,12 @@ function updateBadge(id, on) {
 
 // هروب HTML بسيط لمنع XSS عند حقن قيم إدارية بـ innerHTML
 function escapeHtml(s) {
-  const d = document.createElement("div");
-  d.textContent = String(s == null ? "" : s);
-  return d.innerHTML;
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 document.getElementById("saveBtn").addEventListener("click", async () => {

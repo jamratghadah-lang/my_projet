@@ -133,6 +133,6 @@ function initOrderForm(paymentLink) {
     const link = paymentLink && paymentLink !== "PAYMENT_LINK_PLACEHOLDER"
       ? paymentLink
       : `https://wa.me/966547266733?text=${encodeURIComponent("مرحبا، أبي أطلب الفيديو رقم " + num)}`;
-    window.open(link, "_blank");
+    window.open(link, "_blank", "noopener,noreferrer");
   });
 }

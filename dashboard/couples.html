@@ -138,7 +138,7 @@ async function loadList() {
     const esc = (s) => {
       const d = document.createElement("div");
       d.textContent = String(s == null ? "" : s);
-      return d.innerHTML;
+      return d.innerHTML.replace(/'/g, "&#39;");
     };
     snap.forEach((d) => {
       const data = d.data();

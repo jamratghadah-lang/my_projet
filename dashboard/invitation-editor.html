@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+
+<html dir="rtl" lang="ar">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>محرر الدعوات — لوحة تحكم جمرة غضى</title>
+<meta content="noindex, nofollow" name="robots"/>
+<style>
+  *{box-sizing:border-box}
+  body{font-family:Tahoma,Arial,sans-serif;background:#111;color:#eee;margin:0;padding:20px}
+
+  /* ===== Top Bar ===== */
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px}
+  h1{color:#d4af37;font-size:20px;margin:0}
+  a.back{color:#aaa;text-decoration:none;font-size:14px}
+
+  /* ===== Event Selector ===== */
+  .event-selector{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:18px;margin-bottom:20px}
+  .event-selector label{display:block;font-size:13px;color:#aaa;margin-bottom:6px}
+  .event-selector select{width:100%;max-width:420px;padding:10px 12px;border-radius:8px;border:1px solid #444;background:#222;color:#fff;font-family:inherit;font-size:14px;cursor:pointer}
+
+  /* ===== Main Layout ===== */
+  .editor-layout{display:grid;grid-template-columns:1fr 380px;gap:20px;align-items:start}
+
+  /* ===== Editor Panel ===== */
+  .editor-panel{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:22px}
+  .editor-panel h2{font-size:15px;color:#d4af37;margin:0 0 18px}
+
+  .field{margin-bottom:16px}
+  .field label{display:block;font-size:12.5px;color:#aaa;margin-bottom:5px}
+  .field input,.field textarea,.field select{
+    width:100%;padding:10px 12px;border-radius:8px;border:1px solid #444;background:#222;color:#fff;
+    font-family:inherit;font-size:14px;
+  }
+  .field textarea{min-height:80px;resize:vertical}
+  .field .hint{font-size:11.5px;color:#777;margin-top:4px}
+
+  /* ===== Color Schemes ===== */
+  .schemes-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:6px}
+  .scheme-swatch{position:relative;cursor:pointer;border-radius:10px;overflow:hidden;border:2px solid transparent;transition:border-color .2s,transform .15s}
+  .scheme-swatch:hover{transform:scale(1.04)}
+  .scheme-swatch.selected{border-color:#d4af37;box-shadow:0 0 8px rgba(212,175,55,.35)}
+  .scheme-swatch .swatch-preview{height:56px;display:flex;align-items:center;justify-content:center;position:relative}
+  .scheme-swatch .swatch-preview .swatch-accent{position:absolute;bottom:0;left:0;right:0;height:8px}
+  .scheme-swatch .swatch-name{text-align:center;font-size:10.5px;padding:5px 2px;background:#161616;color:#bbb;line-height:1.3}
+
+  /* ===== Actions ===== */
+  .actions-row{display:flex;gap:10px;margin-top:22px;flex-wrap:wrap}
+  .btn{padding:10px 20px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;font-size:13px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-family:inherit;transition:opacity .2s}
+  .btn-gold{background:#d4af37;color:#111}
+  .btn-gold:hover{background:#e0be4a}
+  .btn-outline{background:transparent;border:1px solid #555;color:#ddd}
+  .btn-outline:hover{border-color:#888}
+  .btn:disabled{opacity:.45;cursor:default}
+  .save-status{font-size:12px;margin-top:8px;min-height:16px}
+  .save-status.err{color:#e07a5f}
+  .save-status.ok{color:#4caf50}
+
+  /* ===== Preview Panel ===== */
+  .preview-panel{position:sticky;top:20px}
+  .preview-panel h2{font-size:15px;color:#d4af37;margin:0 0 14px;text-align:center}
+  .phone-frame{
+    width:100%;max-width:360px;margin:0 auto;
+    background:#000;border-radius:28px;border:3px solid #333;
+    padding:14px 10px;
+    aspect-ratio:9/16;
+    overflow:hidden;
+    box-shadow:0 8px 30px rgba(0,0,0,.5);
+  }
+  .phone-screen{
+    width:100%;height:100%;border-radius:16px;overflow:hidden;overflow-y:auto;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    position:relative;
+  }
+  .phone-screen::-webkit-scrollbar{width:4px}
+  .phone-screen::-webkit-scrollbar-thumb{background:rgba(255,255,255,.2);border-radius:2px}
+
+  /* ===== Preview Content ===== */
+  .inv-preview{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px 20px;text-align:center;position:relative;transition:background .3s}
+  .inv-preview .bg-img{position:absolute;inset:0;background-size:cover;background-position:center;opacity:.35;z-index:0}
+  .inv-preview .bg-overlay{position:absolute;inset:0;z-index:1}
+  .inv-preview .inv-content{position:relative;z-index:2;width:100%}
+  .inv-preview .ornament{font-size:22px;margin-bottom:12px;opacity:.8}
+  .inv-preview .inv-event-name{font-size:22px;font-weight:bold;margin:0 0 8px;line-height:1.4}
+  .inv-preview .inv-divider{width:60px;height:2px;margin:10px auto;opacity:.6}
+  .inv-preview .inv-welcome{font-size:13px;line-height:1.7;margin:10px 0;opacity:.9}
+  .inv-preview .inv-details{margin-top:14px;font-size:12px;line-height:2;opacity:.85}
+  .inv-preview .inv-details span{display:block}
+  .inv-preview .inv-footer{margin-top:20px;font-size:11px;opacity:.5}
+
+  /* ===== Toast ===== */
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#333;color:#fff;padding:12px 24px;border-radius:10px;font-size:13px;z-index:1100;opacity:0;transition:all .35s ease;pointer-events:none;border:1px solid #555}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* ===== Responsive ===== */
+  @media(max-width:840px){
+    .editor-layout{grid-template-columns:1fr}
+    .preview-panel{position:static;order:-1}
+    .schemes-grid{grid-template-columns:repeat(4,1fr)}
+    .phone-frame{max-width:300px}
+  }
+  @media(max-width:480px){
+    .schemes-grid{grid-template-columns:repeat(3,1fr)}
+    .phone-frame{max-width:260px}
+  }
+
+  /* ===== Empty state ===== */
+  .empty-state{color:#777;text-align:center;padding:60px 20px;font-size:14px;line-height:1.8}
+  .empty-state .icon{font-size:40px;display:block;margin-bottom:12px;opacity:.5}
+</style>
+</head>
+<body>
+<div class="topbar">
+<h1>🎨 محرر الدعوات</h1>
+<a class="back" href="events.html">← رجوع للفعاليات</a>
+</div>
+<!-- ===== Event Selector ===== -->
+<div class="event-selector">
+<label for="eventSelect">اختر المناسبة:</label>
+<select id="eventSelect">
+<option value="">— جارِ تحميل المناسبات —</option>
+</select>
+</div>
+<!-- ===== No Event Selected State ===== -->
+<div class="empty-state" id="emptyState" style="display:none">
+<span class="icon">📋</span>
+  اختر مناسبة من القائمة أعلاه لبدء تخصيص الدعوة
+</div>
+<!-- ===== Editor + Preview ===== -->
+<div class="editor-layout" id="editorLayout" style="display:none">
+<!-- Editor Panel -->
+<div class="editor-panel">
+<h2>تخصيص الدعوة</h2>
+<div class="field">
+<label for="eventName">اسم المناسبة</label>
+<input id="eventName" placeholder="مثال: زواج سارة وأحمد" type="text"/>
+</div>
+<div class="field">
+<label for="eventDate">التاريخ</label>
+<input id="eventDate" type="date"/>
+</div>
+<div class="field">
+<label for="eventLocation">المكان</label>
+<input id="eventLocation" placeholder="مثال: فندق الريتز كارلتون" type="text"/>
+</div>
+<div class="field">
+<label for="welcomeMessage">رسالة ترحيبية</label>
+<textarea id="welcomeMessage" placeholder="مثال: يسعدنا دعوتكم لحضور حفل زفافنا..."></textarea>
+</div>
+<div class="field">
+<label for="bgImage">الخلفية / الصورة الرئيسية</label>
+<input id="bgImage" placeholder="https://example.com/image.jpg" type="text"/>
+<div class="hint">أدخل رابط صورة (URL) ليتم عرضها كخلفية للدعوة</div>
+</div>
+<div class="field">
+<label>مخطط الألوان</label>
+<div class="schemes-grid" id="schemesGrid"></div>
+</div>
+<div class="actions-row">
+<button class="btn btn-gold" id="saveBtn">💾 حفظ التخصيص</button>
+<button class="btn btn-outline" id="resetBtn">🔄 إعادة تعيين</button>
+</div>
+<div class="save-status" id="saveStatus"></div>
+</div>
+<!-- Preview Panel -->
+<div class="preview-panel">
+<h2>معاينة حيّة</h2>
+<div class="phone-frame">
+<div class="phone-screen">
+<div class="inv-preview" id="invPreview">
+<div class="bg-img" id="previewBgImg"></div>
+<div class="bg-overlay" id="previewBgOverlay"></div>
+<div class="inv-content">
+<div class="ornament" id="previewOrnament">✦ ✦ ✦</div>
+<div class="inv-event-name" id="previewEventName">اسم المناسبة</div>
+<div class="inv-divider" id="previewDivider"></div>
+<div class="inv-welcome" id="previewWelcome">رسالة الترحيب ستظهر هنا</div>
+<div class="inv-details">
+<span id="previewDate">📅 —</span>
+<span id="previewLocation">📍 —</span>
+</div>
+<div class="inv-footer">جمرة غضى للدعوات</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- ===== Toast ===== -->
+<div class="toast" id="toast"></div>
+<script type="module">
+import { auth, requireLogin, db, collection, doc, getDoc, getDocs, query, where, orderBy, setDoc, updateDoc, serverTimestamp } from '../js/firebase-init.js';
+
+// ===== Color Schemes =====
+const COLOR_SCHEMES = {
+  classic_gold: {
+    name: 'كلاسيكي ذهبي',
+    primary: '#d4af37',
+    secondary: '#111111',
+    text: '#ffffff',
+    background: '#1a1a1a'
+  },
+  elegant_white: {
+    name: 'أنيق أبيض',
+    primary: '#ffffff',
+    secondary: '#d4af37',
+    text: '#1a1a1a',
+    background: '#f9f6f0'
+  },
+  navy_blue: {
+    name: 'رجالي أزرق',
+    primary: '#c5cae9',
+    secondary: '#1a237e',
+    text: '#ffffff',
+    background: '#0d1545'
+  },
+  pink_girl: {
+    name: 'وردي بناتي',
+    primary: '#f48fb1',
+    secondary: '#e91e63',
+    text: '#ffffff',
+    background: '#880e4f'
+  },
+  emerald_green: {
+    name: 'أخضر زمردي',
+    primary: '#d4af37',
+    secondary: '#00695c',
+    text: '#e0f2f1',
+    background: '#004d40'
+  },
+  luxury_black: {
+    name: 'أسود فاخر',
+    primary: '#d4af37',
+    secondary: '#000000',
+    text: '#ffffff',
+    background: '#0a0a0a'
+  },
+  soft_beige: {
+    name: 'بيج ناعم',
+    primary: '#8d6e63',
+    secondary: '#d7ccc8',
+    text: '#3e2723',
+    background: '#f5f0e8'
+  },
+  royal_purple: {
+    name: 'بنفسجي ملكي',
+    primary: '#d4af37',
+    secondary: '#7b1fa2',
+    text: '#f3e5f5',
+    background: '#4a148c'
+  }
+};
+
+// ===== State =====
+let currentEventId = null;
+let currentScheme = 'classic_gold';
+let eventsList = [];
+
+// ===== XSS Protection =====
+function escapeHtml(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// ===== Toast =====
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2500);
+}
+
+// ===== Render Color Swatches =====
+function renderSwatches() {
+  const grid = document.getElementById('schemesGrid');
+  grid.innerHTML = '';
+  for (const [key, scheme] of Object.entries(COLOR_SCHEMES)) {
+    const swatch = document.createElement('div');
+    swatch.className = 'scheme-swatch' + (key === currentScheme ? ' selected' : '');
+    swatch.dataset.scheme = key;
+    swatch.innerHTML = `
+      <div class="swatch-preview" style="background:${scheme.background}">
+        <div class="swatch-accent" style="background:${scheme.primary}"></div>
+      </div>
+      <div class="swatch-name">${scheme.name}</div>
+    `;
+    swatch.addEventListener('click', () => {
+      currentScheme = key;
+      document.querySelectorAll('.scheme-swatch').forEach(s => s.classList.remove('selected'));
+      swatch.classList.add('selected');
+      updatePreview();
+    });
+    grid.appendChild(swatch);
+  }
+}
+
+// ===== Update Live Preview =====
+function updatePreview() {
+  const scheme = COLOR_SCHEMES[currentScheme];
+  const eventName = document.getElementById('eventName').value || 'اسم المناسبة';
+  const date = document.getElementById('eventDate').value;
+  const location = document.getElementById('eventLocation').value;
+  const welcomeMsg = document.getElementById('welcomeMessage').value || 'رسالة الترحيب ستظهر هنا';
+  const bgImage = document.getElementById('bgImage').value.trim();
+
+  const preview = document.getElementById('invPreview');
+  const bgImg = document.getElementById('previewBgImg');
+  const bgOverlay = document.getElementById('previewBgOverlay');
+  const previewName = document.getElementById('previewEventName');
+  const previewDivider = document.getElementById('previewDivider');
+  const previewWelcome = document.getElementById('previewWelcome');
+  const previewDate = document.getElementById('previewDate');
+  const previewLocation = document.getElementById('previewLocation');
+  const previewOrnament = document.getElementById('previewOrnament');
+
+  // Background
+  if (bgImage) {
+    bgImg.style.backgroundImage = `url(${escapeHtml(bgImage)})`;
+    bgImg.style.display = 'block';
+    bgOverlay.style.background = scheme.background;
+    bgOverlay.style.opacity = '0.65';
+  } else {
+    bgImg.style.backgroundImage = '';
+    bgImg.style.display = 'none';
+    bgOverlay.style.opacity = '0';
+  }
+  preview.style.background = scheme.background;
+
+  // Text colors
+  previewName.style.color = scheme.primary;
+  previewName.textContent = eventName;
+
+  previewDivider.style.background = scheme.primary;
+
+  previewWelcome.style.color = scheme.text;
+  previewWelcome.textContent = welcomeMsg;
+
+  previewDate.style.color = scheme.text;
+  previewLocation.style.color = scheme.text;
+
+  // Date formatting
+  if (date) {
+    const d = new Date(date);
+    previewDate.textContent = '📅 ' + d.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
+  } else {
+    previewDate.textContent = '📅 —';
+  }
+
+  previewLocation.textContent = location ? '📍 ' + location : '📍 —';
+
+  previewOrnament.style.color = scheme.primary;
+
+  // Footer
+  const footer = preview.querySelector('.inv-footer');
+  footer.style.color = scheme.text;
+
+  // Details
+  preview.querySelector('.inv-details').style.color = scheme.text;
+}
+
+// ===== Load Events Dropdown =====
+async function loadEvents() {
+  const sel = document.getElementById('eventSelect');
+  try {
+    const snap = await getDocs(query(collection(db, 'events'), orderBy('createdAt', 'desc')));
+    eventsList = [];
+    sel.innerHTML = '<option value="">— اختر مناسبة —</option>';
+    snap.forEach(d => {
+      const r = d.data();
+      const isActive = r.status !== 'closed' && r.status !== 'archived';
+      eventsList.push({ id: d.id, name: r.name || r.title || 'بدون اسم', active: isActive, data: r });
+      const opt = document.createElement('option');
+      opt.value = d.id;
+      opt.textContent = (isActive ? '' : '🔒 ') + (r.name || r.title || 'بدون اسم');
+      sel.appendChild(opt);
+    });
+  } catch (e) {
+    console.error('Error loading events:', e);
+    sel.innerHTML = '<option value="">— تعذّر التحميل —</option>';
+  }
+}
+
+// ===== Load Customization for Event =====
+async function loadCustomization(eventId) {
+  if (!eventId) {
+    document.getElementById('emptyState').style.display = 'block';
+    document.getElementById('editorLayout').style.display = 'none';
+    return;
+  }
+
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('editorLayout').style.display = '';
+
+  // Reset fields
+  document.getElementById('eventName').value = '';
+  document.getElementById('eventDate').value = '';
+  document.getElementById('eventLocation').value = '';
+  document.getElementById('welcomeMessage').value = '';
+  document.getElementById('bgImage').value = '';
+  currentScheme = 'classic_gold';
+
+  // Load event data for defaults
+  const eventRef = doc(db, 'events', eventId);
+  const eventSnap = await getDoc(eventRef);
+  const eventData = eventSnap.exists() ? eventSnap.data() : {};
+
+  // Fill from event data
+  document.getElementById('eventName').value = eventData.name || eventData.title || '';
+  document.getElementById('eventDate').value = eventData.date || '';
+  document.getElementById('eventLocation').value = eventData.location || eventData.venue || '';
+
+  // Load customization override
+  try {
+    const custSnap = await getDoc(doc(db, 'events', eventId, 'customization', 'design'));
+    if (custSnap.exists()) {
+      const c = custSnap.data();
+      if (c.eventName != null) document.getElementById('eventName').value = c.eventName;
+      if (c.date != null) document.getElementById('eventDate').value = c.date;
+      if (c.location != null) document.getElementById('eventLocation').value = c.location;
+      if (c.welcomeMessage != null) document.getElementById('welcomeMessage').value = c.welcomeMessage;
+      if (c.backgroundImage != null) document.getElementById('bgImage').value = c.backgroundImage || '';
+      if (c.colorScheme && COLOR_SCHEMES[c.colorScheme]) {
+        currentScheme = c.colorScheme;
+      }
+    }
+  } catch (e) {
+    console.error('Error loading customization:', e);
+  }
+
+  renderSwatches();
+  updatePreview();
+}
+
+// ===== Save Customization =====
+async function saveCustomization() {
+  if (!currentEventId) {
+    showToast('اختر مناسبة أولًا');
+    return;
+  }
+
+  const statusEl = document.getElementById('saveStatus');
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true;
+  statusEl.textContent = '';
+  statusEl.className = 'save-status';
+
+  const scheme = COLOR_SCHEMES[currentScheme];
+  const data = {
+    eventName: document.getElementById('eventName').value.trim(),
+    date: document.getElementById('eventDate').value,
+    location: document.getElementById('eventLocation').value.trim(),
+    welcomeMessage: document.getElementById('welcomeMessage').value.trim(),
+    backgroundImage: document.getElementById('bgImage').value.trim() || null,
+    colorScheme: currentScheme,
+    colorSchemeData: {
+      primary: scheme.primary,
+      secondary: scheme.secondary,
+      text: scheme.text,
+      background: scheme.background
+    },
+    updatedAt: serverTimestamp()
+  };
+
+  try {
+    await setDoc(doc(db, 'events', currentEventId, 'customization', 'design'), data, { merge: true });
+    statusEl.textContent = 'تم حفظ التخصيص بنجاح ✅';
+    statusEl.className = 'save-status ok';
+    showToast('تم الحفظ ✅');
+  } catch (e) {
+    console.error('Error saving customization:', e);
+    statusEl.textContent = 'تعذّر حفظ التخصيص ❌';
+    statusEl.className = 'save-status err';
+    showToast('خطأ في الحفظ');
+  }
+  btn.disabled = false;
+}
+
+// ===== Reset Customization =====
+async function resetCustomization() {
+  if (!currentEventId) return;
+
+  if (!confirm('هل تريد إعادة تعيين التخصيص؟ سيتم حذف كل التعديلات والرجوع للقيم الافتراضية.')) return;
+
+  const statusEl = document.getElementById('saveStatus');
+  const btn = document.getElementById('resetBtn');
+  btn.disabled = true;
+  statusEl.textContent = '';
+
+  try {
+    // Load event defaults
+    const eventSnap = await getDoc(doc(db, 'events', currentEventId));
+    const eventData = eventSnap.exists() ? eventSnap.data() : {};
+
+    document.getElementById('eventName').value = eventData.name || eventData.title || '';
+    document.getElementById('eventDate').value = eventData.date || '';
+    document.getElementById('eventLocation').value = eventData.location || eventData.venue || '';
+    document.getElementById('welcomeMessage').value = '';
+    document.getElementById('bgImage').value = '';
+    currentScheme = 'classic_gold';
+    renderSwatches();
+    updatePreview();
+
+    // Delete customization doc
+    try {
+      await updateDoc(doc(db, 'events', currentEventId, 'customization', 'design'), { eventName: null, date: null, location: null, welcomeMessage: null, backgroundImage: null, colorScheme: null, colorSchemeData: null, updatedAt: serverTimestamp() });
+    } catch {
+      // If doc doesn't exist, ignore
+    }
+
+    statusEl.textContent = 'تم إعادة التعيين ✅';
+    statusEl.className = 'save-status ok';
+    showToast('تم إعادة التعيين');
+  } catch (e) {
+    console.error('Error resetting:', e);
+    statusEl.textContent = 'تعذّر إعادة التعيين ❌';
+    statusEl.className = 'save-status err';
+  }
+  btn.disabled = false;
+}
+
+// ===== Wire up input listeners for live preview =====
+function wireInputs() {
+  const fields = ['eventName', 'eventDate', 'eventLocation', 'welcomeMessage', 'bgImage'];
+  fields.forEach(id => {
+    document.getElementById(id).addEventListener('input', updatePreview);
+  });
+}
+
+// ===== Init =====
+requireLogin(async () => {
+  await loadEvents();
+  wireInputs();
+  renderSwatches();
+
+  const sel = document.getElementById('eventSelect');
+  sel.addEventListener('change', () => {
+    currentEventId = sel.value || null;
+    loadCustomization(currentEventId);
+  });
+
+  document.getElementById('saveBtn').addEventListener('click', saveCustomization);
+  document.getElementById('resetBtn').addEventListener('click', resetCustomization);
+
+  // Check if event ID passed in URL hash
+  const hash = window.location.hash.replace('#', '');
+  if (hash) {
+    sel.value = hash;
+    if (sel.value === hash) {
+      currentEventId = hash;
+      loadCustomization(hash);
+    }
+  }
+});
+</script>
+</body>
+</html>

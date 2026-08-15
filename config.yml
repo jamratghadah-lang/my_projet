@@ -51,7 +51,6 @@ collections:
             ] }
           - { label: "رقم الواتساب (بدون + وبدون مسافات)", name: "whatsapp_number", widget: "string", default: "966547266733", hint: "مثال: 966547266733" }
           - { label: "رابط الدفع الإلكتروني", name: "payment_link", widget: "string", required: false, hint: "يُستخدم فقط إذا اخترتِ (دفع إلكتروني مباشر) بالأعلى" }
-          - { label: "رابط Formspree العام (لكل صفحات تأكيد الحضور)", name: "formspree_id", widget: "string", required: false, hint: "مثال: https://formspree.io/f/xxxxxxxx" }
 
   - name: "pricing"
     label: "الأسعار والباقات"
@@ -72,7 +71,6 @@ collections:
     label: "صفحات تأكيد الحضور (13)"
     files:
       - { file: "content/rsvp/wedding-silver.json", label: "زفاف - Silver", name: "wedding_silver", media_folder: "/images/uploads/rsvp/wedding-silver", public_folder: "/images/uploads/rsvp/wedding-silver", fields: &rsvp_fields [
-            { label: "رمز الحماية (يُضاف تلقائيًا لرابط QR — الصفحة ما تفتح بدونه)", name: "access_code", widget: "string", required: false, hint: "اتركيه فاضي لتعطيل الحماية مؤقتًا. لو غيّرتيه، لازم تولّدي QR جديد بنفس الرمز الجديد" },
             { label: "الأسماء", name: "names", widget: "string", required: false },
             { label: "التاريخ", name: "date", widget: "string", required: false, hint: "مثال: 12 / 10 / 2026" },
             { label: "الموقع", name: "location", widget: "string", required: false },
@@ -97,7 +95,6 @@ collections:
                 { label: "الحدث", name: "event", widget: "string", required: false }
               ] },
             { label: "كلمة ترحيبية (من الزوجين / صاحب المناسبة)", name: "welcome_message", widget: "text", required: false, hint: "تظهر أعلى صفحة تأكيد الحضور، تقدرين تكتبينها بأي شكل تحبين" },
-            { label: "رابط Formspree خاص (اختياري، يطغى على الرابط العام)", name: "formspree_override", widget: "string", required: false },
             { label: "حقول استمارة تأكيد الحضور (إظهار/إخفاء)", name: "form_fields", widget: "object", required: false, hint: "تحكمين من هنا في أي الحقول تظهر للضيوف بنموذج تأكيد الحضور", fields: [
                 { label: "إظهار حقل رقم الهاتف", name: "phone", widget: "select", required: false, default: "on", options: [
                     { label: "مفعّل (الافتراضي)", value: "on" },

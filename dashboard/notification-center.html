@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مركز الإشعارات — لوحة تحكم جمرة غضى</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+  *{box-sizing:border-box}
+  body{font-family:Tahoma,Arial,sans-serif;background:#111;color:#eee;margin:0;padding:20px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px}
+  h1{color:#d4af37;font-size:20px;margin:0}
+  a.back{color:#aaa;text-decoration:none;font-size:14px}
+
+  /* Stats */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:18px}
+  .stat{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:16px;text-align:center;position:relative;overflow:hidden}
+  .stat::before{content:"";position:absolute;top:0;right:0;width:4px;height:100%}
+  .stat.total::before{background:#d4af37}
+  .stat.unread::before{background:#5b9bd5}
+  .stat.read::before{background:#888}
+  .stat .num{font-size:30px;font-weight:bold;line-height:1}
+  .stat.total .num{color:#d4af37}
+  .stat.unread .num{color:#5b9bd5}
+  .stat.read .num{color:#aaa}
+  .stat .label{font-size:11px;color:#999;margin-top:6px}
+
+  /* Actions Bar */
+  .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+  button{padding:9px 16px;border:none;border-radius:6px;background:#d4af37;color:#111;font-weight:bold;cursor:pointer;font-size:13px;font-family:inherit;transition:opacity .2s}
+  button:hover{opacity:.85}
+  button:disabled{opacity:.45;cursor:default}
+  button.secondary{background:#333;color:#eee}
+  button.danger{background:#7a2e2e;color:#eee}
+  .filter-btns{display:flex;gap:0;margin-right:auto;border-radius:6px;overflow:hidden;border:1px solid #444}
+  .filter-btns button{border-radius:0;background:#222;color:#999;border:1px solid #444;border-right:none;font-size:12px;padding:8px 14px}
+  .filter-btns button:last-child{border-right:1px solid #444;border-left:1px solid #444}
+  .filter-btns button.active{background:#d4af37;color:#111;border-color:#d4af37;font-weight:bold}
+
+  /* Notification List */
+  .notif-list{display:flex;flex-direction:column;gap:10px}
+  .notif-item{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:18px;display:flex;gap:14px;align-items:flex-start;cursor:pointer;transition:border-color .2s,background .2s;position:relative}
+  .notif-item:hover{border-color:#555;background:#222}
+  .notif-item.unread{border-right:3px solid #5b9bd5}
+
+  .notif-dot{width:10px;height:10px;border-radius:50%;background:#5b9bd5;flex-shrink:0;margin-top:5px;box-shadow:0 0 6px rgba(91,155,213,.5)}
+  .notif-dot.read{background:#444;box-shadow:none}
+
+  .notif-icon{font-size:22px;flex-shrink:0;margin-top:2px}
+
+  .notif-body{flex:1;min-width:0}
+  .notif-title{font-size:14px;color:#eee;margin:0 0 4px;line-height:1.5}
+  .notif-title.bold{font-weight:bold}
+  .notif-text{font-size:13px;color:#999;margin:0 0 6px;line-height:1.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  .notif-text.expanded{white-space:normal;overflow:visible;text-overflow:unset}
+  .notif-meta{font-size:11px;color:#777;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .notif-link{color:#5b9bd5;font-size:11px;text-decoration:none;direction:ltr;unicode-bidi:embed}
+  .notif-link:hover{text-decoration:underline}
+
+  .notif-del{background:none;border:none;color:#666;cursor:pointer;font-size:18px;padding:4px 6px;border-radius:4px;flex-shrink:0;transition:color .2s,background .2s;line-height:1}
+  .notif-del:hover{color:#e07a7a;background:rgba(224,122,122,.1)}
+
+  /* Empty State */
+  .empty{text-align:center;padding:60px 20px;color:#666}
+  .empty .icon{font-size:48px;margin-bottom:12px}
+  .empty p{font-size:15px;margin:0}
+
+  /* Dev Button */
+  .dev-btn{position:fixed;bottom:20px;left:20px;background:#333;color:#d4af37;border:1px solid #444;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit;z-index:999}
+  .dev-btn:hover{background:#444}
+
+  @media (max-width: 700px){
+    .container,.page,.content,.main-content{width:100%;max-width:100%;padding-left:12px;padding-right:12px;}
+    .grid{grid-template-columns:1fr !important;}
+    .card{min-width:0;}
+    table{display:block;max-width:100%;overflow-x:auto;white-space:nowrap;}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>🔔 مركز الإشعارات</h1>
+  <a class="back" href="index.html">← رجوع للوحة</a>
+</div>
+
+<div class="stats">
+  <div class="stat total">
+    <div class="num" id="statTotal">0</div>
+    <div class="label">إجمالي الإشعارات</div>
+  </div>
+  <div class="stat unread">
+    <div class="num" id="statUnread">0</div>
+    <div class="label">غير مقروءة</div>
+  </div>
+  <div class="stat read">
+    <div class="num" id="statRead">0</div>
+    <div class="label">مقروءة</div>
+  </div>
+</div>
+
+<div class="actions">
+  <button id="markAllBtn">تحديد الكل كمقروء</button>
+  <button class="danger" id="deleteReadBtn">حذف المقروءة</button>
+  <div class="filter-btns">
+    <button class="active" data-filter="all">الكل</button>
+    <button data-filter="unread">غير مقروءة</button>
+    <button data-filter="read">مقروءة</button>
+  </div>
+</div>
+
+<div class="notif-list" id="notifList"></div>
+
+<div class="empty" id="emptyState" style="display:none">
+  <div class="icon">📭</div>
+  <p>لا توجد إشعارات</p>
+</div>
+
+<button class="dev-btn" id="devBtn" style="display:none">🔧 إنشاء 3 إشعارات تجريبية</button>
+
+<script type="module">
+import {
+  auth, db, requireLogin,
+  collection, query, orderBy, onSnapshot,
+  doc, updateDoc, deleteDoc, addDoc, serverTimestamp,
+} from "../js/firebase-init.js";
+
+let allNotifs = [];
+let currentFilter = "all";
+
+requireLogin(async () => {
+  listenNotifications();
+  setupActions();
+  setupFilters();
+  setupDev();
+});
+
+/* ========== XSS Protection ========== */
+function escapeHtml(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/* ========== Relative Time (Arabic) ========== */
+function relativeTime(date) {
+  if (!date) return "";
+  const now = Date.now();
+  const d = date.toDate ? date.toDate() : new Date(date);
+  const diffMs = now - d.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHr  = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHr / 24);
+  const diffWeek = Math.floor(diffDay / 7);
+
+  if (diffSec < 60) return "منذ لحظات";
+  if (diffMin < 60) return `منذ ${diffMin} دقائق`;
+  if (diffHr < 24)  return `منذ ${diffHr} ساعات`;
+  if (diffDay < 7)  return `منذ ${diffDay} أيام`;
+  if (diffWeek < 5) return `منذ ${diffWeek} أسابيع`;
+
+  // Full Arabic date
+  const months = [
+    "يناير","فبراير","مارس","أبريل","مايو","يونيو",
+    "يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"
+  ];
+  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+/* ========== Type Helpers ========== */
+function typeIcon(type) {
+  switch (type) {
+    case "info":    return "<span class=\"notif-icon\">ℹ️</span>";
+    case "success": return "<span class=\"notif-icon\">✅</span>";
+    case "warning": return "<span class=\"notif-icon\">⚠️</span>";
+    case "error":   return "<span class=\"notif-icon\">❌</span>";
+    default:        return "<span class=\"notif-icon\">ℹ️</span>";
+  }
+}
+
+function typeColor(type) {
+  switch (type) {
+    case "info":    return "#5b9bd5";
+    case "success": return "#4caf50";
+    case "warning": return "#e0a832";
+    case "error":   return "#e07a7a";
+    default:        return "#5b9bd5";
+  }
+}
+
+/* ========== Render ========== */
+function render() {
+  const list = document.getElementById("notifList");
+  const empty = document.getElementById("emptyState");
+
+  let filtered = allNotifs;
+  if (currentFilter === "unread") filtered = allNotifs.filter(n => !n.read);
+  if (currentFilter === "read")   filtered = allNotifs.filter(n => n.read);
+
+  if (filtered.length === 0) {
+    list.innerHTML = "";
+    empty.style.display = "block";
+    return;
+  }
+
+  empty.style.display = "none";
+
+  list.innerHTML = filtered.map(n => {
+    const id = n.id;
+    const isUnread = !n.read;
+    const title = escapeHtml(n.title || "");
+    const body = escapeHtml(n.body || "");
+    const truncated = body.length > 150 ? body.substring(0, 150) + "..." : body;
+    const time = relativeTime(n.createdAt);
+    const link = n.link ? escapeHtml(n.link) : "";
+    const dotClass = isUnread ? "" : "read";
+    const itemClass = isUnread ? "unread" : "";
+    const titleClass = isUnread ? "bold" : "";
+
+    return `
+      <div class="notif-item ${itemClass}" data-id="${id}">
+        <div class="notif-dot ${dotClass}"></div>
+        ${typeIcon(n.type)}
+        <div class="notif-body" data-id="${id}">
+          <div class="notif-title ${titleClass}">${title}</div>
+          <div class="notif-text" data-full="${escapeHtml(body)}">${truncated}</div>
+          <div class="notif-meta">
+            <span>${time}</span>
+            ${link ? `<a class="notif-link" href="${link}" target="_blank" rel="noopener noreferrer">${link.length > 50 ? link.substring(0, 50) + "..." : link}</a>` : ""}
+          </div>
+        </div>
+        <button class="notif-del" data-del="${id}" title="حذف">✕</button>
+      </div>
+    `;
+  }).join("");
+
+  // Event: click notification body → expand / mark as read / navigate
+  list.querySelectorAll(".notif-body").forEach(el => {
+    el.addEventListener("click", (e) => {
+      if (e.target.closest(".notif-link")) return; // let links work
+      const id = el.dataset.id;
+      const textEl = el.querySelector(".notif-text");
+      const fullText = textEl.dataset.full;
+
+      // Toggle expand if text was truncated
+      if (textEl.classList.contains("expanded")) {
+        textEl.classList.remove("expanded");
+        textEl.textContent = fullText.length > 150 ? fullText.substring(0, 150) + "..." : fullText;
+      } else {
+        textEl.classList.add("expanded");
+        textEl.textContent = fullText;
+      }
+
+      // Mark as read
+      markAsRead(id);
+    });
+  });
+
+  // Event: delete button
+  list.querySelectorAll(".notif-del").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.del;
+      deleteNotif(id);
+    });
+  });
+
+  updateStats();
+}
+
+function updateStats() {
+  const total = allNotifs.length;
+  const unread = allNotifs.filter(n => !n.read).length;
+  const read = total - unread;
+  document.getElementById("statTotal").textContent = total;
+  document.getElementById("statUnread").textContent = unread;
+  document.getElementById("statRead").textContent = read;
+}
+
+/* ========== Firestore ========== */
+function listenNotifications() {
+  const q = query(collection(db, "dashboard_notifications"), orderBy("createdAt", "desc"));
+  onSnapshot(q, (snap) => {
+    allNotifs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    render();
+  }, (err) => {
+    console.error("Error listening to notifications:", err);
+  });
+}
+
+async function markAsRead(id) {
+  const n = allNotifs.find(x => x.id === id);
+  if (!n || n.read) return;
+  try {
+    await updateDoc(doc(db, "dashboard_notifications", id), { read: true });
+  } catch (e) {
+    console.error("Failed to mark as read:", e);
+  }
+}
+
+async function deleteNotif(id) {
+  try {
+    await deleteDoc(doc(db, "dashboard_notifications", id));
+  } catch (e) {
+    console.error("Failed to delete:", e);
+  }
+}
+
+/* ========== Actions ========== */
+function setupActions() {
+  // Mark all as read
+  document.getElementById("markAllBtn").addEventListener("click", async () => {
+    const btn = document.getElementById("markAllBtn");
+    const unread = allNotifs.filter(n => !n.read);
+    if (unread.length === 0) return;
+    btn.disabled = true;
+    btn.textContent = "جارِ التحديث...";
+    const promises = unread.map(n =>
+      updateDoc(doc(db, "dashboard_notifications", n.id), { read: true })
+    );
+    await Promise.allSettled(promises);
+    btn.disabled = false;
+    btn.textContent = "تحديد الكل كمقروء";
+  });
+
+  // Delete all read
+  document.getElementById("deleteReadBtn").addEventListener("click", async () => {
+    const readNotifs = allNotifs.filter(n => n.read);
+    if (readNotifs.length === 0) return;
+    if (!confirm(`هل تريد حذف ${readNotifs.length} إشعار مقروء؟ لا يمكن التراجع.`)) return;
+    const btn = document.getElementById("deleteReadBtn");
+    btn.disabled = true;
+    btn.textContent = "جارِ الحذف...";
+    const promises = readNotifs.map(n =>
+      deleteDoc(doc(db, "dashboard_notifications", n.id))
+    );
+    await Promise.allSettled(promises);
+    btn.disabled = false;
+    btn.textContent = "حذف المقروءة";
+  });
+}
+
+/* ========== Filters ========== */
+function setupFilters() {
+  document.querySelectorAll(".filter-btns button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".filter-btns button").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      currentFilter = btn.dataset.filter;
+      render();
+    });
+  });
+}
+
+/* ========== Dev Mode ========== */
+function setupDev() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("dev") === "1") {
+    document.getElementById("devBtn").style.display = "block";
+    document.getElementById("devBtn").addEventListener("click", async () => {
+      const btn = document.getElementById("devBtn");
+      btn.disabled = true;
+      btn.textContent = "جارِ الإنشاء...";
+      try {
+        await addDoc(collection(db, "dashboard_notifications"), {
+          title: "ضيف جديد سجّل ردّه",
+          body: "تم تسجيل ردّ الضيف فاطمة المحمدي على مناسبة «حفل زفاف سارة» — الحالة: مؤكدة، عدد المرافقين: 3. يمكنك مراجعة التفاصيل من صفحة المدعوين.",
+          type: "info",
+          read: false,
+          link: "guests.html",
+          createdAt: serverTimestamp(),
+        });
+        await addDoc(collection(db, "dashboard_notifications"), {
+          title: "تم إرسال التقرير اليومي بنجاح",
+          body: "تم إرسال تقرير ملخص اليوم بنجاح إلى البريد المحدد. يتضمن التقرير إجمالي الردود: 142، مؤكد: 98، معتذر: 18، لم يرد: 26.",
+          type: "success",
+          read: false,
+          link: "",
+          createdAt: serverTimestamp(),
+        });
+        await addDoc(collection(db, "dashboard_notifications"), {
+          title: "تحذير: موعد مناسبة خلال 24 ساعة",
+          body: "المناسبة «حفل زفاف نورة» ستبدأ بعد أقل من 24 ساعة. عدد المؤكدين الذين لم يتلقّوا تذكير SMS بعد: 12. تأكد من تفعيل خدمة التذكير التلقائي.",
+          type: "warning",
+          read: false,
+          link: "reminders.html",
+          createdAt: serverTimestamp(),
+        });
+        btn.textContent = "✓ تم إنشاء 3 إشعارات";
+      } catch (e) {
+        console.error(e);
+        btn.textContent = "✕ خطأ في الإنشاء";
+      }
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.textContent = "🔧 إنشاء 3 إشعارات تجريبية";
+      }, 2500);
+    });
+  }
+}
+</script>
+</body>
+</html>

@@ -71,6 +71,9 @@ exports.handler = async (event) => {
     const guestDoc = responsesSnap.docs[0];
     const guestData = guestDoc.data();
     const responseId = guestDoc.id;
+    if (guestData.qrRevoked === true) {
+      return { statusCode: 403, body: JSON.stringify({ error: "رمز الدخول ملغى" }) };
+    }
 
     // ===== 4) التحقق من عدم تسجيل الدخول مسبقاً =====
     const existingCheckin = await db
@@ -88,6 +91,9 @@ exports.handler = async (event) => {
           name: guestData.name || "—",
           guests: guestData.guests || 0,
           companions: guestData.companions || 0,
+          table: guestData.table || "",
+          seat: guestData.seat || "",
+          gate: guestData.gate || "",
           checkedInAt: prevData.checkedInAt,
           message: "هذا الضيف سجّل دخوله مسبقاً",
         }),
@@ -102,6 +108,9 @@ exports.handler = async (event) => {
       phone: guestData.phone || "—",
       guests: guestData.guests || 0,
       companions: guestData.companions || 0,
+      table: guestData.table || "",
+      seat: guestData.seat || "",
+      gate: guestData.gate || "",
       style: guestData.style || "—",
       slug: guestData.slug || "—",
       checkedInAt: new Date().toISOString(),
@@ -124,6 +133,9 @@ exports.handler = async (event) => {
         name: checkinData.name,
         guests: checkinData.guests,
         companions: checkinData.companions,
+        table: checkinData.table,
+        seat: checkinData.seat,
+        gate: checkinData.gate,
         style: checkinData.style,
         checkedInAt: checkinData.checkedInAt,
         message: `مرحباً ${checkinData.name}! تم تسجيل الدخول بنجاح`,

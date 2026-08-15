@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jamrat AI — إحصائيات المساعد الذكي</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+  *{box-sizing:border-box}
+  body{font-family:Tahoma,Arial,sans-serif;background:#111;color:#eee;margin:0;padding:20px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px}
+  h1{color:#d4af37;font-size:20px;margin:0}
+  a.back{color:#aaa;text-decoration:none;font-size:14px}
+  .card{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:18px;margin-bottom:18px}
+  .card h2{font-size:15px;color:#d4af37;margin:0 0 4px}
+  .card .subtitle{font-size:12px;color:#999;margin:0 0 14px}
+
+  .btn{padding:10px 16px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;font-size:13px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-family:inherit}
+  .btn-gold{background:#d4af37;color:#111}
+  .btn-outline{background:transparent;border:1px solid #555;color:#ddd}
+
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:12.5px;color:#aaa;margin-bottom:5px}
+  .field input,.field select{
+    width:100%;padding:10px 12px;border-radius:8px;border:1px solid #444;background:#222;color:#fff;
+    font-family:inherit;font-size:14px;
+  }
+
+  .msg-status{font-size:13px;margin-top:8px;min-height:18px}
+  .msg-status.err{color:#e07a5f}
+  .msg-status.ok{color:#4caf50}
+
+  /* Stats Row */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:18px}
+  .stat{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:16px;text-align:center;position:relative;overflow:hidden}
+  .stat::before{content:"";position:absolute;top:0;right:0;width:4px;height:100%}
+  .stat.s1::before{background:#d4af37}
+  .stat.s2::before{background:#4caf50}
+  .stat.s3::before{background:#2196f3}
+  .stat.s4::before{background:#e07a5f}
+  .stat .num{font-size:30px;font-weight:bold;line-height:1}
+  .stat.s1 .num{color:#d4af37}
+  .stat.s2 .num{color:#4caf50}
+  .stat.s3 .num{color:#2196f3}
+  .stat.s4 .num{color:#e07a5f}
+  .stat .label{font-size:11px;color:#999;margin-top:6px}
+
+  /* Date range */
+  .date-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:18px}
+  .date-bar .field{margin-bottom:0;flex:1;min-width:150px}
+
+  /* Charts */
+  .charts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;margin-bottom:18px}
+  @media(max-width:500px){.charts-grid{grid-template-columns:1fr}}
+
+  .bar-chart{display:flex;align-items:flex-end;gap:6px;height:180px;padding:0 4px}
+  .bar-col{display:flex;flex-direction:column;align-items:center;flex:1;min-width:0;height:100%;justify-content:flex-end}
+  .bar{width:100%;min-width:16px;max-width:40px;border-radius:4px 4px 0 0;transition:height .3s;position:relative}
+  .bar.gold{background:#d4af37}
+  .bar.green{background:#4caf50}
+  .bar.blue{background:#2196f3}
+  .bar.red{background:#e07a5f}
+  .bar .bar-val{position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:10px;color:#ccc;white-space:nowrap}
+  .bar-label{font-size:9px;color:#888;margin-top:4px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60px}
+
+  /* Unknown rate */
+  .rate-big{font-size:48px;font-weight:bold;color:#e07a5f;line-height:1}
+  .rate-label{font-size:13px;color:#999;margin-top:8px}
+
+  /* Table */
+  .table-wrap{overflow-x:auto;max-height:400px;overflow-y:auto}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  thead th{text-align:right;padding:10px 8px;border-bottom:2px solid #333;color:#d4af37;white-space:nowrap;position:sticky;top:0;background:#1c1c1c;z-index:2}
+  tbody td{padding:10px 8px;border-bottom:1px solid #2a2a2a;white-space:nowrap}
+  tbody tr:hover{background:#222}
+  .empty{color:#777;text-align:center;padding:30px;font-size:14px}
+  .loading{color:#999;font-size:14px;text-align:center;padding:40px}
+  @media(max-width:600px){.stat .num{font-size:22px}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>📊 إحصائيات المساعد الذكي</h1>
+  <a class="back" href="index.html">← رجوع للوحة</a>
+</div>
+
+<div id="app"><div class="loading">جارٍ التحميل...</div></div>
+
+<script type="module">
+import { requireLogin, db, collection, getDocs, query, orderBy, where } from '../js/firebase-init.js';
+
+function escapeHtml(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function formatDate(d){
+  if(!d) return '—';
+  const dt = d?.toDate ? d.toDate() : new Date(d);
+  return dt.toLocaleDateString('ar-SA', {year:'numeric',month:'2-digit',day:'2-digit'});
+}
+
+function shortDate(d){
+  if(!d) return '';
+  const dt = d?.toDate ? d.toDate() : new Date(d);
+  return dt.toLocaleDateString('ar-SA', {month:'short',day:'numeric'});
+}
+
+requireLogin(async (user) => {
+  const app = document.getElementById('app');
+
+  app.innerHTML = `
+    <!-- إحصائيات سريعة -->
+    <div class="stats">
+      <div class="stat s1"><div class="num" id="stat-total">0</div><div class="label">إجمالي المحادثات</div></div>
+      <div class="stat s2"><div class="num" id="stat-packages">0</div><div class="label">أسئلة الباقات</div></div>
+      <div class="stat s3"><div class="num" id="stat-rsvp">0</div><div class="label">أسئلة RSVP</div></div>
+      <div class="stat s4"><div class="num" id="stat-leads">0</div><div class="label">Leads</div></div>
+    </div>
+
+    <!-- نطاق التاريخ -->
+    <div class="card">
+      <div class="date-bar">
+        <div class="field"><label>من تاريخ</label><input type="date" id="date-from"></div>
+        <div class="field"><label>إلى تاريخ</label><input type="date" id="date-to"></div>
+        <button class="btn btn-gold" onclick="window._loadAnalytics()" style="margin-bottom:0;height:42px">🔄 تحديث</button>
+      </div>
+    </div>
+
+    <!-- الرسوم البيانية -->
+    <div class="charts-grid">
+      <div class="card">
+        <h2>المحادثات اليومية</h2>
+        <div class="subtitle">آخر 14 يوم</div>
+        <div class="bar-chart" id="chart-daily"></div>
+      </div>
+      <div class="card">
+        <h2>أكثر الأسئلة</h2>
+        <div class="subtitle">أعلى 10 نيات</div>
+        <div class="bar-chart" id="chart-intents"></div>
+      </div>
+      <div class="card">
+        <h2>الباقات الأكثر سؤالاً</h2>
+        <div class="subtitle">حسب ذكر الباقة في المحادثات</div>
+        <div class="bar-chart" id="chart-packages"></div>
+      </div>
+      <div class="card">
+        <h2>نسبة الأسئلة بدون إجابة</h2>
+        <div class="subtitle">الأسئلة التي لم يُعرف لها قصد</div>
+        <div style="display:flex;align-items:center;gap:30px;padding:20px 0">
+          <div class="rate-big" id="unknown-rate">0%</div>
+          <div style="flex:1">
+            <div style="width:100%;height:16px;background:#333;border-radius:8px;overflow:hidden">
+              <div id="unknown-bar" style="height:100%;background:#e07a5f;border-radius:8px;transition:width .3s;width:0%"></div>
+            </div>
+            <div class="rate-label" style="margin-top:8px" id="unknown-detail">0 من 0 محادثة</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- جدول يومي -->
+    <div class="card">
+      <h2>التفاصيل اليومية</h2>
+      <div class="subtitle">تفصيل المحادثات حسب اليوم</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>التاريخ</th><th>المحادثات</th><th>الباقات</th><th>RSVP</th><th>Leads</th><th>تكلفة تقريبية</th>
+          </tr></thead>
+          <tbody id="daily-tbody"><tr><td colspan="6" class="empty">جارٍ التحميل...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  // تعيين نطاق التاريخ الافتراضي (آخر 14 يوم)
+  const today = new Date();
+  const twoWeeksAgo = new Date(today); twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+  document.getElementById('date-to').value = today.toISOString().split('T')[0];
+  document.getElementById('date-from').value = twoWeeksAgo.toISOString().split('T')[0];
+
+  window._loadAnalytics = loadAnalytics;
+  await loadAnalytics();
+
+  async function loadAnalytics() {
+    const fromStr = document.getElementById('date-from').value;
+    const toStr = document.getElementById('date-to').value;
+    const from = fromStr ? new Date(fromStr) : null;
+    const to = toStr ? new Date(toStr + 'T23:59:59') : null;
+
+    try {
+      let q = query(collection(db, 'ai_analytics_daily'), orderBy('date', 'desc'));
+      const snap = await getDocs(q);
+      let records = [];
+      snap.forEach(doc => records.push({id:doc.id, ...doc.data()}));
+
+      // تصفية حسب التاريخ
+      if (from) records = records.filter(r => {
+        const d = r.date?.toDate ? r.date.toDate() : new Date(r.date);
+        return d >= from;
+      });
+      if (to) records = records.filter(r => {
+        const d = r.date?.toDate ? r.date.toDate() : new Date(r.date);
+        return d <= to;
+      });
+
+      // ترتيب تصاعدي للرسوم البيانية
+      const sorted = [...records].sort((a,b) => {
+        const da = a.date?.toDate ? a.date.toDate() : new Date(a.date);
+        const db2 = b.date?.toDate ? b.date.toDate() : new Date(b.date);
+        return da - db2;
+      });
+
+      // الإحصائيات
+      let totalConvs = 0, totalPkg = 0, totalRsvp = 0, totalLeads = 0, totalUnknown = 0;
+      const intentMap = {};
+      const pkgMap = {};
+
+      records.forEach(r => {
+        totalConvs += r.totalConversations || 0;
+        totalPkg += r.packageQuestions || 0;
+        totalRsvp += r.rsvpQuestions || 0;
+        totalLeads += r.leads || 0;
+        totalUnknown += r.unknownIntent || 0;
+        // النيات
+        if (r.topIntents && Array.isArray(r.topIntents)) {
+          r.topIntents.forEach(ri => {
+            intentMap[ri.intent] = (intentMap[ri.intent] || 0) + (ri.count || 1);
+          });
+        }
+        // الباقات
+        if (r.topPackages && Array.isArray(r.topPackages)) {
+          r.topPackages.forEach(rp => {
+            pkgMap[rp.name] = (pkgMap[rp.name] || 0) + (rp.count || 1);
+          });
+        }
+      });
+
+      document.getElementById('stat-total').textContent = totalConvs.toLocaleString('ar-SA');
+      document.getElementById('stat-packages').textContent = totalPkg.toLocaleString('ar-SA');
+      document.getElementById('stat-rsvp').textContent = totalRsvp.toLocaleString('ar-SA');
+      document.getElementById('stat-leads').textContent = totalLeads.toLocaleString('ar-SA');
+
+      // رسم المحادثات اليومية (آخر 14 يوم من sorted)
+      const last14 = sorted.slice(-14);
+      renderBarChart('chart-daily', last14.map(r => ({
+        label: shortDate(r.date),
+        value: r.totalConversations || 0
+      })), 'gold');
+
+      // أكثر الأسئلة
+      const topIntents = Object.entries(intentMap)
+        .sort((a,b) => b[1]-a[1])
+        .slice(0, 10)
+        .map(([intent, count]) => ({label: intent, value: count}));
+      renderBarChart('chart-intents', topIntents, 'green');
+
+      // الباقات الأكثر سؤالاً
+      const topPkgs = Object.entries(pkgMap)
+        .sort((a,b) => b[1]-a[1])
+        .slice(0, 10)
+        .map(([name, count]) => ({label: name, value: count}));
+      renderBarChart('chart-packages', topPkgs, 'blue');
+
+      // نسبة غير المعروفة
+      const unknownRate = totalConvs > 0 ? Math.round((totalUnknown / totalConvs) * 100) : 0;
+      document.getElementById('unknown-rate').textContent = unknownRate + '%';
+      document.getElementById('unknown-bar').style.width = unknownRate + '%';
+      document.getElementById('unknown-detail').textContent =
+        escapeHtml(totalUnknown.toString()) + ' من ' + escapeHtml(totalConvs.toString()) + ' محادثة';
+
+      // جدول يومي (مرتب تنازلياً)
+      const tableData = [...records].sort((a,b) => {
+        const da = a.date?.toDate ? a.date.toDate() : new Date(a.date);
+        const db2 = b.date?.toDate ? b.date.toDate() : new Date(b.date);
+        return db2 - da;
+      });
+      renderDailyTable(tableData);
+
+    } catch(e) {
+      console.error(e);
+    }
+  }
+
+  function renderBarChart(containerId, data, colorClass) {
+    const container = document.getElementById(containerId);
+    if (!data.length) {
+      container.innerHTML = '<div class="empty" style="width:100%;display:flex;align-items:center;justify-content:center">لا توجد بيانات</div>';
+      return;
+    }
+    const maxVal = Math.max(...data.map(d=>d.value), 1);
+    container.innerHTML = data.map(d => {
+      const h = Math.max((d.value / maxVal) * 150, d.value > 0 ? 8 : 0);
+      return `<div class="bar-col">
+        <div class="bar ${colorClass}" style="height:${h}px">
+          ${d.value > 0 ? '<span class="bar-val">'+d.value+'</span>' : ''}
+        </div>
+        <div class="bar-label">${escapeHtml(d.label)}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderDailyTable(records) {
+    const tb = document.getElementById('daily-tbody');
+    if (!records.length) {
+      tb.innerHTML = '<tr><td colspan="6" class="empty">لا توجد بيانات في هذا النطاق</td></tr>';
+      return;
+    }
+    tb.innerHTML = records.map(r => {
+      const cost = ((r.totalConversations || 0) * 0.002).toFixed(2);
+      return `<tr>
+        <td>${formatDate(r.date)}</td>
+        <td>${r.totalConversations || 0}</td>
+        <td>${r.packageQuestions || 0}</td>
+        <td>${r.rsvpQuestions || 0}</td>
+        <td>${r.leads || 0}</td>
+        <td>${cost} $</td>
+      </tr>`;
+    }).join('');
+  }
+});
+</script>
+</body>
+</html>

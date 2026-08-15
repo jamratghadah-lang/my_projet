@@ -4,5 +4,10 @@
 /admin        /admin/index.html      200
 /dashboard    /dashboard/index.html  200
 
+# صفحة "تأكيد الحضور" القديمة (rsvp.html) صارت مخفية — أي زائر قديم يفتح
+# الرابط يتحوّل تلقائياً للصفحة الرئيسية. الروابط الفردية (rsvp/wedding-gold.html
+# مثلاً) ما تتأثر لأنها ملفات موجودة فعلاً.
+/rsvp.html    /                      302
+
 # الرابط المخصص بأسماء العروسين: jamratghadah.com/سارة-احمد
 /:slug        /.netlify/functions/couple-router  200

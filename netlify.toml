@@ -3,12 +3,23 @@ publish = "."
 command = "npm run build"
 
 [functions]
+# Files required by server-side invitation/pricing functions.
+included_files = ["content/rsvp/**", "content/pricing.json"]
+
 [functions.daily-report]
 schedule = "0 8 * * *"
 
 [functions.event-reminder]
 schedule = "0 * * * *"
 
+[functions."message-scheduler"]
+schedule = "*/5 * * * *"
+
+# ===== CSP العامة لكل الموقع =====
+# لوحة تحكم Decap CMS تحتاج 'unsafe-eval' عشان تشتغل (مكتبة decap-cms.js
+# تستخدم eval/new Function داخلياً). عشان ما نضعّف أمان باقي الموقع،
+# نضيف هذي الترويسة الخاصة بـ /admin فقط اللي تسمح بـ unsafe-eval،
+# بينما تبقى CSP العامة للصفحات العامة بدون unsafe-eval.
 [[headers]]
 for = "/*"
 
@@ -16,7 +27,19 @@ for = "/*"
 X-Frame-Options = "SAMEORIGIN"
 X-Content-Type-Options = "nosniff"
 Referrer-Policy = "strict-origin-when-cross-origin"
-Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://identity.netlify.com https://unpkg.com https://scripts.sirv.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; media-src 'self' https:; connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.google.com https://formspree.io https://api.netlify.com https://*.sirv.com https://auth.decapbridge.com https://gateway.decapbridge.com; frame-src https://www.google.com https://identity.netlify.com; base-uri 'self'; object-src 'none'"
+Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
+Permissions-Policy = "camera=(self), microphone=(), geolocation=()"
+Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://identity.netlify.com https://unpkg.com https://scripts.sirv.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; media-src 'self' https:; connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.google.com https://api.netlify.com https://*.sirv.com https://auth.decapbridge.com https://gateway.decapbridge.com; frame-src https://www.google.com https://identity.netlify.com; base-uri 'self'; object-src 'none'; frame-ancestors 'self'"
+
+# ===== CSP خاصة بـ /admin — تسمح بـ unsafe-eval لـ Decap CMS =====
+[[headers]]
+for = "/admin/*"
+
+[headers.values]
+X-Frame-Options = "SAMEORIGIN"
+X-Content-Type-Options = "nosniff"
+Referrer-Policy = "strict-origin-when-cross-origin"
+Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://identity.netlify.com https://unpkg.com https://scripts.sirv.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; media-src 'self' https:; connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.google.com https://api.netlify.com https://*.sirv.com https://auth.decapbridge.com https://gateway.decapbridge.com https://api.github.com https://github.com; frame-src https://www.google.com https://identity.netlify.com; base-uri 'self'; object-src 'none'; frame-ancestors 'self'"
 
 [[headers]]
 for = "/rsvp/*"
