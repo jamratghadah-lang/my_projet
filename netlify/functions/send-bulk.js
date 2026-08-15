@@ -8,7 +8,7 @@
 //
 // Environment variables required (same as other functions in this project):
 //   WHATSAPP_PHONE_ID, WHATSAPP_TOKEN   — for WhatsApp channel
-//   SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM  — for email channel
+//   RESEND_API_KEY, SEND_FROM           — for email channel
 //
 // Media (video/image) is sent via direct URL (e.g. Cloudinary link) —
 // not uploaded directly from the browser.

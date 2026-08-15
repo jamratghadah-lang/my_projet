@@ -6,7 +6,7 @@
 // حسب إعدادات لوحة التحكم (content/settings.json → reports).
 //
 // متغيرات البيئة المطلوبة:
-//   NOTIFY_EMAIL_TO (بريد المدير الافتراضي), SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM
+//   NOTIFY_EMAIL_TO (بريد المدير الافتراضي), RESEND_API_KEY, SEND_FROM
 //   CRON_SECRET — سر لتوثيق النداءات غير المجدولة
 //
 // الجدولة في netlify.toml:

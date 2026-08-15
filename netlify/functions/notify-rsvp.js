@@ -6,9 +6,9 @@
 //
 // متغيرات البيئة المطلوبة في Netlify:
 //   NOTIFY_EMAIL_TO   — بريد المدير الافتراضي
-//   SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASS / SMTP_FROM
+//   RESEND_API_KEY / SEND_FROM
 //
-// لو لم تُضبط متغيرات SMTP، الدالة ترجع 200 وتتجاهل الإرسال بصمت — حتى لا
+// لو لم تُضبط متغيرات Resend، الدالة ترجع 200 وتتجاهل الإرسال بصمت — حتى لا
 // تكسر تجربة الضيف في صفحة الدعوة.
 
 const { resolveRecipients, sendReportEmail, escapeHtml, getAdminDb } = require("./_report-lib");

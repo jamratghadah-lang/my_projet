@@ -8,7 +8,7 @@
 //   2) fetchResponses()     — تقرأ كل ردود المدعوين من Firestore.
 //   3) buildExcelBuffer()   — تولّد ملف Excel حقيقي (.xlsx) من الردود.
 //   4) buildPdfBuffer()     — تولّد ملف PDF حقيقي من الردود.
-//   5) sendReportEmail()    — ترسل الإيميل مرفقًا فيه الملفين عبر nodemailer.
+//   5) sendReportEmail()    — ترسل الإيميل مرفقًا فيه الملفين عبر Resend API.
 
 // ملاحظة: PROJECT_ID يُقرأ من متغيّر البيئة FIREBASE_PROJECT_ID إن وُجد،
 // وإلا نستخدم القيمة الافتراضية. لا حاجة لمفتاح Firebase API هنا لأن
@@ -146,29 +146,43 @@ async function buildPdfBuffer(rows, stats, title) {
   });
 }
 
-// ===== 5) إرسال الإيميل مع المرفقات =====
+// ===== 5) إرسال الإيميل مع المرفقات (عبر Resend API) =====
 async function sendReportEmail({ to, subject, text, html, attachments }) {
-  const smtpHost = process.env.SMTP_HOST;
-  if (!smtpHost || !to || !to.length) {
-    return { sent: false, reason: "SMTP_NOT_CONFIGURED_OR_NO_RECIPIENT" };
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey || !to || !to.length) {
+    return { sent: false, reason: "RESEND_NOT_CONFIGURED_OR_NO_RECIPIENT" };
   }
 
-  const nodemailer = await import("nodemailer");
-  const transporter = nodemailer.createTransport({
-    host: smtpHost,
-    port: parseInt(process.env.SMTP_PORT || "587", 10),
-    secure: parseInt(process.env.SMTP_PORT || "587", 10) === 465,
-    auth: { user: process.env.SMTP_USER || "", pass: process.env.SMTP_PASS || "" },
-  });
+  // Resend يتوقع المرفقات كـ { filename, content } حيث content هو base64 string
+  const resendAttachments = (attachments || []).map((a) => ({
+    filename: a.filename,
+    content: Buffer.isBuffer(a.content)
+      ? a.content.toString("base64")
+      : Buffer.from(a.content).toString("base64"),
+  }));
 
-  await transporter.sendMail({
-    from: process.env.SMTP_FROM || process.env.SMTP_USER || "",
-    to: to.join(","),
+  const payload = {
+    from: process.env.SEND_FROM || "onboarding@resend.dev",
+    to,
     subject,
     text,
     html,
-    attachments: attachments || [],
+  };
+  if (resendAttachments.length) payload.attachments = resendAttachments;
+
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
   });
+
+  if (!res.ok) {
+    const errText = await res.text().catch(() => "");
+    throw new Error(`Resend send failed (${res.status}): ${errText}`);
+  }
 
   return { sent: true };
 }
