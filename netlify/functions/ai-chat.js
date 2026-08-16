@@ -154,6 +154,7 @@ async function handlePost(event) {
   const guestIntents = [
     'EVENT_INFO', 'GUEST_INFO', 'RESEND_INVITATION',
     'SEND_LOCATION', 'GET_RSVP_STATUS', 'UPDATE_RSVP', 'UPDATE_GUEST_COUNT',
+    'CLIENT_STATS',
   ];
   if (guestIntents.includes(intent)) {
     effectiveIntent = 'PUBLIC_INFO';

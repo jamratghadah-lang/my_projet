@@ -40,6 +40,9 @@ const INTENTS = {
   GET_RSVP_STATUS: "GET_RSVP_STATUS",
   UPDATE_RSVP: "UPDATE_RSVP",
   UPDATE_GUEST_COUNT: "UPDATE_GUEST_COUNT",
+
+  // Client intents (require client/owner verification — phone matches event.phone)
+  CLIENT_STATS: "CLIENT_STATS",
 };
 
 // Keyword → intent mappings with weighted patterns
@@ -287,6 +290,21 @@ const KEYWORD_MAP = [
     ],
     weight: 0.80,
   },
+  {
+    intent: "CLIENT_STATS",
+    patterns: [
+      /كم (أكد|اكد|حضر|اعتذر|رد)/i,
+      /كم (شخص|واحد|ضيف) (حضر|أكد|اكد)/i,
+      /نسبة الحضور/i,
+      /إحصائ(ية|يات)/i,
+      /احصائ(ية|يات)/i,
+      /تقرير (الحضور|المناسبة|الحفل)/i,
+      /كم (باقي|متبقي)/i,
+      /عدد (المؤكدين|المعتذرين|الحضور)/i,
+      /وش الوضع (الحين|بالحفل|بالمناسبة)/i,
+    ],
+    weight: 0.85,
+  },
 ];
 
 // Arabic text normalization
@@ -426,6 +444,10 @@ function isGuestIntent(intent) {
     "UPDATE_RSVP",
     "UPDATE_GUEST_COUNT",
   ].includes(intent);
+}
+
+function isClientIntent(intent) {
+  return intent === "CLIENT_STATS";
 }
 
 // ============================================================
@@ -634,6 +656,75 @@ function parseArabicNumber(str) {
   const digits = str.replace(/[٠-٩]/g, (c) => map[c] || c);
   const num = parseInt(digits, 10);
   return isNaN(num) ? null : num;
+}
+
+/**
+ * Build client (event owner) stats context.
+ * A "client" is verified ONLY by matching phone against events.phone —
+ * never by guest self-declaration. Returns aggregate counts scoped
+ * strictly to that single event; never crosses into other events'
+ * guest lists or personal guest data beyond counts.
+ */
+async function buildClientStatsContext(phone) {
+  const db = getDb();
+  if (!db) return null;
+
+  const normalizedPhone = normalizePhone(phone);
+  if (!normalizedPhone || normalizedPhone.length < 10) return null;
+
+  try {
+    const phoneVariants = [normalizedPhone, "+" + normalizedPhone];
+    let eventDoc = null;
+
+    for (const p of phoneVariants) {
+      const snap = await db.collection("events").where("phone", "==", p).limit(1).get();
+      if (!snap.empty) {
+        eventDoc = snap.docs[0];
+        break;
+      }
+    }
+
+    if (!eventDoc) return null; // not a recognized event owner — fall back to guest flow
+
+    const eventData = eventDoc.data();
+    const eventId = eventDoc.id;
+
+    const responsesSnap = await db.collection("responses").where("eventCode", "==", eventId).get();
+
+    let confirmed = 0, declined = 0, pending = 0, totalGuests = 0;
+    responsesSnap.forEach((doc) => {
+      const d = doc.data();
+      const count = parseInt(String(d.guests || 1), 10) || 1;
+      if (d.status === "confirmed" || d.status === "yes") { confirmed++; totalGuests += count; }
+      else if (d.status === "declined" || d.status === "no") { declined++; }
+      else { pending++; }
+    });
+
+    let attendedCount = 0;
+    try {
+      const checkinsSnap = await db.collection("checkins").where("eventId", "==", eventId).get();
+      attendedCount = checkinsSnap.size;
+    } catch {
+      // checkins may not be readable/available; stats still return without it
+    }
+
+    return {
+      isClient: true,
+      eventName: eventData.name || eventData.client || "مناسبتك",
+      eventDate: eventData.date || null,
+      stats: {
+        totalInvited: responsesSnap.size,
+        confirmed,
+        declined,
+        pending,
+        totalGuestsConfirmed: totalGuests,
+        attendedSoFar: attendedCount,
+      },
+    };
+  } catch (err) {
+    console.error("[AI] buildClientStatsContext error:", err.message);
+    return null;
+  }
 }
 
 async function enrichGuestContext(guestDoc, db) {
@@ -1316,6 +1407,26 @@ function formatStructuredResponse(intent, data) {
  * Decides between structured and Gemini-based responses.
  */
 async function generateResponse(intent, context, userMessage) {
+  // CLIENT_STATS is fully deterministic — the numbers were already computed
+  // server-side in buildClientStatsContext(). No LLM call needed, and none
+  // of these figures should be phrased/altered by a model.
+  if (intent === "CLIENT_STATS" && context.client) {
+    const s = context.client.stats;
+    const lines = [
+      `📊 إحصائيات "${context.client.eventName}"`,
+      "",
+      `✅ أكدوا الحضور: ${s.confirmed}`,
+      `❌ اعتذروا: ${s.declined}`,
+      `⏳ لسا ما ردوا: ${s.pending}`,
+      `👥 إجمالي المدعوين: ${s.totalInvited}`,
+      `🎉 إجمالي الحضور المتوقع (مع المرافقين): ${s.totalGuestsConfirmed}`,
+    ];
+    if (s.attendedSoFar > 0) {
+      lines.push(`🚪 حضروا فعليًا لحد الآن: ${s.attendedSoFar}`);
+    }
+    return { text: lines.join("\n"), tokensUsed: 0, action: intent, actionResult: s };
+  }
+
   const toolName = INTENT_TOOL_MAP[intent];
   let toolResult = null;
 
@@ -1867,11 +1978,13 @@ module.exports = {
   classifyIntent,
   isPublicIntent,
   isGuestIntent,
+  isClientIntent,
   INTENTS,
 
   // Context building
   buildPublicContext,
   buildGuestContext,
+  buildClientStatsContext,
 
   // Disambiguation
   formatDisambiguationMessage,

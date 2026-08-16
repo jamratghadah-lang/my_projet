@@ -19,8 +19,10 @@ const {
   classifyIntent,
   isPublicIntent,
   isGuestIntent,
+  isClientIntent,
   buildPublicContext,
   buildGuestContext,
+  buildClientStatsContext,
   formatDisambiguationMessage,
   parseSelectionNumber,
   generateResponse,
@@ -416,7 +418,10 @@ async function processMessage(phone, messageText, displayName) {
 
     // 10. Build context
     const publicContext = await buildPublicContext();
-    if (isGuestIntent(intent)) {
+    let clientContext = null;
+    if (isClientIntent(intent)) {
+      clientContext = await buildClientStatsContext(phone);
+    } else if (isGuestIntent(intent)) {
       guestContext = await buildGuestContext(phone);
       if (guestContext) {
         if (guestContext._disambiguate) {
@@ -440,11 +445,33 @@ async function processMessage(phone, messageText, displayName) {
 
     const fullContext = {
       ...guestContext,
+      client: clientContext,
       public: publicContext,
       phone,
       platform: 'whatsapp',
       entities: classification.entities,
     };
+
+    // 11a. Client asked for stats but phone isn't a recognized event owner —
+    // never leak whose numbers those are; just say we couldn't identify them.
+    if (isClientIntent(intent) && !clientContext) {
+      responseText =
+        'ما قدرت أتعرف على مناسبتك بهذا الرقم 🌹\n\n' +
+        'تأكد إنك تستخدم نفس رقم الجوال المسجل كصاحب/ة المناسبة.\n' +
+        'لو تحتاج مساعدة، تواصل معنا مباشرة. 💛';
+
+      await sendWhatsAppMessage(phone, responseText);
+      await logConversation({
+        platform: 'whatsapp',
+        guestPhone: phone,
+        userMessage: messageText,
+        assistantResponse: responseText,
+        intent,
+        tokensUsed: 0,
+      });
+      await trackAnalytics({ intent, platform: 'whatsapp', tokensUsed: 0, guestMatched: false });
+      return;
+    }
 
     // 11. Handle guest intent without guest data
     if (isGuestIntent(intent) && !guestContext) {
