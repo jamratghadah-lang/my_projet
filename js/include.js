@@ -40,6 +40,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const inject = (sel, url) => {
     const el = document.querySelector(sel);
     if (!el) return;
+    // Skip if already inlined (SEO build) — just init nav
+    if (el.innerHTML.trim()) { if (sel === "#site-header") initNav(); return; }
     fetch(root + url)
       .then(r => r.text())
       .then(html => {

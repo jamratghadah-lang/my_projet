@@ -3,6 +3,7 @@
 (function () {
   const scriptTag = document.currentScript;
   const slug = scriptTag.dataset.slug;
+  const _settingsCache = sessionStorage.getItem('jg_settings');
 
   function renderEmpty(grid) {
     const p = document.createElement("p");
@@ -68,6 +69,7 @@
       const img = document.createElement("img");
       img.src = v.thumbnail_url;
       img.loading = "lazy";
+      img.decoding = "async";
       img.alt = v.title || ("فيديو رقم " + v.number);
       img.onerror = () => { img.style.display = "none"; };
       thumb.appendChild(img);
@@ -79,7 +81,7 @@
 
     if (v.video_url) {
       thumb.style.cursor = "pointer";
-      thumb.addEventListener("click", () => openVideoModal(v.video_url));
+      thumb.dataset.videoUrl = v.video_url;
     }
 
     const meta = document.createElement("div");
@@ -117,8 +119,10 @@
       const waBtn = document.createElement("button");
       waBtn.type = "button";
       waBtn.className = "btn btn-solid vorder";
+      waBtn.dataset.action = "wa-order";
+      waBtn.dataset.videoNumber = v.number;
+      waBtn.dataset.videoTitle = v.title || "";
       waBtn.textContent = "📱 اطلبي عبر واتساب";
-      waBtn.addEventListener("click", () => orderVideoWhatsapp(v, settings));
       orderBtnWrap.appendChild(waBtn);
     }
 
@@ -126,8 +130,8 @@
       const payBtn = document.createElement("button");
       payBtn.type = "button";
       payBtn.className = "btn btn-outline vorder";
+      payBtn.dataset.action = "pay-order";
       payBtn.textContent = "💳 ادفعي إلكترونيًا";
-      payBtn.addEventListener("click", () => orderVideoPayment(settings));
       orderBtnWrap.appendChild(payBtn);
     }
 
@@ -135,8 +139,10 @@
       const waBtn = document.createElement("button");
       waBtn.type = "button";
       waBtn.className = "btn btn-solid vorder";
+      waBtn.dataset.action = "wa-order";
+      waBtn.dataset.videoNumber = v.number;
+      waBtn.dataset.videoTitle = v.title || "";
       waBtn.textContent = "📱 اطلبي عبر واتساب";
-      waBtn.addEventListener("click", () => orderVideoWhatsapp(v, settings));
       orderBtnWrap.appendChild(waBtn);
     }
 
@@ -151,13 +157,36 @@
     const grid = document.getElementById("portfolio-grid");
     if (!grid) return;
 
+    const settingsPromise = _settingsCache
+      ? Promise.resolve(JSON.parse(_settingsCache))
+      : fetch("../content/settings.json").then(r => r.json()).then(s => { try { sessionStorage.setItem('jg_settings', JSON.stringify(s)); } catch(e){} return s; }).catch(() => ({}));
+
     Promise.all([
       fetch("../content/portfolio/" + slug + ".json").then(r => r.json()).catch(() => ({ videos: [] })),
-      fetch("../content/settings.json").then(r => r.json()).catch(() => ({}))
+      settingsPromise
     ]).then(([data, settings]) => {
       const items = (data && data.videos) || [];
       if (!items.length) { renderEmpty(grid); return; }
       items.forEach(v => renderVideo(grid, v, settings));
+
+      // Event delegation — مستمع واحد بدل مستمع لكل زر
+      grid.addEventListener('click', (e) => {
+        const thumb = e.target.closest('.thumb');
+        if (thumb && thumb.dataset.videoUrl) {
+          openVideoModal(thumb.dataset.videoUrl);
+          return;
+        }
+        const btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        if (btn.dataset.action === 'wa-order') {
+          orderVideoWhatsapp(
+            { number: btn.dataset.videoNumber, title: btn.dataset.videoTitle },
+            settings
+          );
+        } else if (btn.dataset.action === 'pay-order') {
+          orderVideoPayment(settings);
+        }
+      });
 
       const waBtn = document.getElementById("general-whatsapp-btn");
       if (waBtn) waBtn.href = `https://wa.me/${cleanPhone(settings.whatsapp_number)}`;
