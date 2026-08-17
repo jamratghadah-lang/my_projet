@@ -15,6 +15,9 @@ schedule = "0 * * * *"
 [functions."message-scheduler"]
 schedule = "*/5 * * * *"
 
+[functions."post-event-survey"]
+schedule = "0 * * * *"
+
 # ===== CSP العامة لكل الموقع =====
 # لوحة تحكم Decap CMS تحتاج 'unsafe-eval' عشان تشتغل (مكتبة decap-cms.js
 # تستخدم eval/new Function داخلياً). عشان ما نضعّف أمان باقي الموقع،
@@ -79,6 +82,74 @@ status = 200
 [[redirects]]
 from = "/dashboard"
 to = "/dashboard/index.html"
+status = 200
+
+# ===== معاينة مباشرة لقوالب RSVP بالاسم المختصر =====
+# لازم تكون قبل قاعدة /:slug العامة، وإلا محرك الروابط المخصصة
+# (couple-router) يمسكها أول ويرجّعها للرئيسية لأنها مو اسم عروسين فعلي.
+[[redirects]]
+from = "/wedding-silver"
+to = "/rsvp/wedding-silver.html"
+status = 200
+
+[[redirects]]
+from = "/wedding-gold"
+to = "/rsvp/wedding-gold.html"
+status = 200
+
+[[redirects]]
+from = "/wedding-classic"
+to = "/rsvp/wedding-classic.html"
+status = 200
+
+[[redirects]]
+from = "/wedding-modern"
+to = "/rsvp/wedding-modern.html"
+status = 200
+
+[[redirects]]
+from = "/wedding-pink"
+to = "/rsvp/wedding-pink.html"
+status = 200
+
+[[redirects]]
+from = "/wedding-royal"
+to = "/rsvp/wedding-royal.html"
+status = 200
+
+[[redirects]]
+from = "/wedding-vip"
+to = "/rsvp/wedding-vip.html"
+status = 200
+
+[[redirects]]
+from = "/baby-boy"
+to = "/rsvp/baby-boy.html"
+status = 200
+
+[[redirects]]
+from = "/baby-girl"
+to = "/rsvp/baby-girl.html"
+status = 200
+
+[[redirects]]
+from = "/graduation-classic"
+to = "/rsvp/graduation-classic.html"
+status = 200
+
+[[redirects]]
+from = "/graduation-luxury"
+to = "/rsvp/graduation-luxury.html"
+status = 200
+
+[[redirects]]
+from = "/conference"
+to = "/rsvp/conference.html"
+status = 200
+
+[[redirects]]
+from = "/corporate"
+to = "/rsvp/corporate.html"
 status = 200
 
 [[redirects]]

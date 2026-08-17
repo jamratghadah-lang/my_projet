@@ -43,6 +43,10 @@ const INTENTS = {
 
   // Client intents (require client/owner verification — phone matches event.phone)
   CLIENT_STATS: "CLIENT_STATS",
+  CLIENT_CANCEL_GUEST: "CLIENT_CANCEL_GUEST",
+  CLIENT_RESTORE_GUEST: "CLIENT_RESTORE_GUEST",
+  CLIENT_RESEND_TO_GUEST: "CLIENT_RESEND_TO_GUEST",
+  CLIENT_BULK_ADD_GUESTS: "CLIENT_BULK_ADD_GUESTS",
 };
 
 // Keyword → intent mappings with weighted patterns
@@ -305,6 +309,38 @@ const KEYWORD_MAP = [
     ],
     weight: 0.85,
   },
+  {
+    intent: "CLIENT_CANCEL_GUEST",
+    patterns: [
+      /الغ[ىي] حضور/i,
+      /ألغ[ىي] حضور/i,
+      /احذف[ي]? .* من (القائمة|الضيوف)/i,
+      /شيل[ي]? .* من (القائمة|الضيوف)/i,
+      /اعتذار .* بدل/i,
+    ],
+    weight: 0.85,
+  },
+  {
+    intent: "CLIENT_RESTORE_GUEST",
+    patterns: [
+      /رجّع[ي]? حضور/i,
+      /رجعي حضور/i,
+      /استرجع[ي]? حضور/i,
+      /ألغ[ىي] الاعتذار/i,
+      /الغ[ىي] الاعتذار/i,
+    ],
+    weight: 0.85,
+  },
+  {
+    intent: "CLIENT_RESEND_TO_GUEST",
+    patterns: [
+      /ابعث[ي]? (فيديو|دعوة|تذكير) ل/i,
+      /ارسل[ي]? (فيديو|دعوة|تذكير) ل/i,
+      /بعثي (فيديو|دعوة|تذكير)/i,
+      /رسلي (فيديو|دعوة|تذكير)/i,
+    ],
+    weight: 0.85,
+  },
 ];
 
 // Arabic text normalization
@@ -447,7 +483,88 @@ function isGuestIntent(intent) {
 }
 
 function isClientIntent(intent) {
-  return intent === "CLIENT_STATS";
+  return [
+    "CLIENT_STATS",
+    "CLIENT_CANCEL_GUEST",
+    "CLIENT_RESTORE_GUEST",
+    "CLIENT_RESEND_TO_GUEST",
+  ].includes(intent);
+}
+
+/**
+ * Extract a guest name from a client's free-text command, e.g.
+ * "الغي حضور سارة" → "سارة". Best-effort regex, not full NLU —
+ * if extraction fails, the caller should ask the client to clarify.
+ */
+/**
+ * Detect a pasted guest list: 2+ lines, each containing a Saudi phone
+ * number and/or an email — plus a name. Checked by *shape*, not
+ * keywords. A line needs a name AND at least one contact method
+ * (phone or email) to count.
+ */
+function parseGuestListText(text) {
+  const lines = String(text || "")
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  const phoneRe = /(?:\+?966|0)?5\d{8}/;
+  const emailRe = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
+  const entries = [];
+
+  for (const line of lines) {
+    const phoneMatch = line.match(phoneRe);
+    const emailMatch = line.match(emailRe);
+    if (!phoneMatch && !emailMatch) continue;
+
+    let name = line;
+    if (phoneMatch) name = name.replace(phoneMatch[0], "");
+    if (emailMatch) name = name.replace(emailMatch[0], "");
+    name = name.trim().replace(/^[-–,:]+|[-–,:]+$/g, "").trim();
+    if (!name) continue;
+
+    entries.push({
+      name,
+      phone: phoneMatch ? normalizePhone(phoneMatch[0]) : null,
+      email: emailMatch ? emailMatch[0].toLowerCase() : null,
+    });
+  }
+
+  // لازم سطرين على الأقل يطابقون الشكل، وإلا هذا نص عادي مو قائمة
+  return entries.length >= 2 ? entries : null;
+}
+
+function extractGuestNameFromCommand(text) {
+  const t = String(text || "").trim();
+  const patterns = [
+    /(?:الغ[ىي]|ألغ[ىي])\s*(?:حضور|اعتذار)?\s*(.+)/i,
+    /(?:رجّع[ي]?|رجعي|استرجع[ي]?)\s*(?:حضور)?\s*(.+)/i,
+    /(?:احذف[ي]?|شيل[ي]?)\s*(.+?)\s*من/i,
+    /(?:ابعث[ي]?|ارسل[ي]?|بعثي|رسلي)\s*(?:فيديو|دعوة|تذكير)\s*ل\s*(.+)/i,
+  ];
+  for (const p of patterns) {
+    const m = t.match(p);
+    if (m && m[1]) return m[1].trim().replace(/[.!؟?]+$/, "");
+  }
+  return null;
+}
+
+/**
+ * Find a single guest within the client's own event by (partial) name match.
+ * Returns { matched: doc } | { ambiguous: [docs] } | { notFound: true }.
+ * Never searches outside the given eventId — this is the security boundary.
+ */
+async function findGuestInEvent(db, eventId, nameQuery) {
+  const snap = await db.collection("responses").where("eventCode", "==", eventId).get();
+  const needle = normalizeArabic(nameQuery).toLowerCase();
+  const matches = [];
+  snap.forEach((doc) => {
+    const name = normalizeArabic(doc.data().name || "").toLowerCase();
+    if (name.includes(needle) || needle.includes(name)) matches.push(doc);
+  });
+  if (matches.length === 0) return { notFound: true };
+  if (matches.length > 1) return { ambiguous: matches };
+  return { matched: matches[0] };
 }
 
 // ============================================================
@@ -710,6 +827,7 @@ async function buildClientStatsContext(phone) {
 
     return {
       isClient: true,
+      eventId,
       eventName: eventData.name || eventData.client || "مناسبتك",
       eventDate: eventData.date || null,
       stats: {
@@ -1427,6 +1545,76 @@ async function generateResponse(intent, context, userMessage) {
     return { text: lines.join("\n"), tokensUsed: 0, action: intent, actionResult: s };
   }
 
+  // ─── Client actions: cancel / restore / resend for a named guest ───
+  // These mutate data, so they're intentionally NOT routed through the
+  // generic Gemini/tool pipeline — the guest-name match + status change
+  // is deterministic and must stay inside the client's own event only.
+  if (
+    (intent === "CLIENT_CANCEL_GUEST" || intent === "CLIENT_RESTORE_GUEST" || intent === "CLIENT_RESEND_TO_GUEST") &&
+    context.client
+  ) {
+    const db = getDb();
+    const guestName = extractGuestNameFromCommand(userMessage);
+    if (!db || !guestName) {
+      return {
+        text: "ما قدرت أفهم اسم الضيف من رسالتك 🌹 جربي تكتبين مثلاً: \"الغي حضور سارة\"",
+        tokensUsed: 0, action: intent, actionResult: null,
+      };
+    }
+
+    const result = await findGuestInEvent(db, context.client.eventId, guestName);
+
+    if (result.notFound) {
+      return {
+        text: `ما لقيت ضيف بهذا الاسم "${guestName}" بقائمة "${context.client.eventName}" 🌹`,
+        tokensUsed: 0, action: intent, actionResult: null,
+      };
+    }
+    if (result.ambiguous) {
+      const names = result.ambiguous.map((d, i) => `${i + 1}. ${d.data().name}`).join("\n");
+      return {
+        text: `فيه أكثر من ضيف بنفس الاسم تقريبًا:\n${names}\n\nاكتبي الاسم كامل أدق عشان أحدد الصح.`,
+        tokensUsed: 0, action: intent, actionResult: null,
+      };
+    }
+
+    const guestDoc = result.matched;
+    const guestData = guestDoc.data();
+
+    if (intent === "CLIENT_CANCEL_GUEST") {
+      await guestDoc.ref.update({ status: "no" });
+      return {
+        text: `تم ✅ إلغيت حضور "${guestData.name}" من قائمة "${context.client.eventName}".`,
+        tokensUsed: 0, action: intent, actionResult: { guestId: guestDoc.id },
+      };
+    }
+    if (intent === "CLIENT_RESTORE_GUEST") {
+      await guestDoc.ref.update({ status: "yes" });
+      return {
+        text: `تم ✅ رجّعت حضور "${guestData.name}" لقائمة "${context.client.eventName}".`,
+        tokensUsed: 0, action: intent, actionResult: { guestId: guestDoc.id },
+      };
+    }
+    if (intent === "CLIENT_RESEND_TO_GUEST") {
+      if (!guestData.phone) {
+        return {
+          text: `ما فيه رقم جوال مسجّل لـ"${guestData.name}"، ما قدرت أرسل له.`,
+          tokensUsed: 0, action: intent, actionResult: null,
+        };
+      }
+      // يعيد استخدام نفس منطق الإرسال المستخدم أصلًا لطلب الضيف نفسه
+      const eventCode = guestData.eventCode || context.client.eventId;
+      const link = `${process.env.URL || "https://jamratghadah.com"}/${eventCode}?code=${encodeURIComponent(guestData.entryCode || "")}`;
+      const sendResult = await sendWhatsAppMessage(guestData.phone, `تذكير من "${context.client.eventName}" 🌸\nرابط دعوتكم: ${link}`);
+      return {
+        text: sendResult.ok
+          ? `تم ✅ أرسلت تذكير لـ"${guestData.name}".`
+          : `حاولت أرسل لـ"${guestData.name}" بس صار خطأ بالإرسال، تأكدي من الرقم.`,
+        tokensUsed: 0, action: intent, actionResult: { guestId: guestDoc.id },
+      };
+    }
+  }
+
   const toolName = INTENT_TOOL_MAP[intent];
   let toolResult = null;
 
@@ -1985,6 +2173,7 @@ module.exports = {
   buildPublicContext,
   buildGuestContext,
   buildClientStatsContext,
+  parseGuestListText,
 
   // Disambiguation
   formatDisambiguationMessage,

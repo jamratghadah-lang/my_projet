@@ -279,6 +279,15 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
+    // ─── post_event_feedback: ردود استبيان ما بعد المناسبة ───
+    // تُنشأ فقط عبر Admin SDK (post-event-survey.js / ai-webhook.js)،
+    // تُقرأ من لوحة التحكم فقط.
+    match /post_event_feedback/{feedbackId} {
+      allow create: if false;
+      allow read: if isAdmin();
+      allow update, delete: if false;
+    }
+
     // ─── ai_pending_sessions: WhatsApp confirmation/disambiguation state ───
     // Server-only; never writable from the browser.
     match /ai_pending_sessions/{sessionId} {

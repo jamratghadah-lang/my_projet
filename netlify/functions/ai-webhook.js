@@ -23,6 +23,7 @@ const {
   buildPublicContext,
   buildGuestContext,
   buildClientStatsContext,
+  parseGuestListText,
   formatDisambiguationMessage,
   parseSelectionNumber,
   generateResponse,
@@ -113,6 +114,33 @@ async function setPendingEventSelection(phone, options, originalIntent, original
 }
 
 async function clearPendingEventSelection(phone) {
+  const db = getPendingDb();
+  if (!db) return;
+  await db.collection("ai_pending_sessions").doc(pendingDocId(phone)).delete().catch(() => {});
+}
+
+// ─── Post-event survey pending state ───
+const SURVEY_TTL = 3 * 24 * 60 * 60 * 1000; // 3 أيام — نافذة معقولة للرد
+
+async function getPendingSurvey(phone) {
+  const db = getPendingDb();
+  if (!db) return null;
+  try {
+    const snap = await db.collection("ai_pending_sessions").doc(pendingDocId(phone)).get();
+    if (!snap.exists) return null;
+    const data = snap.data();
+    if (data.kind !== "awaiting_survey" || Date.now() - Number(data.timestamp || 0) > SURVEY_TTL) {
+      await snap.ref.delete().catch(() => {});
+      return null;
+    }
+    return data;
+  } catch (err) {
+    console.error("[AI Webhook] getPendingSurvey error:", err.message);
+    return null;
+  }
+}
+
+async function clearPendingSurvey(phone) {
   const db = getPendingDb();
   if (!db) return;
   await db.collection("ai_pending_sessions").doc(pendingDocId(phone)).delete().catch(() => {});
@@ -255,6 +283,115 @@ async function processMessage(phone, messageText, displayName) {
         'شكراً لتواصلكم مع جمرة غضى 🌹\nحالياً الخدمة الذكية مو متوفرة، تواصلوا معنا مباشرة على الواتساب للدعم.'
       );
       return;
+    }
+
+    // 6.5 Check for pending post-event survey — a short reply here
+    // ("رائع" or a free-text note) is feedback, not a normal intent.
+    const pendingSurvey = await getPendingSurvey(phone);
+    if (pendingSurvey) {
+      const trimmed = (messageText || "").trim();
+      const isPositive = /^(رائع|ممتاز|تمام|زين|حلو|كويس|👍|❤️|💛)/i.test(trimmed);
+      const rating = isPositive ? "happy" : "issue";
+      const note = isPositive ? null : trimmed;
+
+      await getPendingDb().collection("post_event_feedback").add({
+        slug: pendingSurvey.slug,
+        guestName: pendingSurvey.guestName,
+        guestPhone: phone,
+        rating,
+        note,
+        time: new Date().toISOString(),
+      });
+      await clearPendingSurvey(phone);
+
+      const thankYouMsg = isPositive
+        ? "تسلمون على وقتكم 🌹 يسعدنا إنكم استمتعتوا معانا. شرفتونا 💛"
+        : "تسلمين على صراحتك 🌹 ملاحظتك وصلتنا وراح نستفيد منها. شرفتونا 💛";
+      await sendWhatsAppMessage(phone, thankYouMsg);
+      await logConversation({
+        platform: "whatsapp",
+        guestPhone: phone,
+        userMessage: messageText,
+        assistantResponse: thankYouMsg,
+        intent: "SURVEY_RESPONSE",
+        tokensUsed: 0,
+      });
+      await trackAnalytics({ intent: "SURVEY_RESPONSE", platform: "whatsapp", tokensUsed: 0, guestMatched: true });
+      return;
+    }
+
+    // 6.7 Detect a pasted guest list by shape (2+ "name + phone" lines).
+    // Only meaningful if the sender is a verified event owner — a random
+    // guest pasting text should never trigger a bulk add.
+    const possibleList = parseGuestListText(messageText);
+    if (possibleList) {
+      const clientCtx = await buildClientStatsContext(phone);
+      if (!clientCtx) {
+        // مو عميلة معروفة — تجاهلي، خليها تكمل كنص عادي بالتصنيف الطبيعي
+      } else {
+        const db = getPendingDb();
+        let added = 0, skipped = 0;
+        for (const entry of possibleList) {
+          try {
+            // فحص التكرار حسب أي وسيلة تواصل متوفرة (جوال أو إيميل)
+            let dupFound = false;
+            if (entry.phone) {
+              const dupCheck = await db
+                .collection("responses")
+                .where("eventCode", "==", clientCtx.eventId)
+                .where("phone", "==", entry.phone)
+                .limit(1)
+                .get();
+              if (!dupCheck.empty) dupFound = true;
+            }
+            if (!dupFound && !entry.phone && entry.email) {
+              const dupCheck = await db
+                .collection("responses")
+                .where("eventCode", "==", clientCtx.eventId)
+                .where("email", "==", entry.email)
+                .limit(1)
+                .get();
+              if (!dupCheck.empty) dupFound = true;
+            }
+            if (dupFound) { skipped++; continue; }
+
+            const newDoc = {
+              name: entry.name,
+              guests: 1,
+              status: "pending",
+              eventCode: clientCtx.eventId,
+              style: clientCtx.eventId,
+              source: "client_bulk_import",
+              archived: false,
+              createdAt: new Date().toISOString(),
+            };
+            if (entry.phone) newDoc.phone = entry.phone;
+            if (entry.email) newDoc.email = entry.email;
+
+            await db.collection("responses").add(newDoc);
+            added++;
+          } catch {
+            skipped++;
+          }
+        }
+
+        const summary =
+          `تم ✅ أضفت ${added} ضيف لقائمة "${clientCtx.eventName}"` +
+          (skipped ? `، وتخطيت ${skipped} (مكررين أو فيهم خطأ).` : ".") +
+          `\n\nحالتهم "بالانتظار" لين يردون، أو تقدرين تعدّلين حالتهم من لوحة التحكم.`;
+
+        await sendWhatsAppMessage(phone, summary);
+        await logConversation({
+          platform: "whatsapp",
+          guestPhone: phone,
+          userMessage: messageText,
+          assistantResponse: summary,
+          intent: "CLIENT_BULK_ADD_GUESTS",
+          tokensUsed: 0,
+        });
+        await trackAnalytics({ intent: "CLIENT_BULK_ADD_GUESTS", platform: "whatsapp", tokensUsed: 0, guestMatched: true });
+        return;
+      }
     }
 
     // 7. Check for pending event selection (disambiguation)
