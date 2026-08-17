@@ -6,20 +6,29 @@
 <title>لوحة تحكم جمرة غضى</title>
 <meta name="robots" content="noindex, nofollow">
 <style>
-  body{font-family:Tahoma,Arial,sans-serif;background:#111;color:#eee;margin:0;padding:20px}
-  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
-  h1{color:#d4af37;font-size:20px;margin:0}
-  button.logout{background:none;border:1px solid #444;color:#ccc;padding:6px 14px;border-radius:6px;cursor:pointer}
-  .section-title{color:#888;font-size:12px;margin:20px 0 10px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #222;padding-bottom:6px}
+  :root{
+    --bg:#111; --fg:#eee; --tile-bg:#1c1c1c; --tile-border:#333; --tile-border-hover:#555;
+    --muted:#999; --section-muted:#888; --section-line:#222; --gold:#d4af37;
+  }
+  html[data-mode="light"]{
+    --bg:#f7f4ee; --fg:#2b2118; --tile-bg:#ffffff; --tile-border:#e2dcc9; --tile-border-hover:#c9b98a;
+    --muted:#7a7062; --section-muted:#9a8f7a; --section-line:#e6e0d0; --gold:#a97e1f;
+  }
+  body{font-family:Tahoma,Arial,sans-serif;background:var(--bg);color:var(--fg);margin:0;padding:20px;transition:background .2s,color .2s}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;gap:10px}
+  .topbar-actions{display:flex;gap:8px;align-items:center}
+  h1{color:var(--gold);font-size:20px;margin:0}
+  button.logout,button.mode-toggle{background:none;border:1px solid var(--tile-border);color:var(--fg);padding:6px 14px;border-radius:6px;cursor:pointer;font-size:14px}
+  .section-title{color:var(--section-muted);font-size:12px;margin:20px 0 10px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--section-line);padding-bottom:6px}
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;max-width:1400px}
-  .tile{background:#1c1c1c;border:1px solid #333;border-radius:10px;padding:18px;text-decoration:none;color:#eee;display:block;transition:border-color .2s}
-  .tile:hover{border-color:#555}
-  .tile h2{margin:0 0 6px;font-size:15px;color:#d4af37}
-  .tile p{margin:0;font-size:12px;color:#999;line-height:1.6}
+  .tile{background:var(--tile-bg);border:1px solid var(--tile-border);border-radius:10px;padding:18px;text-decoration:none;color:var(--fg);display:block;transition:border-color .2s}
+  .tile:hover{border-color:var(--tile-border-hover)}
+  .tile h2{margin:0 0 6px;font-size:15px;color:var(--gold)}
+  .tile p{margin:0;font-size:12px;color:var(--muted);line-height:1.6}
   .tile .badge-new{display:inline-block;background:rgba(76,175,80,.15);color:#4caf50;font-size:10px;padding:2px 8px;border-radius:20px;margin-right:6px;vertical-align:middle}
   .footer-links{max-width:1400px;margin-top:22px;display:flex;gap:10px;justify-content:center}
-  .footer-links a{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:#1c1c1c;border:1px solid #333;color:#666;text-decoration:none;font-size:15px;transition:border-color .2s}
-  .footer-links a:hover{border-color:#555}
+  .footer-links a{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:var(--tile-bg);border:1px solid var(--tile-border);color:var(--muted);text-decoration:none;font-size:15px;transition:border-color .2s}
+  .footer-links a:hover{border-color:var(--tile-border-hover)}
   .notif-badge{position:relative}
   .notif-badge .dot{position:absolute;top:-2px;right:-2px;width:8px;height:8px;border-radius:50%;background:#e07a5f}
 
@@ -32,9 +41,18 @@
 </style>
 </head>
 <body>
+<script>
+  (function(){
+    var saved = localStorage.getItem("jg-dashboard-mode") || "dark";
+    document.documentElement.setAttribute("data-mode", saved);
+  })();
+</script>
 <div class="topbar">
   <h1>لوحة تحكم جمرة غضى</h1>
-  <button class="logout" id="logoutBtn">تسجيل الخروج</button>
+  <div class="topbar-actions">
+    <button class="mode-toggle" id="modeToggle">☀️</button>
+    <button class="logout" id="logoutBtn">تسجيل الخروج</button>
+  </div>
 </div>
 
 <div class="grid">
@@ -180,6 +198,19 @@ document.getElementById("logoutBtn").addEventListener("click", async () => {
   await signOut(auth);
   window.location.href = "login.html";
 });
+
+(function(){
+  var btn = document.getElementById("modeToggle");
+  function applyIcon(mode){ btn.textContent = mode === "dark" ? "☀️" : "🌙"; }
+  applyIcon(document.documentElement.getAttribute("data-mode") || "dark");
+  btn.addEventListener("click", function(){
+    var current = document.documentElement.getAttribute("data-mode") || "dark";
+    var next = current === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-mode", next);
+    localStorage.setItem("jg-dashboard-mode", next);
+    applyIcon(next);
+  });
+})();
 </script>
 </body>
 </html>
