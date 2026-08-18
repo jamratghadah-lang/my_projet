@@ -542,13 +542,27 @@
       const inviteEid = qs.get("eid") || document.body.dataset.eventCode || "";
       const inviteG = qs.get("g") || document.body.dataset.guestCode || "";
       const inviteUrl = `/.netlify/functions/invitation-data?slug=${encodeURIComponent(slug)}${inviteCode ? `&code=${encodeURIComponent(inviteCode)}` : ""}${inviteEid ? `&eid=${encodeURIComponent(inviteEid)}` : ""}${inviteG ? `&g=${encodeURIComponent(inviteG)}` : ""}`;
-      [data, settings] = await Promise.all([
-        fetch(inviteUrl, { cache: "no-store" }).then(async r => {
-          if (!r.ok) throw new Error(r.status === 403 ? "INVITATION_PROTECTED" : "INVITATION_LOAD_FAILED");
-          return r.json();
-        }),
-        fetch("../content/settings.json").then(r => r.ok ? r.json() : {}).catch(() => ({})),
-      ]);
+      const isPreview = qs.get("preview") === "1" || (!inviteEid && !inviteG);
+      if (isPreview) {
+        // القالب المباشر يُستخدم للمعاينة من لوحة التحكم ومن الرابط العام للقالب.
+        // نقرأ إعدادات القالب فقط، بدون إنشاء جلسة ضيف أو كشف بيانات مناسبة فعلية.
+        [data, settings] = await Promise.all([
+          fetch(`../content/rsvp/${encodeURIComponent(slug)}.json`, { cache: "no-store" }).then(async r => {
+            if (!r.ok) throw new Error("RSVP_PREVIEW_LOAD_FAILED");
+            return r.json();
+          }),
+          fetch("../content/settings.json").then(r => r.ok ? r.json() : {}).catch(() => ({})),
+        ]);
+        window.__jgRsvpPreview = true;
+      } else {
+        [data, settings] = await Promise.all([
+          fetch(inviteUrl, { cache: "no-store" }).then(async r => {
+            if (!r.ok) throw new Error(r.status === 403 ? "INVITATION_PROTECTED" : "INVITATION_LOAD_FAILED");
+            return r.json();
+          }),
+          fetch("../content/settings.json").then(r => r.ok ? r.json() : {}).catch(() => ({})),
+        ]);
+      }
       window.__jgRsvpToken = data.rsvp_token || "";
       try { delete data.rsvp_token; } catch {}
     } catch (e) {
@@ -624,7 +638,20 @@
     const form = document.getElementById("rsvpForm");
     if (form) {
       form.removeAttribute("action");
+      if (window.__jgRsvpPreview) {
+        const submitBtn = form.querySelector(".submit-btn");
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.textContent = "المعاينة فقط";
+          submitBtn.title = "لا يمكن إرسال RSVP من وضع المعاينة";
+        }
+        const previewNote = document.createElement("div");
+        previewNote.textContent = "وضع المعاينة — الإرسال متوقف هنا. افتحي رابط الدعوة الخاص بالضيف لإرسال RSVP.";
+        previewNote.style.cssText = "margin:10px 0;padding:10px 12px;border:1px solid rgba(169,126,31,.35);border-radius:10px;background:rgba(169,126,31,.08);color:inherit;font-size:12px;line-height:1.7;text-align:center;";
+        form.parentNode.insertBefore(previewNote, form);
+      }
       form.addEventListener("submit", async (event) => {
+        if (window.__jgRsvpPreview) { event.preventDefault(); return; }
         event.preventDefault();
         const fd = new FormData(form);
         const attendance = fd.get("Attendance") || fd.get("attendance") || "";

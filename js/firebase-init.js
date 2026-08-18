@@ -23,6 +23,7 @@ import {
   limit,
   serverTimestamp,
   onSnapshot,
+  deleteField,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -57,6 +58,7 @@ export {
   limit,
   serverTimestamp,
   onSnapshot,
+  deleteField,
 };
 
 // حماية أي صفحة لوحة تحكم: يستدعيها كل ملف Dashboard في بداية تنفيذه

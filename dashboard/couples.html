@@ -33,9 +33,22 @@
   .open-btn{background:#222;color:#d4af37;border:1px solid #444}
   .del-btn{background:#3a1c1c;color:#e07a7a;border:none;cursor:pointer}
   .empty{color:#777;text-align:center;padding:20px;font-size:13px}
+  .video-btn{background:#222;color:#d4af37;border:1px solid #444}
+  .row-wrap{width:100%;border-bottom:1px solid #2a2a2a;padding:10px 4px}
+  .row-wrap:last-child{border-bottom:none}
+  .row-main{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  .warn-badge{font-size:11px;padding:2px 8px;border-radius:20px;background:#3a2a10;color:#e0b95a;border:1px solid #5a4315}
+  .ok-badge{font-size:11px;padding:2px 8px;border-radius:20px;background:#16301a;color:#7ac97f;border:1px solid #275a2f}
+  .video-panel{display:none;margin-top:12px;padding-top:12px;border-top:1px dashed #333}
+  .video-panel.open{display:block}
+  .video-panel label{font-size:12px}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media (max-width:520px){.two-col{grid-template-columns:1fr}}
 </style>
+  <link rel="stylesheet" href="../css/dashboard-theme.css">
 </head>
 <body>
+<script src="../js/dashboard-theme.js"></script>
 
 <div class="topbar">
   <h1>🔗 الروابط المخصصة بأسماء العروسين</h1>
@@ -77,7 +90,7 @@
 <script type="module">
 import {
   db, requireLogin,
-  collection, getDocs, doc, getDoc, setDoc, deleteDoc, serverTimestamp,
+  collection, getDocs, doc, getDoc, setDoc, deleteDoc, serverTimestamp, deleteField,
 } from "../js/firebase-init.js";
 
 requireLogin(() => { loadList(); });
@@ -148,17 +161,52 @@ async function loadList() {
       const url = `${SITE_ORIGIN}/${d.id}`;
       const safeUrl = /^https?:\/\//.test(url) ? url : "#";
       const li = document.createElement("li");
+      li.style.flexDirection = "column";
+      li.style.alignItems = "stretch";
+      const reminderUrl = esc(data.reminderVideoUrl || "");
+      const thankYouUrl = esc(data.thankYouVideoUrl || "");
+      const reminderHrs = data.reminderHoursBefore || "";
+      const thankYouHrs = data.thankYouHoursAfter || "";
       li.innerHTML = `
-        <div class="who">
-          <span class="slug">/${slugEsc}</span>
-          <span class="tpl">${tplEsc}</span>
-        </div>
-        <div class="row-actions">
-          <a class="open-btn" href="${esc(safeUrl)}" target="_blank" rel="noopener noreferrer">فتح ↗</a>
-          <button class="copy-btn" data-url="${esc(safeUrl)}">نسخ الرابط</button>
-          <button class="del-btn" data-id="${slugEsc}">حذف</button>
+        <div class="row-wrap">
+          <div class="row-main">
+            <div class="who">
+              <span class="slug">/${slugEsc}</span>
+              <span class="tpl">${tplEsc}</span>
+              <span class="video-status" data-slug="${slugEsc}"></span>
+            </div>
+            <div class="row-actions">
+              <a class="open-btn" href="${esc(safeUrl)}" target="_blank" rel="noopener noreferrer">فتح ↗</a>
+              <button class="copy-btn" data-url="${esc(safeUrl)}">نسخ الرابط</button>
+              <button class="video-btn" data-toggle="${slugEsc}">🎥 فيديو التذكير والشكر</button>
+              <button class="del-btn" data-id="${slugEsc}">حذف</button>
+            </div>
+          </div>
+          <div class="video-panel" id="panel-${slugEsc}">
+            <div class="two-col">
+              <div>
+                <label>رابط فيديو التذكير (يُرسل تلقائيًا قبل المناسبة)</label>
+                <input type="text" dir="ltr" class="reminderUrlInput" data-slug="${slugEsc}" placeholder="https://..." value="${reminderUrl}">
+                <label>ساعات مخصّصة لهذه المناسبة (اتركيه فاضي = الافتراضي العام)</label>
+                <input type="text" inputmode="numeric" class="reminderHoursInput" data-slug="${slugEsc}" placeholder="مثال: 48" value="${reminderHrs}">
+                ${data.reminderVideoSent ? `<button class="secondary reset-btn" data-slug="${slugEsc}" data-field="reminderVideoSent">إعادة الإرسال (أُرسل مسبقًا ✓)</button>` : ""}
+              </div>
+              <div>
+                <label>رابط فيديو الشكر (يُرسل تلقائيًا بعد المناسبة)</label>
+                <input type="text" dir="ltr" class="thankYouUrlInput" data-slug="${slugEsc}" placeholder="https://..." value="${thankYouUrl}">
+                <label>ساعات مخصّصة لهذه المناسبة (اتركيه فاضي = الافتراضي العام)</label>
+                <input type="text" inputmode="numeric" class="thankYouHoursInput" data-slug="${slugEsc}" placeholder="مثال: 12" value="${thankYouHrs}">
+                ${data.thankYouVideoSent ? `<button class="secondary reset-btn" data-slug="${slugEsc}" data-field="thankYouVideoSent">إعادة الإرسال (أُرسل مسبقًا ✓)</button>` : ""}
+              </div>
+            </div>
+            <button class="save-video-btn" data-slug="${slugEsc}" style="margin-top:8px">حفظ الفيديوهين</button>
+            <span class="hint video-save-status" data-slug="${slugEsc}"></span>
+          </div>
         </div>`;
       listWrap.appendChild(li);
+
+      // تنبيه لو المناسبة قربت (خلال 3 أيام) ولسا ما رفعِت فيديو التذكير
+      checkUpcomingWarning(d.id, data);
     });
 
     listWrap.querySelectorAll(".copy-btn").forEach((b) => {
@@ -175,9 +223,65 @@ async function loadList() {
         loadList();
       });
     });
+    listWrap.querySelectorAll(".video-btn").forEach((b) => {
+      b.addEventListener("click", () => {
+        document.getElementById(`panel-${b.dataset.toggle}`).classList.toggle("open");
+      });
+    });
+    listWrap.querySelectorAll(".save-video-btn").forEach((b) => {
+      b.addEventListener("click", async () => {
+        const slug = b.dataset.slug;
+        const statusEl = listWrap.querySelector(`.video-save-status[data-slug="${slug}"]`);
+        const reminderVideoUrl = listWrap.querySelector(`.reminderUrlInput[data-slug="${slug}"]`).value.trim();
+        const thankYouVideoUrl = listWrap.querySelector(`.thankYouUrlInput[data-slug="${slug}"]`).value.trim();
+        const reminderHoursBefore = parseInt(listWrap.querySelector(`.reminderHoursInput[data-slug="${slug}"]`).value, 10);
+        const thankYouHoursAfter = parseInt(listWrap.querySelector(`.thankYouHoursInput[data-slug="${slug}"]`).value, 10);
+        if (reminderVideoUrl && !reminderVideoUrl.startsWith("https://")) { statusEl.textContent = "رابط فيديو التذكير لازم يبدأ بـ https://"; return; }
+        if (thankYouVideoUrl && !thankYouVideoUrl.startsWith("https://")) { statusEl.textContent = "رابط فيديو الشكر لازم يبدأ بـ https://"; return; }
+        try {
+          const payload = { reminderVideoUrl, thankYouVideoUrl };
+          if (Number.isInteger(reminderHoursBefore) && reminderHoursBefore > 0) payload.reminderHoursBefore = reminderHoursBefore;
+          else payload.reminderHoursBefore = deleteField();
+          if (Number.isInteger(thankYouHoursAfter) && thankYouHoursAfter > 0) payload.thankYouHoursAfter = thankYouHoursAfter;
+          else payload.thankYouHoursAfter = deleteField();
+          await setDoc(doc(db, "couples", slug), payload, { merge: true });
+          statusEl.textContent = "تم الحفظ ✓";
+          setTimeout(() => (statusEl.textContent = ""), 2000);
+        } catch (e) {
+          statusEl.textContent = "تعذر الحفظ";
+        }
+      });
+    });
+    listWrap.querySelectorAll(".reset-btn").forEach((b) => {
+      b.addEventListener("click", async () => {
+        if (!confirm("تأكيد إعادة الإرسال؟ سيُرسل الفيديو تلقائيًا مرة أخرى بموعد الجدولة القادم.")) return;
+        await setDoc(doc(db, "couples", b.dataset.slug), { [b.dataset.field]: deleteField() }, { merge: true });
+        loadList();
+      });
+    });
   } catch (e) {
     listWrap.innerHTML = '<li class="empty">تعذر تحميل القائمة.</li>';
   }
+}
+
+// ---------- تنبيه: مناسبة قربت (خلال 3 أيام) وما فيه فيديو تذكير مرفوع ----------
+async function checkUpcomingWarning(slug, data) {
+  const el = document.querySelector(`.video-status[data-slug="${CSS.escape(slug)}"]`);
+  if (!el || !data.template) return;
+  try {
+    const res = await fetch(`/content/rsvp/${encodeURIComponent(data.template)}.json`);
+    if (!res.ok) return;
+    const json = await res.json();
+    const m = String(json.date || "").match(/(\d{1,2})\s*\/\s*(\d{1,2})\s*\/\s*(\d{4})/);
+    if (!m) return;
+    const eventDate = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]), 18, 0, 0);
+    const daysLeft = (eventDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+    if (daysLeft > 0 && daysLeft <= 3 && !data.reminderVideoUrl) {
+      el.innerHTML = `<span class="warn-badge">⚠️ المناسبة بعد ${Math.ceil(daysLeft)} يوم — ما رفعتِ فيديو التذكير</span>`;
+    } else if (data.reminderVideoUrl || data.thankYouVideoUrl) {
+      el.innerHTML = `<span class="ok-badge">🎥 مفعّل</span>`;
+    }
+  } catch (e) { /* تجاهل — التنبيه ثانوي وما يوقف الصفحة */ }
 }
 </script>
 </body>

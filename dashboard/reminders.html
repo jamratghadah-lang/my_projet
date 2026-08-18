@@ -41,8 +41,10 @@
     table{display:block;max-width:100%;overflow-x:auto;white-space:nowrap;}
   }
 </style>
+  <link rel="stylesheet" href="../css/dashboard-theme.css">
 </head>
 <body>
+<script src="../js/dashboard-theme.js"></script>
 <div class="topbar">
 <h1>تذكير الضيوف (قبل يومين من المناسبة)</h1>
 <a class="back" href="index.html">← رجوع للوحة</a>
@@ -68,6 +70,16 @@
 <span id="status"></span>
 </div>
 <div class="card">
+<h2>جدولة فيديو التذكير والشكر التلقائية</h2>
+<div class="hint">هذا هو التوقيت الافتراضي لكل المناسبات: فيديو التذكير يُرسل تلقائيًا لكل ضيف مؤكد قبل المناسبة بعدد الساعات هذا، وفيديو الشكر يُرسل بعد المناسبة بعدد الساعات هذا — بشرط رفع الفيديوهين من صفحة كل رابط دعوة (الروابط المخصصة). أي مناسبة تقدرين تعطينها توقيت مختلف عن هذا الافتراضي من نفس الصفحة.</div>
+<label for="reminderHours" style="font-size:13px;color:#ccc;display:block;margin-bottom:6px">فيديو التذكير: كم ساعة قبل المناسبة</label>
+<input type="text" id="reminderHours" inputmode="numeric" placeholder="48">
+<label for="thankYouHours" style="font-size:13px;color:#ccc;display:block;margin-bottom:6px">فيديو الشكر: كم ساعة بعد المناسبة</label>
+<input type="text" id="thankYouHours" inputmode="numeric" placeholder="12">
+<button id="saveScheduling">حفظ التوقيت الافتراضي</button>
+<span id="schedulingStatus" class="hint" style="display:inline-block;margin-right:8px"></span>
+</div>
+<div class="card">
 <h2>الضيوف المؤكدين للحضور</h2>
 <div id="guestsWrap"><div class="empty">جارِ التحميل...</div></div>
 <div id="smsSendWrap" style="display:none;margin-top:12px">
@@ -85,7 +97,37 @@ let guests = [];
 
 requireLogin(async () => {
   await loadSettings();
+  await loadSchedulingSettings();
   await loadGuests();
+});
+
+// ---------- التوقيت الافتراضي لفيديو التذكير/الشكر التلقائي ----------
+async function loadSchedulingSettings() {
+  try {
+    const ref = doc(db, "settings", "scheduling");
+    const snap = await getDoc(ref);
+    const data = snap.exists() ? snap.data() : {};
+    document.getElementById("reminderHours").value = data.reminderHoursBefore || 48;
+    document.getElementById("thankYouHours").value = data.thankYouHoursAfter || 12;
+  } catch (e) {
+    document.getElementById("reminderHours").value = 48;
+    document.getElementById("thankYouHours").value = 12;
+  }
+}
+
+document.getElementById("saveScheduling").addEventListener("click", async () => {
+  const status = document.getElementById("schedulingStatus");
+  const reminderHoursBefore = Math.max(1, parseInt(document.getElementById("reminderHours").value, 10) || 48);
+  const thankYouHoursAfter = Math.max(1, parseInt(document.getElementById("thankYouHours").value, 10) || 12);
+  document.getElementById("reminderHours").value = reminderHoursBefore;
+  document.getElementById("thankYouHours").value = thankYouHoursAfter;
+  try {
+    await setDoc(doc(db, "settings", "scheduling"), { reminderHoursBefore, thankYouHoursAfter }, { merge: true });
+    status.textContent = "تم الحفظ ✓";
+  } catch (e) {
+    status.textContent = "تعذر الحفظ";
+  }
+  setTimeout(() => (status.textContent = ""), 2500);
 });
 
 // ---------- الإعدادات (وضع التذكير + نص الرسالة) ----------

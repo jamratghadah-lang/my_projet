@@ -105,8 +105,10 @@
   .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;z-index:9999;opacity:0;transition:opacity .3s}
   .toast.show{opacity:1}
 </style>
+  <link rel="stylesheet" href="../css/dashboard-theme.css">
 </head>
 <body>
+<script src="../js/dashboard-theme.js"></script>
 <div class="topbar">
 <h1>📋 إدارة المدعوين</h1>
 <a class="back" href="index.html">← رجوع للوحة</a>
@@ -759,7 +761,7 @@ document.getElementById("sendConfirm").addEventListener("click", async () => {
         if (r.whatsapp) parts.push(`واتساب: ${r.whatsapp.ok ? "✅" : "❌ " + (r.whatsapp.error || "")}`);
         if (r.email) parts.push(`إيميل: ${r.email.ok ? "✅" : "❌ " + (r.email.error || "")}`);
         return `<div>${escapeHtml(r.name)} — ${parts.join(" | ")}</div>`;
-      }).join("");
+      }).join("") + '<div style="margin-top:10px"><a href="send-log.html" style="color:#d4af37">↩ هذي النتيجة مسجّلة بشكل دائم — راجعيها لاحقًا من سجل الإرسال</a></div>';
     }
   } catch (e) {
     msgEl.textContent = "تعذّر الاتصال بالسيرفر"; msgEl.className = "msg-status err";

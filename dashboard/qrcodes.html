@@ -31,8 +31,10 @@
     table{display:block;max-width:100%;overflow-x:auto;white-space:nowrap;}
   }
 </style>
+  <link rel="stylesheet" href="../css/dashboard-theme.css">
 </head>
 <body>
+<script src="../js/dashboard-theme.js"></script>
 
 <div class="topbar">
   <h1>الدعوات ورموز QR</h1>
@@ -87,6 +89,14 @@ function qrItem(name, url) {
   linkEl.className = "link";
   linkEl.textContent = url;
   wrap.appendChild(linkEl);
+  const preview = document.createElement("a");
+  preview.textContent = "معاينة";
+  preview.href = url.includes("/rsvp/") ? url + (url.includes("?") ? "&" : "?") + "preview=1" : url;
+  preview.target = "_blank";
+  preview.rel = "noopener";
+  preview.style.cssText = "display:block;text-decoration:none;text-align:center;margin-bottom:6px;padding:7px;border-radius:6px;background:#d4af37;color:#111;font-weight:bold;font-size:12px;";
+  wrap.appendChild(preview);
+
   const dl = document.createElement("button");
   dl.textContent = "تحميل PNG";
   dl.className = "secondary";
