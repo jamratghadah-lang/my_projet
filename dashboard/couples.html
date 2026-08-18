@@ -44,6 +44,12 @@
   .video-panel label{font-size:12px}
   .two-col{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   @media (max-width:520px){.two-col{grid-template-columns:1fr}}
+  .upload-row{display:flex;align-items:center;gap:8px;margin:-6px 0 12px}
+  .upload-row input[type=file]{display:none}
+  .upload-btn{background:#222;border:1px solid #444;color:#d4af37;padding:7px 12px;font-size:12px;border-radius:6px;cursor:pointer;white-space:nowrap}
+  .upload-progress{font-size:11px;color:#999;flex:1}
+  .invite-note{background:#1a2530;border:1px solid #2a3a4a;border-radius:8px;padding:8px 12px;font-size:12px;color:#9cc3e0;margin-bottom:12px}
+  .invite-note a{color:#d4af37}
 </style>
   <link rel="stylesheet" href="../css/dashboard-theme.css">
 </head>
@@ -94,6 +100,83 @@ import {
 } from "../js/firebase-init.js";
 
 requireLogin(() => { loadList(); });
+
+// ---------- رفع فيديو مباشر إلى Cloudinary (بإعدادات صفحة "التكاملات") ----------
+let cloudinaryConfigPromise = null;
+async function getCloudinaryConfig() {
+  if (!cloudinaryConfigPromise) {
+    cloudinaryConfigPromise = getDoc(doc(db, "integration_configs", "cloudinary"))
+      .then((snap) => (snap.exists() ? snap.data() : null))
+      .catch(() => null);
+  }
+  return cloudinaryConfigPromise;
+}
+
+function uploadVideoToCloudinary(file, cloudName, uploadPreset, onProgress) {
+  return new Promise((resolve, reject) => {
+    const url = `https://api.cloudinary.com/v1_1/${encodeURIComponent(cloudName)}/video/upload`;
+    const form = new FormData();
+    form.append("file", file);
+    form.append("upload_preset", uploadPreset);
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", url);
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
+    };
+    xhr.onload = () => {
+      try {
+        const res = JSON.parse(xhr.responseText);
+        if (xhr.status >= 200 && xhr.status < 300 && res.secure_url) resolve(res.secure_url);
+        else reject(new Error(res.error?.message || "فشل الرفع"));
+      } catch { reject(new Error("فشل الرفع")); }
+    };
+    xhr.onerror = () => reject(new Error("تعذر الاتصال بـ Cloudinary"));
+    xhr.send(form);
+  });
+}
+
+function wireVideoUploadButtons(container) {
+  container.querySelectorAll(".upload-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const fileInput = container.querySelector(
+        `.videoFileInput[data-target="${btn.dataset.target}"][data-slug="${btn.dataset.slug}"]`
+      );
+      fileInput.click();
+    });
+  });
+  container.querySelectorAll(".videoFileInput").forEach((input) => {
+    input.addEventListener("change", async () => {
+      const file = input.files[0];
+      if (!file) return;
+      const progressEl = container.querySelector(
+        `.upload-progress[data-target="${input.dataset.target}"][data-slug="${input.dataset.slug}"]`
+      );
+      const urlInput = container.querySelector(
+        `.${input.dataset.target}[data-slug="${input.dataset.slug}"]`
+      );
+      const cfg = await getCloudinaryConfig();
+      if (!cfg || !cfg.cloudName || !cfg.uploadPreset) {
+        progressEl.textContent = "⚠️ لازم تعبّي Cloud Name و Upload Preset (نوعه unsigned) بصفحة التكاملات أول";
+        progressEl.style.color = "#e07a7a";
+        return;
+      }
+      progressEl.style.color = "#999";
+      progressEl.textContent = "جارِ الرفع... 0%";
+      try {
+        const secureUrl = await uploadVideoToCloudinary(file, cfg.cloudName, cfg.uploadPreset, (pct) => {
+          progressEl.textContent = `جارِ الرفع... ${pct}%`;
+        });
+        urlInput.value = secureUrl;
+        progressEl.style.color = "#8ecb8e";
+        progressEl.textContent = "تم الرفع ✓ — ما نسيتِ تضغطين (حفظ الفيديوهين)";
+      } catch (e) {
+        progressEl.style.color = "#e07a7a";
+        progressEl.textContent = "تعذر الرفع: " + e.message;
+      }
+      input.value = "";
+    });
+  });
+}
 
 const SITE_ORIGIN = window.location.origin;
 const RESERVED = ["admin","dashboard","rsvp","categories","content","css","js","netlify","partials",
@@ -183,10 +266,16 @@ async function loadList() {
             </div>
           </div>
           <div class="video-panel" id="panel-${slugEsc}">
+            <div class="invite-note">🎬 فيديو الدعوة نفسه (مو التذكير/الشكر) يُدار من صفحة <a href="events.html" target="_blank">المناسبات</a> — بنفس اسم المناسبة.</div>
             <div class="two-col">
               <div>
                 <label>رابط فيديو التذكير (يُرسل تلقائيًا قبل المناسبة)</label>
                 <input type="text" dir="ltr" class="reminderUrlInput" data-slug="${slugEsc}" placeholder="https://..." value="${reminderUrl}">
+                <div class="upload-row">
+                  <button type="button" class="upload-btn" data-target="reminderUrlInput" data-slug="${slugEsc}">⬆️ رفع فيديو من جهازي</button>
+                  <input type="file" accept="video/*" class="videoFileInput" data-target="reminderUrlInput" data-slug="${slugEsc}">
+                  <span class="upload-progress" data-target="reminderUrlInput" data-slug="${slugEsc}"></span>
+                </div>
                 <label>ساعات مخصّصة لهذه المناسبة (اتركيه فاضي = الافتراضي العام)</label>
                 <input type="text" inputmode="numeric" class="reminderHoursInput" data-slug="${slugEsc}" placeholder="مثال: 48" value="${reminderHrs}">
                 ${data.reminderVideoSent ? `<button class="secondary reset-btn" data-slug="${slugEsc}" data-field="reminderVideoSent">إعادة الإرسال (أُرسل مسبقًا ✓)</button>` : ""}
@@ -194,8 +283,13 @@ async function loadList() {
               <div>
                 <label>رابط فيديو الشكر (يُرسل تلقائيًا بعد المناسبة)</label>
                 <input type="text" dir="ltr" class="thankYouUrlInput" data-slug="${slugEsc}" placeholder="https://..." value="${thankYouUrl}">
+                <div class="upload-row">
+                  <button type="button" class="upload-btn" data-target="thankYouUrlInput" data-slug="${slugEsc}">⬆️ رفع فيديو من جهازي</button>
+                  <input type="file" accept="video/*" class="videoFileInput" data-target="thankYouUrlInput" data-slug="${slugEsc}">
+                  <span class="upload-progress" data-target="thankYouUrlInput" data-slug="${slugEsc}"></span>
+                </div>
                 <label>ساعات مخصّصة لهذه المناسبة (اتركيه فاضي = الافتراضي العام)</label>
-                <input type="text" inputmode="numeric" class="thankYouHoursInput" data-slug="${slugEsc}" placeholder="مثال: 12" value="${thankYouHrs}">
+                <input type="text" inputmode="numeric" class="thankYouHoursInput" data-slug="${slugEsc}" placeholder="مثال: 24" value="${thankYouHrs}">
                 ${data.thankYouVideoSent ? `<button class="secondary reset-btn" data-slug="${slugEsc}" data-field="thankYouVideoSent">إعادة الإرسال (أُرسل مسبقًا ✓)</button>` : ""}
               </div>
             </div>
@@ -259,6 +353,7 @@ async function loadList() {
         loadList();
       });
     });
+    wireVideoUploadButtons(listWrap);
   } catch (e) {
     listWrap.innerHTML = '<li class="empty">تعذر تحميل القائمة.</li>';
   }

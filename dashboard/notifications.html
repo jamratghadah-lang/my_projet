@@ -77,32 +77,18 @@
 </div>
 </div>
 <div class="card">
-<h2>إعدادات البريد (SMTP)</h2>
-<p class="desc">تُضاف القيم في Netlify Environment Variables — مو من هنا — عشان الأمان. هنا بس تتحقق إنها مفعّلة وتجرب الإرسال.</p>
+<h2>إعدادات البريد (Resend)</h2>
+<p class="desc">إرسال الإيميلات الفعلي في هذا الموقع يمر عبر Resend API — مو SMTP. مفاتيح RESEND_API_KEY وSEND_FROM تُضاف من Netlify Environment Variables — مو من هنا — عشان الأمان. هنا بس تحددين بريد الاستلام الافتراضي وتجربين الإرسال.</p>
 <div class="row">
 <div>
-<label for="notifyEmail">بريد الاستلام (NOTIFY_EMAIL_TO)</label>
+<label for="notifyEmail">بريد الاستلام الافتراضي (NOTIFY_EMAIL_TO)</label>
 <input dir="ltr" id="notifyEmail" placeholder="you@example.com" type="email"/>
-</div>
-<div>
-<label for="smtpHost">خادم SMTP (SMTP_HOST)</label>
-<input dir="ltr" id="smtpHost" placeholder="smtp.gmail.com" type="text"/>
-</div>
-</div>
-<div class="row">
-<div>
-<label for="smtpPort">المنفذ (SMTP_PORT)</label>
-<input dir="ltr" id="smtpPort" placeholder="587" type="text"/>
-</div>
-<div>
-<label for="smtpFrom">المُرسِل (SMTP_FROM)</label>
-<input dir="ltr" id="smtpFrom" placeholder="you@example.com" type="text"/>
 </div>
 </div>
 <button id="saveBtn">حفظ الإعدادات</button>
-<button class="test-btn" id="testBtn">إرسال إيميل تجريبي</button>
 <span id="status"></span>
 <div class="hint" id="envHint"></div>
+<div class="hint">للتأكد من عمل الإرسال فعليًا، استخدمي زر "📤 إرسال التقرير الآن" بالأسفل — يرسل تقرير حقيقي عبر نفس مسار Resend المستخدم في كل إشعارات الموقع.</div>
 </div>
 <div class="card">
 <h2>📩 إرسال التقرير الآن</h2>
@@ -132,9 +118,6 @@ async function loadSettings() {
     const snap = await getDoc(doc(db, "settings", "notifications"));
     const data = snap.exists() ? snap.data() : {};
     if (data.notifyEmail) document.getElementById("notifyEmail").value = data.notifyEmail;
-    if (data.smtpHost) document.getElementById("smtpHost").value = data.smtpHost;
-    if (data.smtpPort) document.getElementById("smtpPort").value = data.smtpPort;
-    if (data.smtpFrom) document.getElementById("smtpFrom").value = data.smtpFrom;
   } catch {}
 
   try {
@@ -150,20 +133,23 @@ async function loadSettings() {
 }
 
 async function checkEnv() {
-  // نفحص الإعدادات عبر دالة notify-rsvp (ترجع sent:false لو ناقصة)
+  // نفحص إعدادات Resend الفعلية عبر metrics.js (فحص مباشر لـ RESEND_API_KEY
+  // مع Resend نفسها) — لا نستخدم notify-rsvp للفحص لأنها تتطلب توكن RSVP
+  // صالح من ضيف حقيقي وترفض أي استدعاء تجريبي بدون توكن، فكان فحص الحالة
+  // القديم يرجّع نفس النتيجة دائمًا بغض النظر عن ضبط الإعدادات فعليًا.
   try {
-    const res = await fetch("/.netlify/functions/notify-rsvp", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ _test: true, guestName: "اختبار", status: "yes" }),
+    const idToken = await auth.currentUser.getIdToken();
+    const res = await fetch("/.netlify/functions/metrics", {
+      headers: { Authorization: `Bearer ${idToken}` },
     });
     const data = await res.json();
-    const configured = data.sent === true || (data.sent === false && data.reason !== "SMTP_NOT_CONFIGURED");
+    const configured = data?.connections?.resend === "connected";
     updateBadge("badgeInstant", configured);
     updateBadge("badgeDaily", configured);
-    document.getElementById("envHint").textContent = configured
-      ? "الإعدادات مفعّلة في Netlify ✓"
-      : "الإعدادات غير مكتملة — أضيفي متغيرات SMTP في Netlify Environment Variables.";
+    document.getElementById("envHint").textContent =
+      data?.connections?.resend === "connected" ? "الإعدادات مفعّلة في Netlify ✓" :
+      data?.connections?.resend === "not_configured" ? "الإعدادات غير مكتملة — أضيفي RESEND_API_KEY وSEND_FROM في Netlify Environment Variables." :
+      "تعذّر التحقق من مفتاح Resend — تأكدي إنه صحيح.";
   } catch {
     document.getElementById("envHint").textContent = "تعذّر فحص الإعدادات.";
   }
@@ -191,9 +177,6 @@ document.getElementById("saveBtn").addEventListener("click", async () => {
   const status = document.getElementById("status");
   const data = {
     notifyEmail: document.getElementById("notifyEmail").value.trim(),
-    smtpHost: document.getElementById("smtpHost").value.trim(),
-    smtpPort: document.getElementById("smtpPort").value.trim(),
-    smtpFrom: document.getElementById("smtpFrom").value.trim(),
   };
   btn.disabled = true;
   try {
@@ -206,43 +189,6 @@ document.getElementById("saveBtn").addEventListener("click", async () => {
   }
   btn.disabled = false;
   setTimeout(() => (status.textContent = ""), 2500);
-});
-
-document.getElementById("testBtn").addEventListener("click", async () => {
-  const btn = document.getElementById("testBtn");
-  const status = document.getElementById("status");
-  btn.disabled = true;
-  status.textContent = "جارِ الإرسال...";
-  status.className = "";
-  try {
-    const res = await fetch("/.netlify/functions/notify-rsvp", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        guestName: "إيميل تجريبي",
-        phone: "—",
-        status: "yes",
-        guests: "0",
-        style: "test",
-      }),
-    });
-    const data = await res.json();
-    if (data.sent) {
-      status.textContent = "تم الإرسال! تأكدي من بريدك ✓";
-      status.className = "ok";
-    } else if (data.reason === "SMTP_NOT_CONFIGURED") {
-      status.textContent = "الإعدادات غير مكتملة في Netlify";
-      status.className = "err";
-    } else {
-      status.textContent = "تعذّر الإرسال — راجعي بيانات SMTP";
-      status.className = "err";
-    }
-  } catch {
-    status.textContent = "خطأ في الاتصال";
-    status.className = "err";
-  }
-  btn.disabled = false;
-  setTimeout(() => (status.textContent = ""), 4000);
 });
 
 document.getElementById("sendNowBtn").addEventListener("click", async () => {
@@ -269,7 +215,7 @@ document.getElementById("sendNowBtn").addEventListener("click", async () => {
       status.textContent = "لا يوجد بريد مستلِم — أضيفي بريد العميلة أو NOTIFY_EMAIL_TO";
       status.className = "err";
     } else {
-      status.textContent = "تعذّر الإرسال — راجعي بيانات SMTP";
+      status.textContent = "تعذّر الإرسال — تأكدي من RESEND_API_KEY وSEND_FROM في Netlify";
       status.className = "err";
     }
   } catch {

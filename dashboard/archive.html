@@ -201,13 +201,13 @@ function escapeHtml(s) {
 function formatDate(ts) {
   if (!ts) return '—';
   const d = ts.toMillis ? new Date(ts.toMillis()) : new Date(ts);
-  return d.toLocaleDateString('ar-SA', { year: 'numeric', month: '2-digit', day: '2-digit' });
+  return d.toLocaleDateString('ar-SA-u-nu-latn', { year: 'numeric', month: '2-digit', day: '2-digit' });
 }
 
 function formatDateTime(ts) {
   if (!ts) return '—';
   const d = ts.toMillis ? new Date(ts.toMillis()) : new Date(ts);
-  return d.toLocaleString('ar-SA', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleString('ar-SA-u-nu-latn', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
 
 function toMonthKey(ts) {
@@ -273,7 +273,13 @@ requireLogin(async () => {
     updateStats();
     renderTable();
   } catch (err) {
-    document.getElementById('tableBody').innerHTML = '<tr><td colspan="6"><div class="empty">تعذّر تحميل البيانات: ' + escapeHtml(err.message) + '</div></td></tr>';
+    console.error('archive load error:', err);
+    let reason = 'خطأ غير متوقع، حاولي تحديث الصفحة';
+    const code = err && err.code ? String(err.code) : '';
+    if (code === 'permission-denied') reason = 'لا توجد صلاحية للوصول لهذه البيانات — تأكدي من تسجيل الدخول';
+    else if (code === 'failed-precondition') reason = 'قاعدة البيانات تحتاج فهرسًا (index) لم يُنشأ بعد — تواصلي مع المطوّر';
+    else if (code === 'unavailable') reason = 'تعذّر الاتصال بالخادم — تأكدي من الإنترنت وحاولي مجددًا';
+    document.getElementById('tableBody').innerHTML = '<tr><td colspan="6"><div class="empty">تعذّر تحميل البيانات: ' + escapeHtml(reason) + '</div></td></tr>';
   }
 });
 
@@ -490,8 +496,8 @@ function openDetailModal(ev) {
   // Budget Summary
   html += '<div class="detail-section">';
   html += '<h4>ملخص الميزانية</h4>';
-  html += '<div class="detail-row"><span class="lbl">التكلفة المقدّرة</span><span class="val">' + budgetEst.toLocaleString('ar-SA') + ' ر.س</span></div>';
-  html += '<div class="detail-row"><span class="lbl">التكلفة الفعلية</span><span class="val">' + budgetAct.toLocaleString('ar-SA') + ' ر.س</span></div>';
+  html += '<div class="detail-row"><span class="lbl">التكلفة المقدّرة</span><span class="val">' + budgetEst.toLocaleString('ar-SA-u-nu-latn') + ' ر.س</span></div>';
+  html += '<div class="detail-row"><span class="lbl">التكلفة الفعلية</span><span class="val">' + budgetAct.toLocaleString('ar-SA-u-nu-latn') + ' ر.س</span></div>';
   html += '<div class="detail-row"><span class="lbl">نسبة الفرق</span><span class="val ' + budgetVarClass + '">' + budgetVarSign + budgetVariance + '%</span></div>';
 
   // Budget items table if available
@@ -505,8 +511,8 @@ function openDetailModal(ev) {
       const varSign = varPct > 0 ? '+' : '';
       html += '<tr>';
       html += '<td>' + escapeHtml(item.name || '—') + '</td>';
-      html += '<td>' + est.toLocaleString('ar-SA') + '</td>';
-      html += '<td>' + act.toLocaleString('ar-SA') + '</td>';
+      html += '<td>' + est.toLocaleString('ar-SA-u-nu-latn') + '</td>';
+      html += '<td>' + act.toLocaleString('ar-SA-u-nu-latn') + '</td>';
       html += '<td class="' + varCls + '">' + varSign + varPct + '%</td>';
       html += '</tr>';
     });
@@ -618,8 +624,8 @@ function openPdfWindow(ev) {
 
   <div class="section">
     <h2>ملخص الميزانية</h2>
-    <div class="row"><span class="l">التكلفة المقدّرة</span><span class="v">${budgetEst.toLocaleString('ar-SA')} ر.س</span></div>
-    <div class="row"><span class="l">التكلفة الفعلية</span><span class="v">${budgetAct.toLocaleString('ar-SA')} ر.س</span></div>
+    <div class="row"><span class="l">التكلفة المقدّرة</span><span class="v">${budgetEst.toLocaleString('ar-SA-u-nu-latn')} ر.س</span></div>
+    <div class="row"><span class="l">التكلفة الفعلية</span><span class="v">${budgetAct.toLocaleString('ar-SA-u-nu-latn')} ر.س</span></div>
     <div class="row"><span class="l">نسبة الفرق</span><span class="v ${budgetVariance > 0 ? 'neg' : 'pos'}">${budgetVariance > 0 ? '+' : ''}${budgetVariance}%</span></div>
     ${ev.budgetItems && ev.budgetItems.length > 0 ? `
     <table style="margin-top:12px">
@@ -628,13 +634,13 @@ function openPdfWindow(ev) {
         const est = item.estimated || 0;
         const act = item.actual || 0;
         const vp = est > 0 ? Math.round(((act - est) / est) * 100) : 0;
-        return `<tr><td>${escapeHtml(item.name || '—')}</td><td>${est.toLocaleString('ar-SA')}</td><td>${act.toLocaleString('ar-SA')}</td><td class="${vp > 0 ? 'neg' : 'pos'}">${vp > 0 ? '+' : ''}${vp}%</td></tr>`;
+        return `<tr><td>${escapeHtml(item.name || '—')}</td><td>${est.toLocaleString('ar-SA-u-nu-latn')}</td><td>${act.toLocaleString('ar-SA-u-nu-latn')}</td><td class="${vp > 0 ? 'neg' : 'pos'}">${vp > 0 ? '+' : ''}${vp}%</td></tr>`;
       }).join('')}</tbody>
     </table>` : ''}
   </div>
 
   <div class="footer">
-    تم إنشاء هذا التقرير تلقائيًا من لوحة تحكم جمرة غضى — ${new Date().toLocaleDateString('ar-SA')}
+    تم إنشاء هذا التقرير تلقائيًا من لوحة تحكم جمرة غضى — ${new Date().toLocaleDateString('ar-SA-u-nu-latn')}
   </div>
 
   <script>setTimeout(function(){window.print()},400)<\/script>

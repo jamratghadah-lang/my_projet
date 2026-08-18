@@ -181,10 +181,20 @@ requireLogin(async (user) => {
           <input type="number" id="cost-maxContext" value="10" min="1">
         </div>
         <div class="field">
-          <label>نموذج Gemini</label>
-          <select id="cost-model">
-            <option value="gemini-2.0-flash">gemini-2.0-flash</option>
-            <option value="gemini-2.0-flash-lite">gemini-2.0-flash-lite</option>
+          <label>النموذج الأساسي (Groq)</label>
+          <select id="cost-model-groq">
+            <option value="openai/gpt-oss-120b">openai/gpt-oss-120b (افتراضي)</option>
+            <option value="openai/gpt-oss-20b">openai/gpt-oss-20b</option>
+            <option value="llama-3.3-70b-versatile">llama-3.3-70b-versatile</option>
+            <option value="llama-3.1-8b-instant">llama-3.1-8b-instant</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>نموذج الاحتياطي (Z.ai) — يُستخدم فقط لو فشل Groq</label>
+          <select id="cost-model-zai">
+            <option value="glm-4.7-flash">glm-4.7-flash (افتراضي)</option>
+            <option value="glm-4.6">glm-4.6</option>
+            <option value="glm-4.5-air">glm-4.5-air</option>
           </select>
         </div>
         <div class="field">
@@ -230,12 +240,13 @@ requireLogin(async (user) => {
         if (d.costProtection?.maxMessagesPerHour !== undefined) document.getElementById('cost-msgPerHour').value = d.costProtection.maxMessagesPerHour;
         if (d.costProtection?.maxMessageLength !== undefined) document.getElementById('cost-maxMsgLen').value = d.costProtection.maxMessageLength;
         if (d.costProtection?.maxContextMessages !== undefined) document.getElementById('cost-maxContext').value = d.costProtection.maxContextMessages;
-        if (d.costProtection?.geminiModel) document.getElementById('cost-model').value = d.costProtection.geminiModel;
+        if (d.costProtection?.groqModel) document.getElementById('cost-model-groq').value = d.costProtection.groqModel;
+        if (d.costProtection?.zaiModel) document.getElementById('cost-model-zai').value = d.costProtection.zaiModel;
         if (d.costProtection?.maxTokens !== undefined) document.getElementById('cost-maxTokens').value = d.costProtection.maxTokens;
         // آخر تحديث
         if (d.updatedAt) {
           const dt = d.updatedAt?.toDate ? d.updatedAt.toDate() : new Date(d.updatedAt);
-          document.getElementById('last-updated').textContent = 'آخر تحديث: ' + dt.toLocaleString('ar-SA');
+          document.getElementById('last-updated').textContent = 'آخر تحديث: ' + dt.toLocaleString('ar-SA-u-nu-latn');
         }
       }
     } catch(e) {
@@ -279,7 +290,8 @@ requireLogin(async (user) => {
           maxMessagesPerHour: parseInt(document.getElementById('cost-msgPerHour').value) || 20,
           maxMessageLength: parseInt(document.getElementById('cost-maxMsgLen').value) || 500,
           maxContextMessages: parseInt(document.getElementById('cost-maxContext').value) || 10,
-          geminiModel: document.getElementById('cost-model').value,
+          groqModel: document.getElementById('cost-model-groq').value,
+          zaiModel: document.getElementById('cost-model-zai').value,
           maxTokens: parseInt(document.getElementById('cost-maxTokens').value) || 500
         },
         updatedBy: user.email,

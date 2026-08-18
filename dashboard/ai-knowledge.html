@@ -185,9 +185,12 @@ requireLogin(async (user) => {
       <div class="card-actions">
         <div>
           <h2>📦 الباقات</h2>
-          <div class="subtitle">إدارة باقات الخدمات والأسعار</div>
+          <div class="subtitle">إدارة باقات الخدمات والأسعار — الاسم والسعر والمميزات هنا هي نفسها اللي يعتمد عليها المساعد الذكي عند الرد على الضيوف. إذا عدّلتِ الباقات من صفحة الأسعار (/admin)، اضغطي "مزامنة" عشان يطابقها المساعد الذكي.</div>
         </div>
-        <button class="btn btn-gold btn-sm" onclick="window._openPkgModal(-1)">➕ إضافة باقة</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-outline btn-sm" onclick="window._syncFromPricing()">🔄 مزامنة من صفحة الأسعار</button>
+          <button class="btn btn-gold btn-sm" onclick="window._openPkgModal(-1)">➕ إضافة باقة</button>
+        </div>
       </div>
       <div class="table-wrap">
         <table>
@@ -273,14 +276,44 @@ requireLogin(async (user) => {
   ]);
 
   // ===== الباقات =====
+
+  // تجلب باقات صفحة الأسعار الحقيقية (content/pricing.json) وتحوّلها لنفس
+  // شكل باقات المساعد الذكي — هذا هو مصدر الحقيقة الوحيد لاسم/سعر/مميزات
+  // كل باقة، عشان ما يصير فرق بين اللي يقوله المساعد الذكي واللي يشوفه
+  // الضيف فعليًا بصفحة الأسعار.
+  async function fetchPricingPackages() {
+    const res = await fetch('../content/pricing.json', { cache: 'no-store' });
+    if (!res.ok) throw new Error('تعذّر تحميل content/pricing.json');
+    const data = await res.json();
+    const items = Array.isArray(data.packages) ? data.packages : [];
+    if (!items.length) throw new Error('صفحة الأسعار لا تحتوي على باقات حاليًا');
+    return items.map((p) => ({
+      name: p.name || '',
+      price: p.price || '',
+      badge: p.badge || '',
+      features: Array.isArray(p.features) ? p.features : [],
+      guestLimit: 0,
+      aiEnabled: false, rsvpEnabled: false, qrEnabled: false,
+      whatsappEnabled: false, reportsEnabled: false, videosEnabled: true
+    }));
+  }
+
   async function loadPackages() {
     try {
       const snap = await getDoc(doc(db, 'ai_knowledge', 'packages'));
       if (snap.exists() && (snap.data().packages || snap.data().items) && (snap.data().packages || snap.data().items).length > 0) {
         packages = snap.data().packages || snap.data().items;
       } else {
-        // Seed default packages
-        packages = JSON.parse(JSON.stringify(DEFAULT_PACKAGES));
+        // أول تشغيل: نبذر الباقات من صفحة الأسعار الحقيقية عشان يبدأ
+        // المساعد الذكي متطابق معها من أول يوم. لو تعذّر الوصول لملف
+        // الأسعار (مثلاً مشكلة شبكة)، نرجع لباقات احتياطية قديمة بس
+        // كحل مؤقت.
+        try {
+          packages = await fetchPricingPackages();
+        } catch (fetchErr) {
+          console.warn('تعذّرت المزامنة من صفحة الأسعار، استخدام باقات احتياطية:', fetchErr.message);
+          packages = JSON.parse(JSON.stringify(DEFAULT_PACKAGES));
+        }
         await setDoc(doc(db, 'ai_knowledge', 'packages'), {
           packages: packages,
           updatedBy: user.email,
@@ -293,6 +326,30 @@ requireLogin(async (user) => {
       document.getElementById('pkg-tbody').innerHTML = '<tr><td colspan="5" class="empty">خطأ في التحميل</td></tr>';
     }
   }
+
+  // زر "مزامنة من صفحة الأسعار": يستبدل الاسم/السعر/المميزات بما هو
+  // منشور فعليًا بصفحة الأسعار، ويحافظ على إعدادات المساعد الذكي الخاصة
+  // بكل باقة (الحد الأقصى للمدعوين، تفعيل RSVP/QR/واتساب...) لو الاسم تطابق.
+  window._syncFromPricing = async function() {
+    const ok = confirm('هذا سيحدّث اسم وسعر ومميزات كل باقة لتطابق المنشور فعليًا بصفحة الأسعار. إعدادات المساعد الذكي (الحد الأقصى للمدعوين، التفعيلات) تُحفظ للباقات اللي أسماؤها ما تغيّرت. متابعة؟');
+    if (!ok) return;
+    try {
+      const fresh = await fetchPricingPackages();
+      packages = fresh.map((np) => {
+        const existing = packages.find((p) => p.name === np.name);
+        return existing ? { ...np, guestLimit: existing.guestLimit, aiEnabled: existing.aiEnabled, rsvpEnabled: existing.rsvpEnabled, qrEnabled: existing.qrEnabled, whatsappEnabled: existing.whatsappEnabled, reportsEnabled: existing.reportsEnabled, videosEnabled: existing.videosEnabled } : np;
+      });
+      await setDoc(doc(db, 'ai_knowledge', 'packages'), {
+        packages: packages,
+        updatedBy: user.email,
+        updatedAt: serverTimestamp()
+      });
+      renderPackages();
+      alert('تمت المزامنة ✓ — باقات المساعد الذكي الآن مطابقة لصفحة الأسعار.');
+    } catch (e) {
+      alert('تعذّرت المزامنة: ' + e.message);
+    }
+  };
 
   function renderPackages() {
     const tb = document.getElementById('pkg-tbody');
@@ -392,7 +449,7 @@ requireLogin(async (user) => {
         document.getElementById('company-process').value = d.process || '';
         if (d.updatedAt) {
           const dt = d.updatedAt?.toDate ? d.updatedAt.toDate() : new Date(d.updatedAt);
-          document.getElementById('updated-company').textContent = 'آخر تحديث: ' + dt.toLocaleString('ar-SA');
+          document.getElementById('updated-company').textContent = 'آخر تحديث: ' + dt.toLocaleString('ar-SA-u-nu-latn');
         }
       }
       return true;
@@ -516,7 +573,7 @@ requireLogin(async (user) => {
         document.getElementById('contact-website').value = d.website || '';
         if (d.updatedAt) {
           const dt = d.updatedAt?.toDate ? d.updatedAt.toDate() : new Date(d.updatedAt);
-          document.getElementById('updated-contact').textContent = 'آخر تحديث: ' + dt.toLocaleString('ar-SA');
+          document.getElementById('updated-contact').textContent = 'آخر تحديث: ' + dt.toLocaleString('ar-SA-u-nu-latn');
         }
       } else {
         // Pre-fill from settings.json
@@ -562,7 +619,7 @@ requireLogin(async (user) => {
         document.getElementById('policy-support').value = d.support || '';
         if (d.updatedAt) {
           const dt = d.updatedAt?.toDate ? d.updatedAt.toDate() : new Date(d.updatedAt);
-          document.getElementById('updated-policies').textContent = 'آخر تحديث: ' + dt.toLocaleString('ar-SA');
+          document.getElementById('updated-policies').textContent = 'آخر تحديث: ' + dt.toLocaleString('ar-SA-u-nu-latn');
         }
       } else {
         document.getElementById('policy-payment').value = DEFAULT_POLICIES.payment;

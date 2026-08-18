@@ -101,7 +101,7 @@ function escapeHtml(s) {
 function formatTime(d){
   if(!d) return '—';
   const dt = d?.toDate ? d.toDate() : new Date(d);
-  return dt.toLocaleString('ar-SA', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+  return dt.toLocaleString('ar-SA-u-nu-latn', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 }
 
 function truncate(s, len=60){
@@ -129,15 +129,23 @@ requireLogin(async (user) => {
         <div class="field"><label>النية</label>
           <select id="filter-intent">
             <option value="">الكل</option>
-            <option value="greeting">تحية</option>
-            <option value="packages_info">معلومات الباقات</option>
-            <option value="package_recommend">ترشيح باقة</option>
-            <option value="rsvp_update">تحديث حضور</option>
-            <option value="event_info">معلومات المناسبة</option>
-            <option value="location">الموقع</option>
-            <option value="pricing">الأسعار</option>
-            <option value="lead">عميل محتمل</option>
-            <option value="unknown">غير معروف</option>
+            <option value="PUBLIC_INFO">معلومات عامة</option>
+            <option value="PACKAGE_LIST">قائمة الباقات</option>
+            <option value="PACKAGE_DETAILS">تفاصيل باقة</option>
+            <option value="PACKAGE_COMPARE">مقارنة باقات</option>
+            <option value="PACKAGE_RECOMMEND">ترشيح باقة</option>
+            <option value="CONTACT_INFO">معلومات التواصل</option>
+            <option value="FAQ">أسئلة شائعة</option>
+            <option value="HOW_TO_ORDER">كيف أطلب</option>
+            <option value="LEAD_CAPTURE">عميل محتمل</option>
+            <option value="HUMAN_HANDOFF">تحويل لموظف</option>
+            <option value="EVENT_INFO">معلومات المناسبة</option>
+            <option value="GUEST_INFO">معلومات ضيف</option>
+            <option value="SEND_LOCATION">إرسال الموقع</option>
+            <option value="GET_RSVP_STATUS">استعلام حضور</option>
+            <option value="UPDATE_RSVP">تحديث حضور</option>
+            <option value="UPDATE_GUEST_COUNT">تحديث عدد المرافقين</option>
+            <option value="CLIENT_STATS">إحصائيات العميلة</option>
           </select>
         </div>
         <div class="field phone-field"><label>بحث برقم الهاتف</label><input type="text" id="filter-phone" dir="ltr" placeholder="05xxxxxxxx"></div>
@@ -177,15 +185,31 @@ requireLogin(async (user) => {
   // استماع للمحادثات بشكل لحظي
   let allConversations = [];
   const INTENT_LABELS = {
-    greeting: 'تحية',
-    packages_info: 'معلومات الباقات',
-    package_recommend: 'ترشيح باقة',
-    rsvp_update: 'تحديث حضور',
-    event_info: 'معلومات المناسبة',
-    location: 'الموقع',
-    pricing: 'الأسعار',
-    lead: 'عميل محتمل',
-    unknown: 'غير معروف'
+    PUBLIC_INFO: 'معلومات عامة',
+    PACKAGE_LIST: 'قائمة الباقات',
+    PACKAGE_DETAILS: 'تفاصيل باقة',
+    PACKAGE_COMPARE: 'مقارنة باقات',
+    PACKAGE_RECOMMEND: 'ترشيح باقة',
+    CONTACT_INFO: 'معلومات التواصل',
+    SOCIAL_LINK: 'روابط التواصل',
+    FAQ: 'أسئلة شائعة',
+    HOW_TO_ORDER: 'كيف أطلب',
+    LEAD_CAPTURE: 'عميل محتمل',
+    HUMAN_HANDOFF: 'تحويل لموظف',
+    EVENT_INFO: 'معلومات المناسبة',
+    GUEST_INFO: 'معلومات ضيف',
+    RESEND_INVITATION: 'إعادة إرسال الدعوة',
+    SEND_LOCATION: 'إرسال الموقع',
+    GET_RSVP_STATUS: 'استعلام حضور',
+    UPDATE_RSVP: 'تحديث حضور',
+    UPDATE_GUEST_COUNT: 'تحديث عدد المرافقين',
+    CLIENT_STATS: 'إحصائيات العميلة',
+    CLIENT_CANCEL_GUEST: 'إلغاء ضيف',
+    CLIENT_RESTORE_GUEST: 'استرجاع ضيف',
+    CLIENT_RESEND_TO_GUEST: 'إعادة إرسال لضيف',
+    CLIENT_BULK_ADD_GUESTS: 'إضافة ضيوف جماعي',
+    SURVEY_RESPONSE: 'رد استبيان',
+    DISAMBIGUATE: 'تحديد المناسبة',
   };
 
   function applyFilters() {

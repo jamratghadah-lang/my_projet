@@ -104,14 +104,43 @@ function escapeHtml(s) {
 function formatDate(d){
   if(!d) return '—';
   const dt = d?.toDate ? d.toDate() : new Date(d);
-  return dt.toLocaleDateString('ar-SA', {year:'numeric',month:'2-digit',day:'2-digit'});
+  return dt.toLocaleDateString('ar-SA-u-nu-latn', {year:'numeric',month:'2-digit',day:'2-digit'});
 }
 
 function shortDate(d){
   if(!d) return '';
   const dt = d?.toDate ? d.toDate() : new Date(d);
-  return dt.toLocaleDateString('ar-SA', {month:'short',day:'numeric'});
+  return dt.toLocaleDateString('ar-SA-u-nu-latn', {month:'short',day:'numeric'});
 }
+
+// نفس أسماء النيات الحقيقية المستخدمة بمحرك الذكاء الاصطناعي (_ai-lib.js)
+const INTENT_LABELS = {
+  PUBLIC_INFO: 'معلومات عامة',
+  PACKAGE_LIST: 'قائمة الباقات',
+  PACKAGE_DETAILS: 'تفاصيل باقة',
+  PACKAGE_COMPARE: 'مقارنة باقات',
+  PACKAGE_RECOMMEND: 'ترشيح باقة',
+  CONTACT_INFO: 'معلومات التواصل',
+  SOCIAL_LINK: 'روابط التواصل',
+  FAQ: 'أسئلة شائعة',
+  HOW_TO_ORDER: 'كيف أطلب',
+  LEAD_CAPTURE: 'عميل محتمل',
+  HUMAN_HANDOFF: 'تحويل لموظف',
+  EVENT_INFO: 'معلومات المناسبة',
+  GUEST_INFO: 'معلومات ضيف',
+  RESEND_INVITATION: 'إعادة إرسال الدعوة',
+  SEND_LOCATION: 'إرسال الموقع',
+  GET_RSVP_STATUS: 'استعلام حضور',
+  UPDATE_RSVP: 'تحديث حضور',
+  UPDATE_GUEST_COUNT: 'تحديث عدد المرافقين',
+  CLIENT_STATS: 'إحصائيات العميلة',
+  CLIENT_CANCEL_GUEST: 'إلغاء ضيف',
+  CLIENT_RESTORE_GUEST: 'استرجاع ضيف',
+  CLIENT_RESEND_TO_GUEST: 'إعادة إرسال لضيف',
+  CLIENT_BULK_ADD_GUESTS: 'إضافة ضيوف جماعي',
+  SURVEY_RESPONSE: 'رد استبيان',
+  DISAMBIGUATE: 'تحديد المناسبة',
+};
 
 requireLogin(async (user) => {
   const app = document.getElementById('app');
@@ -147,13 +176,13 @@ requireLogin(async (user) => {
         <div class="bar-chart" id="chart-intents"></div>
       </div>
       <div class="card">
-        <h2>الباقات الأكثر سؤالاً</h2>
-        <div class="subtitle">حسب ذكر الباقة في المحادثات</div>
+        <h2>أنواع أسئلة الباقات</h2>
+        <div class="subtitle">قائمة / تفاصيل / مقارنة / ترشيح — حسب نوع السؤال (تتبّع اسم الباقة نفسها غير متوفر بعد)</div>
         <div class="bar-chart" id="chart-packages"></div>
       </div>
       <div class="card">
-        <h2>نسبة الأسئلة بدون إجابة</h2>
-        <div class="subtitle">الأسئلة التي لم يُعرف لها قصد</div>
+        <h2>نسبة التحويل لموظف بشري</h2>
+        <div class="subtitle">المحادثات اللي ما قدر المساعد الذكي يكمّلها لوحده</div>
         <div style="display:flex;align-items:center;gap:30px;padding:20px 0">
           <div class="rate-big" id="unknown-rate">0%</div>
           <div style="flex:1">
@@ -220,34 +249,32 @@ requireLogin(async (user) => {
       });
 
       // الإحصائيات
-      let totalConvs = 0, totalPkg = 0, totalRsvp = 0, totalLeads = 0, totalUnknown = 0;
+      let totalConvs = 0, totalPkg = 0, totalRsvp = 0, totalLeads = 0, totalHandoff = 0;
       const intentMap = {};
-      const pkgMap = {};
+      const pkgIntentMap = {};
+      const PACKAGE_INTENTS = ["PACKAGE_LIST", "PACKAGE_DETAILS", "PACKAGE_COMPARE", "PACKAGE_RECOMMEND"];
 
       records.forEach(r => {
         totalConvs += r.totalConversations || 0;
         totalPkg += r.packageQuestions || 0;
         totalRsvp += r.rsvpQuestions || 0;
         totalLeads += r.leads || 0;
-        totalUnknown += r.unknownIntent || 0;
-        // النيات
-        if (r.topIntents && Array.isArray(r.topIntents)) {
-          r.topIntents.forEach(ri => {
-            intentMap[ri.intent] = (intentMap[ri.intent] || 0) + (ri.count || 1);
-          });
-        }
-        // الباقات
-        if (r.topPackages && Array.isArray(r.topPackages)) {
-          r.topPackages.forEach(rp => {
-            pkgMap[rp.name] = (pkgMap[rp.name] || 0) + (rp.count || 1);
+        totalHandoff += r.humanHandoffCount || 0;
+        // النيات (مخزّنة كـ map: intentCounts.<الاسم>)
+        if (r.intentCounts && typeof r.intentCounts === 'object') {
+          Object.entries(r.intentCounts).forEach(([intent, count]) => {
+            intentMap[intent] = (intentMap[intent] || 0) + (count || 0);
+            if (PACKAGE_INTENTS.includes(intent)) {
+              pkgIntentMap[intent] = (pkgIntentMap[intent] || 0) + (count || 0);
+            }
           });
         }
       });
 
-      document.getElementById('stat-total').textContent = totalConvs.toLocaleString('ar-SA');
-      document.getElementById('stat-packages').textContent = totalPkg.toLocaleString('ar-SA');
-      document.getElementById('stat-rsvp').textContent = totalRsvp.toLocaleString('ar-SA');
-      document.getElementById('stat-leads').textContent = totalLeads.toLocaleString('ar-SA');
+      document.getElementById('stat-total').textContent = totalConvs.toLocaleString('ar-SA-u-nu-latn');
+      document.getElementById('stat-packages').textContent = totalPkg.toLocaleString('ar-SA-u-nu-latn');
+      document.getElementById('stat-rsvp').textContent = totalRsvp.toLocaleString('ar-SA-u-nu-latn');
+      document.getElementById('stat-leads').textContent = totalLeads.toLocaleString('ar-SA-u-nu-latn');
 
       // رسم المحادثات اليومية (آخر 14 يوم من sorted)
       const last14 = sorted.slice(-14);
@@ -256,26 +283,25 @@ requireLogin(async (user) => {
         value: r.totalConversations || 0
       })), 'gold');
 
-      // أكثر الأسئلة
+      // أكثر الأسئلة (حسب النية الحقيقية)
       const topIntents = Object.entries(intentMap)
         .sort((a,b) => b[1]-a[1])
         .slice(0, 10)
-        .map(([intent, count]) => ({label: intent, value: count}));
+        .map(([intent, count]) => ({label: INTENT_LABELS[intent] || intent, value: count}));
       renderBarChart('chart-intents', topIntents, 'green');
 
-      // الباقات الأكثر سؤالاً
-      const topPkgs = Object.entries(pkgMap)
+      // أنواع أسئلة الباقات
+      const topPkgs = Object.entries(pkgIntentMap)
         .sort((a,b) => b[1]-a[1])
-        .slice(0, 10)
-        .map(([name, count]) => ({label: name, value: count}));
+        .map(([intent, count]) => ({label: INTENT_LABELS[intent] || intent, value: count}));
       renderBarChart('chart-packages', topPkgs, 'blue');
 
-      // نسبة غير المعروفة
-      const unknownRate = totalConvs > 0 ? Math.round((totalUnknown / totalConvs) * 100) : 0;
-      document.getElementById('unknown-rate').textContent = unknownRate + '%';
-      document.getElementById('unknown-bar').style.width = unknownRate + '%';
+      // نسبة التحويل لموظف بشري
+      const handoffRate = totalConvs > 0 ? Math.round((totalHandoff / totalConvs) * 100) : 0;
+      document.getElementById('unknown-rate').textContent = handoffRate + '%';
+      document.getElementById('unknown-bar').style.width = handoffRate + '%';
       document.getElementById('unknown-detail').textContent =
-        escapeHtml(totalUnknown.toString()) + ' من ' + escapeHtml(totalConvs.toString()) + ' محادثة';
+        escapeHtml(totalHandoff.toString()) + ' من ' + escapeHtml(totalConvs.toString()) + ' محادثة';
 
       // جدول يومي (مرتب تنازلياً)
       const tableData = [...records].sort((a,b) => {

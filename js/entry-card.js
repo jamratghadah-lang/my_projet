@@ -176,7 +176,17 @@
       const eventCode = document.body.dataset.eventCode || new URLSearchParams(window.location.search).get("eid") || "";
       const qrValue = entryCode ? JSON.stringify({eventId:eventCode,entryCode}) : inviteUrl;
       try {
-        qrImg.src = window.QRCode.toDataURL(qrValue, { width: 220, margin: 1, color: { dark: "#3a2a12", light: "#ffffff" } });
+        // window.QRCode.toDataURL غير متزامنة (callback أو Promise) — تعيد
+        // Promise وليس نص رابط الصورة مباشرة، فتعيينها مباشرة لـ img.src
+        // كان يكسر عرض الـQR دائمًا (أيقونة صورة معطوبة)، مو بس بالمعاينة.
+        window.QRCode.toDataURL(
+          qrValue,
+          { width: 220, margin: 1, color: { dark: "#3a2a12", light: "#ffffff" } },
+          function (err, url) {
+            if (err || !url) { qrWrap.style.display = "none"; return; }
+            qrImg.src = url;
+          }
+        );
       } catch (e) {
         qrWrap.style.display = "none";
       }

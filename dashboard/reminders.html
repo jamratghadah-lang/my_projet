@@ -54,6 +54,12 @@
 <div class="mode-switch">
 <label><input id="modeWhatsapp" name="mode" type="radio" value="whatsapp"/><span>واتساب يدوي (مجاني)</span></label>
 <label><input id="modeSms" name="mode" type="radio" value="sms"/><span>SMS جماعي تلقائي</span></label>
+<label><input id="modeEmail" name="mode" type="radio" value="email"/><span>بريد إلكتروني جماعي</span></label>
+</div>
+<div id="emailOptions" style="display:none">
+<label for="emailSubject" style="font-size:13px;color:#ccc">عنوان الرسالة:</label>
+<input type="text" id="emailSubject" placeholder="تذكير بمناسبتنا 🌸"/>
+<div class="hint">الإرسال يمر عبر نفس نظام البريد المستخدم بباقي الموقع (Resend) — يشترط ضبط RESEND_API_KEY وSEND_FROM في Netlify Environment Variables. يُرسل فقط للضيوف المؤكدين اللي عندهم بريد إلكتروني مسجّل.</div>
 </div>
 <div id="smsOptions" style="display:none">
 <select id="smsProvider">
@@ -75,7 +81,7 @@
 <label for="reminderHours" style="font-size:13px;color:#ccc;display:block;margin-bottom:6px">فيديو التذكير: كم ساعة قبل المناسبة</label>
 <input type="text" id="reminderHours" inputmode="numeric" placeholder="48">
 <label for="thankYouHours" style="font-size:13px;color:#ccc;display:block;margin-bottom:6px">فيديو الشكر: كم ساعة بعد المناسبة</label>
-<input type="text" id="thankYouHours" inputmode="numeric" placeholder="12">
+<input type="text" id="thankYouHours" inputmode="numeric" placeholder="24">
 <button id="saveScheduling">حفظ التوقيت الافتراضي</button>
 <span id="schedulingStatus" class="hint" style="display:inline-block;margin-right:8px"></span>
 </div>
@@ -85,6 +91,10 @@
 <div id="smsSendWrap" style="display:none;margin-top:12px">
 <button id="sendSmsBtn">إرسال SMS لكل الضيوف</button>
 <span class="hint" id="sendStatus"></span>
+</div>
+<div id="emailSendWrap" style="display:none;margin-top:12px">
+<button id="sendEmailBtn">إرسال بريد لكل الضيوف</button>
+<span class="hint" id="sendEmailStatus"></span>
 </div>
 </div>
 <script type="module">
@@ -108,17 +118,17 @@ async function loadSchedulingSettings() {
     const snap = await getDoc(ref);
     const data = snap.exists() ? snap.data() : {};
     document.getElementById("reminderHours").value = data.reminderHoursBefore || 48;
-    document.getElementById("thankYouHours").value = data.thankYouHoursAfter || 12;
+    document.getElementById("thankYouHours").value = data.thankYouHoursAfter || 24;
   } catch (e) {
     document.getElementById("reminderHours").value = 48;
-    document.getElementById("thankYouHours").value = 12;
+    document.getElementById("thankYouHours").value = 24;
   }
 }
 
 document.getElementById("saveScheduling").addEventListener("click", async () => {
   const status = document.getElementById("schedulingStatus");
   const reminderHoursBefore = Math.max(1, parseInt(document.getElementById("reminderHours").value, 10) || 48);
-  const thankYouHoursAfter = Math.max(1, parseInt(document.getElementById("thankYouHours").value, 10) || 12);
+  const thankYouHoursAfter = Math.max(1, parseInt(document.getElementById("thankYouHours").value, 10) || 24);
   document.getElementById("reminderHours").value = reminderHoursBefore;
   document.getElementById("thankYouHours").value = thankYouHoursAfter;
   try {
@@ -137,20 +147,27 @@ async function loadSettings() {
   const data = snap.exists() ? snap.data() : {};
 
   const mode = data.mode || "whatsapp";
-  document.getElementById(mode === "sms" ? "modeSms" : "modeWhatsapp").checked = true;
+  const modeId = mode === "sms" ? "modeSms" : mode === "email" ? "modeEmail" : "modeWhatsapp";
+  document.getElementById(modeId).checked = true;
   document.getElementById("smsOptions").style.display = mode === "sms" ? "block" : "none";
+  document.getElementById("emailOptions").style.display = mode === "email" ? "block" : "none";
   document.getElementById("smsProvider").value = data.smsProvider || "";
   if (data.template) document.getElementById("template").value = data.template;
+  if (data.emailSubject) document.getElementById("emailSubject").value = data.emailSubject;
 
   document.getElementById("smsSendWrap").style.display = mode === "sms" ? "block" : "none";
+  document.getElementById("emailSendWrap").style.display = mode === "email" ? "block" : "none";
 }
 
 document.querySelectorAll('input[name="mode"]').forEach((el) => {
   el.addEventListener("change", (e) => {
     const isSms = e.target.value === "sms";
+    const isEmail = e.target.value === "email";
     document.getElementById("smsOptions").style.display = isSms ? "block" : "none";
+    document.getElementById("emailOptions").style.display = isEmail ? "block" : "none";
     document.getElementById("smsSendWrap").style.display = isSms ? "block" : "none";
-    renderGuests(); // نعيد رسم القائمة لتبديل زر واتساب / اختيار فقط
+    document.getElementById("emailSendWrap").style.display = isEmail ? "block" : "none";
+    renderGuests(); // نعيد رسم القائمة حسب القناة المختارة
   });
 });
 
@@ -158,8 +175,9 @@ document.getElementById("saveSettings").addEventListener("click", async () => {
   const mode = document.querySelector('input[name="mode"]:checked')?.value || "whatsapp";
   const smsProvider = document.getElementById("smsProvider").value;
   const template = document.getElementById("template").value;
+  const emailSubject = document.getElementById("emailSubject").value;
 
-  await setDoc(doc(db, "settings", "reminders"), { mode, smsProvider, template }, { merge: true });
+  await setDoc(doc(db, "settings", "reminders"), { mode, smsProvider, template, emailSubject }, { merge: true });
   const status = document.getElementById("status");
   status.textContent = "تم الحفظ ✓";
   setTimeout(() => (status.textContent = ""), 2500);
@@ -175,8 +193,13 @@ async function loadGuests() {
     snap.forEach((d) => {
       const r = d.data();
       const attending = r.status === "yes" || r.attending === true || r.status === "يحضر";
-      if (attending && r.phone) {
-        guests.push({ id: d.id, name: r.name || "ضيف", phone: normalizePhone(r.phone) });
+      if (attending && (r.phone || r.email)) {
+        guests.push({
+          id: d.id,
+          name: r.name || "ضيف",
+          phone: r.phone ? normalizePhone(r.phone) : "",
+          email: r.email || "",
+        });
       }
     });
     renderGuests();
@@ -211,11 +234,17 @@ function renderGuests() {
     return d.innerHTML.replace(/'/g, "&#39;");
   };
 
-  wrap.innerHTML = `<ul class="guest-list">` + guests.map((g) => {
+  const visibleGuests = mode === "email" ? guests.filter((g) => g.email) : guests.filter((g) => g.phone);
+  if (!visibleGuests.length) {
+    wrap.innerHTML = `<div class="empty">${mode === "email" ? "ما فيه ضيوف مؤكدين عندهم بريد إلكتروني" : "ما فيه ضيوف مؤكدين عندهم رقم جوال"}</div>`;
+    return;
+  }
+
+  wrap.innerHTML = `<ul class="guest-list">` + visibleGuests.map((g) => {
     const msg = template.replace(/\{name\}/g, g.name);
     const waLink = `https://wa.me/${encodeURIComponent(g.phone)}?text=${encodeURIComponent(msg)}`;
     return `<li>
-      <span class="who">${esc(g.name)} <span class="badge">${esc(g.phone)}</span></span>
+      <span class="who">${esc(g.name)} <span class="badge">${esc(mode === "email" ? g.email : g.phone)}</span></span>
       ${mode === "whatsapp" ? `<a class="wa-btn" target="_blank" rel="noopener noreferrer" href="${esc(waLink)}">إرسال واتساب</a>` : ""}
     </li>`;
   }).join("") + `</ul>`;
@@ -226,8 +255,9 @@ document.getElementById("sendSmsBtn").addEventListener("click", async () => {
   const btn = document.getElementById("sendSmsBtn");
   const status = document.getElementById("sendStatus");
   const template = document.getElementById("template").value;
+  const smsGuests = guests.filter((g) => g.phone);
 
-  if (!guests.length) { status.textContent = "ما فيه ضيوف للإرسال"; return; }
+  if (!smsGuests.length) { status.textContent = "ما فيه ضيوف عندهم رقم جوال"; return; }
 
   btn.disabled = true;
   status.textContent = "جارِ الإرسال...";
@@ -237,7 +267,7 @@ document.getElementById("sendSmsBtn").addEventListener("click", async () => {
     const res = await fetch("/.netlify/functions/send-sms", {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${idToken}` },
-      body: JSON.stringify({ guests, message: template }),
+      body: JSON.stringify({ guests: smsGuests, message: template }),
     });
     const data = await res.json();
     if (res.status === 401) {
@@ -246,6 +276,45 @@ document.getElementById("sendSmsBtn").addEventListener("click", async () => {
       status.textContent = data.error || "المزوّد غير مفعّل بعد — أضيفي مفاتيح API في Netlify";
     } else {
       status.textContent = `تم الإرسال لـ ${data.sent} ضيف ✓`;
+    }
+  } catch (e) {
+    status.textContent = "خطأ في الإرسال";
+  }
+  btn.disabled = false;
+});
+
+// ---------- إرسال بريد إلكتروني جماعي (عبر send-bulk / Resend) ----------
+document.getElementById("sendEmailBtn").addEventListener("click", async () => {
+  const btn = document.getElementById("sendEmailBtn");
+  const status = document.getElementById("sendEmailStatus");
+  const template = document.getElementById("template").value;
+  const subject = document.getElementById("emailSubject").value || "تذكير بمناسبتنا 🌸";
+  const emailGuests = guests.filter((g) => g.email);
+
+  if (!emailGuests.length) { status.textContent = "ما فيه ضيوف عندهم بريد إلكتروني"; return; }
+
+  btn.disabled = true;
+  status.textContent = "جارِ الإرسال...";
+  try {
+    // التوكن مطلوب لأن دالة send-bulk تتحقق من صلاحية إدارية
+    const idToken = await auth.currentUser.getIdToken();
+    const res = await fetch("/.netlify/functions/send-bulk", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${idToken}` },
+      body: JSON.stringify({
+        guestIds: emailGuests.map((g) => g.id),
+        channel: "email",
+        subject,
+        message: template,
+      }),
+    });
+    const data = await res.json();
+    if (res.status === 401 || res.status === 403) {
+      status.textContent = "انتهت الجلسة أو صلاحية غير كافية — سجّلي دخول من جديد";
+    } else if (!res.ok) {
+      status.textContent = data.error || "تعذّر الإرسال — راجعي إعدادات Resend في Netlify";
+    } else {
+      status.textContent = `تم الإرسال لـ ${data.sent} ضيف${data.failed ? ` (فشل ${data.failed}) ` : ""} ✓`;
     }
   } catch (e) {
     status.textContent = "خطأ في الإرسال";

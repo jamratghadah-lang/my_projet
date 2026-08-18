@@ -203,11 +203,11 @@
 <!-- ===== نافذة استيراد قائمة ===== -->
 <div class="modal-bg" id="importModalBg">
 <div class="modal">
-<h3>📥 استيراد قائمة ضيوف (CSV)</h3>
+<h3>📥 استيراد قائمة ضيوف (Excel أو CSV)</h3>
 <div class="field">
-<label for="importFile">ملف CSV — أعمدة: الاسم, الهاتف, البريد (اختياري), عدد_المرافقين, طاولة (اختياري), مقعد (اختياري), بوابة (اختياري)</label>
-<input accept=".csv" id="importFile" type="file"/>
-<div class="hint">أول سطر بالملف لازم يكون عناوين الأعمدة. البريد وعدد المرافقين والطاولة والمقعد والبوابة اختيارية.</div>
+<label for="importFile">ملف Excel (xlsx/xls) أو CSV — أعمدة: الاسم, الهاتف, البريد (اختياري), عدد_المرافقين, طاولة (اختياري), مقعد (اختياري), بوابة (اختياري)</label>
+<input accept=".csv,.xlsx,.xls" id="importFile" type="file"/>
+<div class="hint">أول سطر بالملف لازم يكون عناوين الأعمدة. البريد وعدد المرافقين والطاولة والمقعد والبوابة اختيارية. يدعم ملفات إكسل (xlsx/xls) مباشرة بدون الحاجة لتحويلها CSV.</div>
 </div>
 <div class="import-preview" id="importPreview" style="display:none"></div>
 <div class="msg-status" id="importStatusMsg"></div>
@@ -337,7 +337,7 @@ requireLogin(() => {
         manual: r.source === "manual",
         entryCode: r.entryCode || "",
         qrRevoked: !!r.qrRevoked,
-        date: r.createdAt ? new Date(r.createdAt.toMillis ? r.createdAt.toMillis() : r.createdAt).toLocaleString("ar-SA") : "—",
+        date: r.createdAt ? new Date(r.createdAt.toMillis ? r.createdAt.toMillis() : r.createdAt).toLocaleString("ar-SA-u-nu-latn") : "—",
       });
     });
     updateStats();
@@ -640,22 +640,55 @@ function parseCsv(text) {
   });
 }
 
+// محلّل ملفات إكسل (xlsx/xls) باستخدام مكتبة SheetJS المحمّلة أعلى الصفحة
+async function parseExcel(file) {
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, { type: "array" });
+  const firstSheet = wb.SheetNames[0];
+  const sheet = wb.Sheets[firstSheet];
+  // defval:"" يضمن عدم فقدان أعمدة فارغة، raw:false يحوّل كل القيم لنص موحّد
+  return XLSX.utils.sheet_to_json(sheet, { defval: "", raw: false });
+}
+
+// يوحّد صف خام (من CSV أو إكسل) إلى شكل بيانات الضيف الموحّد
+function mapImportRow(r) {
+  return {
+    name: String(r["الاسم"] || r["name"] || "").trim(),
+    phone: String(r["الهاتف"] || r["phone"] || "").trim(),
+    email: String(r["البريد"] || r["email"] || "").trim(),
+    guests: parseInt(r["عدد_المرافقين"] || r["guests"] || "0", 10) || 0,
+    table: String(r["طاولة"] || r["table"] || "").trim(),
+    seat: String(r["مقعد"] || r["seat"] || "").trim(),
+    gate: String(r["بوابة"] || r["gate"] || "").trim(),
+  };
+}
+
 document.getElementById("importFile").addEventListener("change", async (e) => {
   const file = e.target.files[0];
   const msgEl = document.getElementById("importStatusMsg");
   msgEl.textContent = "";
   if (!file) return;
-  const text = await file.text();
-  const parsed = parseCsv(text);
-  importRows = parsed.map(r => ({
-    name: r["الاسم"] || r["name"] || "",
-    phone: r["الهاتف"] || r["phone"] || "",
-    email: r["البريد"] || r["email"] || "",
-    guests: parseInt(r["عدد_المرافقين"] || r["guests"] || "0", 10) || 0,
-    table: r["طاولة"] || r["table"] || "",
-    seat: r["مقعد"] || r["seat"] || "",
-    gate: r["بوابة"] || r["gate"] || "",
-  })).filter(r => r.name);
+
+  const nameLower = (file.name || "").toLowerCase();
+  const isExcel = nameLower.endsWith(".xlsx") || nameLower.endsWith(".xls");
+
+  let parsed = [];
+  try {
+    if (isExcel) {
+      parsed = await parseExcel(file);
+    } else {
+      const text = await file.text();
+      parsed = parseCsv(text);
+    }
+  } catch (err) {
+    document.getElementById("importPreview").style.display = "none";
+    msgEl.textContent = "تعذّرت قراءة الملف — تأكدي أن الملف بصيغة CSV أو Excel (xlsx/xls) صحيحة";
+    msgEl.className = "msg-status err";
+    document.getElementById("importConfirm").disabled = true;
+    return;
+  }
+
+  importRows = parsed.map(mapImportRow).filter(r => r.name);
 
   const preview = document.getElementById("importPreview");
   if (!importRows.length) {
@@ -794,7 +827,7 @@ async function showEditLog(guestId, guestName) {
     const fieldLabels = { name: "الاسم", phone: "الهاتف", email: "البريد", status: "الحالة", guests: "المرافقين", archived: "الأرشفة" };
     logList.innerHTML = '<div class="edit-log-panel">' + snap.docs.map(d => {
       const r = d.data();
-      const t = r.time ? new Date(r.time.toMillis ? r.time.toMillis() : r.time).toLocaleString("ar-SA") : "—";
+      const t = r.time ? new Date(r.time.toMillis ? r.time.toMillis() : r.time).toLocaleString("ar-SA-u-nu-latn") : "—";
       return `<div class="log-entry">
         <span class="log-time">${escapeHtml(t)}</span>
         <span>${escapeHtml(r.userName || "النظام")}</span>

@@ -260,7 +260,7 @@ requireLogin(async () => {
     const rows = [];
     snap.forEach(d => {
       const r = d.data();
-      const date = r.createdAt ? (r.createdAt.toMillis ? new Date(r.createdAt.toMillis()) : new Date(r.createdAt)).toLocaleString('ar-SA') : '—';
+      const date = r.createdAt ? (r.createdAt.toMillis ? new Date(r.createdAt.toMillis()) : new Date(r.createdAt)).toLocaleString('ar-SA-u-nu-latn') : '—';
       rows.push({
         date,
         collections: (r.collections || []).join(', '),

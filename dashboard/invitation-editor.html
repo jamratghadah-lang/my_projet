@@ -79,7 +79,7 @@
 
   /* ===== Preview Content ===== */
   .inv-preview{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px 20px;text-align:center;position:relative;transition:background .3s}
-  .inv-preview .bg-img{position:absolute;inset:0;background-size:cover;background-position:center;opacity:.35;z-index:0}
+  .inv-preview .bg-img{position:absolute;inset:0;background-size:cover;background-position:center;opacity:.6;z-index:0}
   .inv-preview .bg-overlay{position:absolute;inset:0;z-index:1}
   .inv-preview .inv-content{position:relative;z-index:2;width:100%}
   .inv-preview .ornament{font-size:22px;margin-bottom:12px;opacity:.8}
@@ -155,6 +155,11 @@
 <label for="bgImage">الخلفية / الصورة الرئيسية</label>
 <input id="bgImage" placeholder="https://example.com/image.jpg" type="text"/>
 <div class="hint">أدخل رابط صورة (URL) ليتم عرضها كخلفية للدعوة</div>
+</div>
+<div class="field" id="bgOpacityField" style="display:none">
+<label for="bgOpacity">شفافية طبقة اللون فوق الصورة: <span id="bgOpacityValue">30%</span></label>
+<input id="bgOpacity" max="90" min="0" step="5" type="range" value="30"/>
+<div class="hint">نسبة أقل = الصورة تبين أوضح — نسبة أعلى = اللون يغلب على الصورة</div>
 </div>
 <div class="field">
 <label>مخطط الألوان</label>
@@ -310,6 +315,10 @@ function updatePreview() {
   const location = document.getElementById('eventLocation').value;
   const welcomeMsg = document.getElementById('welcomeMessage').value || 'رسالة الترحيب ستظهر هنا';
   const bgImage = document.getElementById('bgImage').value.trim();
+  const bgOpacityField = document.getElementById('bgOpacityField');
+  const bgOpacityInput = document.getElementById('bgOpacity');
+  const bgOpacityValueLabel = document.getElementById('bgOpacityValue');
+  bgOpacityValueLabel.textContent = bgOpacityInput.value + '%';
 
   const preview = document.getElementById('invPreview');
   const bgImg = document.getElementById('previewBgImg');
@@ -326,11 +335,13 @@ function updatePreview() {
     bgImg.style.backgroundImage = `url(${escapeHtml(bgImage)})`;
     bgImg.style.display = 'block';
     bgOverlay.style.background = scheme.background;
-    bgOverlay.style.opacity = '0.65';
+    bgOverlay.style.opacity = String((parseInt(bgOpacityInput.value, 10) || 0) / 100);
+    bgOpacityField.style.display = 'block';
   } else {
     bgImg.style.backgroundImage = '';
     bgImg.style.display = 'none';
     bgOverlay.style.opacity = '0';
+    bgOpacityField.style.display = 'none';
   }
   preview.style.background = scheme.background;
 
@@ -349,7 +360,7 @@ function updatePreview() {
   // Date formatting
   if (date) {
     const d = new Date(date);
-    previewDate.textContent = '📅 ' + d.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
+    previewDate.textContent = '📅 ' + d.toLocaleDateString('ar-SA-u-nu-latn', { year: 'numeric', month: 'long', day: 'numeric' });
   } else {
     previewDate.textContent = '📅 —';
   }
@@ -405,6 +416,8 @@ async function loadCustomization(eventId) {
   document.getElementById('eventLocation').value = '';
   document.getElementById('welcomeMessage').value = '';
   document.getElementById('bgImage').value = '';
+  document.getElementById('bgOpacity').value = '30';
+  document.getElementById('bgOpacityValue').textContent = '30%';
   currentScheme = 'classic_gold';
 
   // Load event data for defaults
@@ -427,6 +440,10 @@ async function loadCustomization(eventId) {
       if (c.location != null) document.getElementById('eventLocation').value = c.location;
       if (c.welcomeMessage != null) document.getElementById('welcomeMessage').value = c.welcomeMessage;
       if (c.backgroundImage != null) document.getElementById('bgImage').value = c.backgroundImage || '';
+      if (c.backgroundOpacity != null) {
+        document.getElementById('bgOpacity').value = c.backgroundOpacity;
+        document.getElementById('bgOpacityValue').textContent = c.backgroundOpacity + '%';
+      }
       if (c.colorScheme && COLOR_SCHEMES[c.colorScheme]) {
         currentScheme = c.colorScheme;
       }
@@ -459,6 +476,7 @@ async function saveCustomization() {
     location: document.getElementById('eventLocation').value.trim(),
     welcomeMessage: document.getElementById('welcomeMessage').value.trim(),
     backgroundImage: document.getElementById('bgImage').value.trim() || null,
+    backgroundOpacity: parseInt(document.getElementById('bgOpacity').value, 10) || 0,
     colorScheme: currentScheme,
     colorSchemeData: {
       primary: scheme.primary,
@@ -504,13 +522,15 @@ async function resetCustomization() {
     document.getElementById('eventLocation').value = eventData.location || eventData.venue || '';
     document.getElementById('welcomeMessage').value = '';
     document.getElementById('bgImage').value = '';
+    document.getElementById('bgOpacity').value = '30';
+    document.getElementById('bgOpacityValue').textContent = '30%';
     currentScheme = 'classic_gold';
     renderSwatches();
     updatePreview();
 
     // Delete customization doc
     try {
-      await updateDoc(doc(db, 'events', currentEventId, 'customization', 'design'), { eventName: null, date: null, location: null, welcomeMessage: null, backgroundImage: null, colorScheme: null, colorSchemeData: null, updatedAt: serverTimestamp() });
+      await updateDoc(doc(db, 'events', currentEventId, 'customization', 'design'), { eventName: null, date: null, location: null, welcomeMessage: null, backgroundImage: null, backgroundOpacity: null, colorScheme: null, colorSchemeData: null, updatedAt: serverTimestamp() });
     } catch {
       // If doc doesn't exist, ignore
     }
@@ -531,6 +551,10 @@ function wireInputs() {
   const fields = ['eventName', 'eventDate', 'eventLocation', 'welcomeMessage', 'bgImage'];
   fields.forEach(id => {
     document.getElementById(id).addEventListener('input', updatePreview);
+  });
+  document.getElementById('bgOpacity').addEventListener('input', () => {
+    document.getElementById('bgOpacityValue').textContent = document.getElementById('bgOpacity').value + '%';
+    updatePreview();
   });
 }
 
