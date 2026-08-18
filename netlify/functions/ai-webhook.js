@@ -252,12 +252,19 @@ async function handlePost(event) {
     return { statusCode: 200, body: 'OK' };
   }
 
-  // 5. Process asynchronously to respond fast to WhatsApp
-  processMessage(phone, messageText, msg.displayName).catch((err) => {
+  // 5. Process the message and WAIT for it to finish before returning.
+  // Netlify/Lambda freezes the execution environment right after the
+  // handler's response is sent — a "fire and forget" call here gets
+  // killed mid-flight most of the time (the AI call + WhatsApp send
+  // never complete), which is why replies were going missing with no
+  // error in the logs. Meta tolerates a few seconds before retrying,
+  // so awaiting this is safe.
+  try {
+    await processMessage(phone, messageText, msg.displayName);
+  } catch (err) {
     console.error('[AI Webhook] processMessage error:', err.message);
-  });
+  }
 
-  // Return 200 immediately to WhatsApp
   return { statusCode: 200, body: 'OK' };
 }
 

@@ -1891,6 +1891,18 @@ async function sendWhatsAppMessage(phone, message, type = "text", extra = {}) {
 
     const resData = await res.json().catch(() => ({}));
 
+    if (!res.ok) {
+      // This used to fail silently — no throw, no log — so a send
+      // failure (expired token, unregistered recipient, etc.) never
+      // showed up anywhere. Log it loudly so it's visible in the
+      // Netlify function log.
+      console.error(
+        "[AI] sendWhatsAppMessage FAILED:",
+        res.status,
+        JSON.stringify(resData.error || resData)
+      );
+    }
+
     return {
       ok: res.ok,
       messageId: resData.messages?.[0]?.id || null,
