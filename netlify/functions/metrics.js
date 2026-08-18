@@ -68,7 +68,7 @@ exports.handler = async (event) => {
     events: { active: 0, closed: 0 },
     messages: { sentToday: 0, sentThisWeek: 0, successRate: null, totalSent: 0, totalFailed: 0 },
     ai: { usageCount: 0, errorCount: 0 },
-    connections: { firebase: "unknown", whatsapp: "unknown", gemini: "unknown" },
+    connections: { firebase: "unknown", whatsapp: "unknown", gemini: "unknown", resend: "unknown" },
   };
 
   // ===== 1) Event statistics =====
@@ -207,6 +207,21 @@ exports.handler = async (event) => {
         }
       } catch (e) {
         result.connections.gemini = "error";
+      }
+
+      // ===== 7) Connection status — Resend (البريد الفعلي في الموقع) =====
+      try {
+        const resendKey = process.env.RESEND_API_KEY;
+        if (resendKey) {
+          const resendRes = await fetch("https://api.resend.com/domains", {
+            headers: { Authorization: `Bearer ${resendKey}` },
+          });
+          result.connections.resend = resendRes.ok ? "connected" : "error";
+        } else {
+          result.connections.resend = "not_configured";
+        }
+      } catch (e) {
+        result.connections.resend = "error";
       }
     } else {
       result.connections.firebase = "error";

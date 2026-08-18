@@ -56,7 +56,7 @@ async function handle(event) {
       "",
       cleanMessage || "",
       "",
-      `الوقت: ${new Date().toLocaleString("ar-SA")}`,
+      `الوقت: ${new Date().toLocaleString("ar-SA-u-nu-latn")}`,
     ].join("\n");
 
     const htmlBody = `
@@ -66,7 +66,7 @@ async function handle(event) {
         <p style="color:#fff;margin:0 0 16px;font-weight:bold">${escapeHtml(cleanName || "ضيف")}</p>
         <p style="color:#999;margin:0 0 4px;font-size:13px">الكلمة</p>
         <p style="color:#fff;line-height:1.8;background:#222;border-radius:8px;padding:14px;margin:0">${escapeHtml(cleanMessage || "")}</p>
-        <p style="color:#777;font-size:12px;margin-top:20px">${new Date().toLocaleString("ar-SA")}</p>
+        <p style="color:#777;font-size:12px;margin-top:20px">${new Date().toLocaleString("ar-SA-u-nu-latn")}</p>
       </div>`;
 
     const result = await sendReportEmail({ to: recipients, subject, text: textBody, html: htmlBody });

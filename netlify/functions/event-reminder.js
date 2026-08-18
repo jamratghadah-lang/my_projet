@@ -107,7 +107,7 @@ exports.handler = async (event) => {
       const { recipients, reportsCfg } = await resolveRecipients();
       if (reportsCfg.before_event !== "off" && recipients.length) {
         const { rows, total, yes, no, pending } = await fetchResponses();
-        const dateStr = new Date().toLocaleDateString("ar-SA");
+        const dateStr = new Date().toLocaleDateString("ar-SA-u-nu-latn");
         const eventsList = eventsInWindow.map(e => `- ${e.slug} (${e.jsonDate})`).join("\n");
 
         const [excelBuf, pdfBuf] = await Promise.all([

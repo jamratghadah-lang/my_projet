@@ -55,7 +55,7 @@ exports.handler = async (event) => {
     }
 
     const { rows, total, yes, no, pending } = await fetchResponses();
-    const dateStr = new Date().toLocaleDateString("ar-SA");
+    const dateStr = new Date().toLocaleDateString("ar-SA-u-nu-latn");
     const subject = `تقرير فوري — ${dateStr} (${total} مدعو)`;
 
     const [excelBuf, pdfBuf] = await Promise.all([

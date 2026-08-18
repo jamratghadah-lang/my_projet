@@ -353,7 +353,7 @@
       }
 
       if(data.alreadyCheckedIn){
-        const t = data.checkedInAt ? new Date(data.checkedInAt).toLocaleTimeString("ar-SA", {hour:"2-digit", minute:"2-digit"}) : "";
+        const t = data.checkedInAt ? new Date(data.checkedInAt).toLocaleTimeString("ar-SA-u-nu-latn", {hour:"2-digit", minute:"2-digit"}) : "";
         showResult("warn", "🔁", data.name || "—", "سجّل دخوله مسبقاً" + (t ? " — الساعة " + t : ""), buildMetaLine(data));
         return;
       }

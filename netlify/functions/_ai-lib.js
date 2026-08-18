@@ -1301,7 +1301,7 @@ const SYSTEM_PROMPT = `أنت مساعد ذكي لمنصة جمرة غضى لل�
  * Call Groq's OpenAI-compatible chat completions endpoint.
  * @returns {Promise<{text: string, tokensUsed: number}>}
  */
-async function callGroq(prompt, maxTokens, systemInstruction) {
+async function callGroq(prompt, maxTokens, systemInstruction, model) {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) throw new Error("GROQ_API_KEY not configured");
 
@@ -1312,7 +1312,7 @@ async function callGroq(prompt, maxTokens, systemInstruction) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "openai/gpt-oss-120b",
+      model: model || "openai/gpt-oss-120b",
       messages: [
         { role: "system", content: systemInstruction || SYSTEM_PROMPT },
         { role: "user", content: prompt },
@@ -1337,7 +1337,7 @@ async function callGroq(prompt, maxTokens, systemInstruction) {
  * Call Z.ai's OpenAI-compatible chat completions endpoint (GLM models).
  * @returns {Promise<{text: string, tokensUsed: number}>}
  */
-async function callZai(prompt, maxTokens, systemInstruction) {
+async function callZai(prompt, maxTokens, systemInstruction, model) {
   const apiKey = process.env.ZAI_API_KEY;
   if (!apiKey) throw new Error("ZAI_API_KEY not configured");
 
@@ -1348,7 +1348,7 @@ async function callZai(prompt, maxTokens, systemInstruction) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "glm-4.7-flash",
+      model: model || "glm-4.7-flash",
       messages: [
         { role: "system", content: systemInstruction || SYSTEM_PROMPT },
         { role: "user", content: prompt },
@@ -1378,13 +1378,38 @@ async function callZai(prompt, maxTokens, systemInstruction) {
  * @param {string} [systemInstruction] - Override system instruction.
  * @returns {Promise<{text: string, tokensUsed: number}>}
  */
-async function callGemini(prompt, maxTokens = 500, systemInstruction) {
+// كاش قصير لإعدادات اختيار الموديل (نفس نمط isAIEnabled) — يقلل قراءات
+// Firestore المتكررة بدون تجميد الإعداد إلى الأبد لو تغيّر من لوحة التحكم.
+let _modelSettingsCache = null;
+let _modelSettingsCacheExpiry = 0;
+const MODEL_SETTINGS_CACHE_TTL = 5 * 60 * 1000; // 5 دقائق
+
+async function getModelSettings() {
+  if (_modelSettingsCache && Date.now() < _modelSettingsCacheExpiry) {
+    return _modelSettingsCache;
+  }
+  const db = getDb();
+  if (!db) return {};
   try {
-    return await callGroq(prompt, maxTokens, systemInstruction);
+    const snap = await db.collection("ai_settings").doc("global").get();
+    const cp = (snap.exists && snap.data().costProtection) || {};
+    const settings = { groqModel: cp.groqModel || "", zaiModel: cp.zaiModel || "" };
+    _modelSettingsCache = settings;
+    _modelSettingsCacheExpiry = Date.now() + MODEL_SETTINGS_CACHE_TTL;
+    return settings;
+  } catch (err) {
+    return {};
+  }
+}
+
+async function callGemini(prompt, maxTokens = 500, systemInstruction) {
+  const { groqModel, zaiModel } = await getModelSettings();
+  try {
+    return await callGroq(prompt, maxTokens, systemInstruction, groqModel);
   } catch (groqErr) {
     console.error("[AI] Groq failed, falling back to Z.ai:", groqErr.message);
     try {
-      return await callZai(prompt, maxTokens, systemInstruction);
+      return await callZai(prompt, maxTokens, systemInstruction, zaiModel);
     } catch (zaiErr) {
       console.error("[AI] Z.ai also failed:", zaiErr.message);
       throw new Error(`كل المزوّدين فشلوا — Groq: ${groqErr.message} | Z.ai: ${zaiErr.message}`);
@@ -2051,15 +2076,30 @@ async function trackAnalytics(data) {
     const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
     const ref = db.collection("ai_analytics_daily").doc(today);
 
+    const PACKAGE_INTENTS = ["PACKAGE_LIST", "PACKAGE_DETAILS", "PACKAGE_COMPARE", "PACKAGE_RECOMMEND"];
+    const RSVP_INTENTS = ["UPDATE_RSVP", "GET_RSVP_STATUS", "UPDATE_GUEST_COUNT"];
+
     const updates = {
+      // "date" لازم يكون موجود كحقل فعلي (مو بس اسم المستند) — بدونه استعلام
+      // orderBy('date') بصفحة الإحصائيات يتجاهل المستند بالكامل ويطلع فاضي.
+      date: today,
       totalConversations: admin.firestore.FieldValue.increment(1),
     };
 
     if (data.intent) {
       updates[`intentCounts.${data.intent}`] = admin.firestore.FieldValue.increment(1);
+      if (PACKAGE_INTENTS.includes(data.intent)) {
+        updates.packageQuestions = admin.firestore.FieldValue.increment(1);
+      }
+      if (RSVP_INTENTS.includes(data.intent)) {
+        updates.rsvpQuestions = admin.firestore.FieldValue.increment(1);
+      }
+      if (data.intent === "HUMAN_HANDOFF") {
+        updates.humanHandoffCount = admin.firestore.FieldValue.increment(1);
+      }
     }
     if (data.intent === "LEAD_CAPTURE" || data.leadCaptured) {
-      updates.leadCount = admin.firestore.FieldValue.increment(1);
+      updates.leads = admin.firestore.FieldValue.increment(1);
     }
     if (data.platform) {
       updates[`platformCounts.${data.platform}`] = admin.firestore.FieldValue.increment(1);

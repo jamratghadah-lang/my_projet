@@ -41,7 +41,7 @@ exports.handler = async (event) => {
     }
 
     const { rows, total, yes, no, pending } = await fetchResponses();
-    const dateStr = new Date().toLocaleDateString("ar-SA");
+    const dateStr = new Date().toLocaleDateString("ar-SA-u-nu-latn");
     const subject = `التقرير اليومي — ${dateStr} (${total} مدعو)`;
 
     const textBody = [
