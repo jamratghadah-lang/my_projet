@@ -85,3 +85,13 @@ sitemap.xml, robots.txt تحكم في فهرسة جوجل — حدّثي الد�
 ## v10.18 fix
 - WhatsApp `resend_invitation` now sends the configured invitation video as WhatsApp video media instead of a text URL.
 - Existing RSVP/website pages are unchanged.
+
+
+## v10.19 — جدولة فيديو التذكير والشكر التلقائية
+- دالة مجدولة جديدة (كل ساعة): `netlify/functions/video-scheduler.js` — تُرسل تلقائيًا فيديو التذكير قبل المناسبة وفيديو الشكر بعدها، بنفس بنية `event-reminder.js` تمامًا (couples + content/rsvp/<template>.json + responses)، بدون أي ازدواجية أو مصدر بيانات جديد.
+- **صفحة كل رابط دعوة** (`dashboard/couples.html` → زر «🎥 فيديو التذكير والشكر» على كل رابط): رفع رابط فيديو التذكير ورابط فيديو الشكر (Cloudinary أو أي رابط https)، مع إمكانية تخصيص عدد الساعات لهذه المناسبة فقط.
+- **الافتراضي العام** (`dashboard/reminders.html`): فيديو التذكير قبل المناسبة بـ48 ساعة، وفيديو الشكر بعدها بـ12 ساعة — قابلين للتعديل من نفس الصفحة (يُحفظان في `settings/scheduling`)، وينطبقان على أي مناسبة ما حددت لها توقيت خاص.
+- تنبيه تلقائي في `couples.html` لو المناسبة باقي لها 3 أيام أو أقل وما رُفع فيديو تذكير بعد.
+- كل إرسال (نجح أو فشل، واتساب أو إيميل) يُسجَّل في `send_logs` بنوع `reminder` أو `thank_you` — يظهر مباشرة في `dashboard/send-log.html`.
+- كل مناسبة تُرسل لها الفيديوهات مرة واحدة فقط (`reminderVideoSent` / `thankYouVideoSent` على مستند couples)؛ فيه زر «إعادة الإرسال» لإعادة تفعيل الإرسال التلقائي عند الحاجة.
+- **لازم تُضاف يدويًا بعد الرفع:** جدولة `video-scheduler` مضافة في `netlify.toml` (`schedule = "0 * * * *"`) — تعمل تلقائيًا بمجرد نشر هذا الإصدار، بنفس متغيرات البيئة الموجودة أصلاً (`WHATSAPP_PHONE_ID`, `WHATSAPP_TOKEN`, `RESEND_API_KEY`, `FIREBASE_SERVICE_ACCOUNT_JSON`, `CRON_SECRET`).

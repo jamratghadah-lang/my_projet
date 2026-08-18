@@ -1,9 +1,13 @@
 // netlify/functions/post-event-survey.js
 //
 // دالة مُجدولة (كل ساعة) تفحص المناسبات المنتهية وترسل استبيان رضا
-// تلقائي عبر واتساب لكل ضيف أكّد حضوره (status = "yes")، بعد X أيام
-// من تاريخ المناسبة (افتراضيًا يوم واحد، قابل للتعديل عبر
-// content/settings.json → survey.days_after).
+// تلقائي عبر واتساب لكل ضيف أكّد حضوره (status = "yes").
+//
+// التوقيت مُتزامن مع فيديو الشكر (video-scheduler.js) بالضبط: تُستخدم
+// نفس الساعات (settings/scheduling → thankYouHoursAfter بـ Firestore،
+// أو couples/<slug>.thankYouHoursAfter لتخصيص مناسبة معينة)، بحيث
+// الاستبيان يوصل بنفس اللحظة اللي يوصل فيها فيديو الشكر. الافتراضي
+// العام لو ما فيه أي إعداد: 24 ساعة (يوم واحد) بعد المناسبة.
 //
 // آلية منع التكرار: كل مناسبة تُرسل لها الاستبيانات مرة واحدة فقط،
 // عبر علامة survey_sent=true على مستند couples/<slug>.
@@ -17,6 +21,8 @@
 
 const { getAdminDb } = require("./_report-lib");
 const { safeEqual } = require("./_auth");
+
+const DEFAULT_SURVEY_HOURS = 24; // يوم واحد — نفس افتراضي فيديو الشكر
 
 function verifyCronSecret(event) {
   if (event.httpMethod === "SCHEDULED") return true;
@@ -77,13 +83,25 @@ exports.handler = async (event) => {
 
   try {
     const db = getAdminDb();
-    const daysAfter = parseInt(process.env.SURVEY_DAYS_AFTER || "1", 10);
     const eventHost = process.env.URL || process.env.DEPLOY_URL || "https://jamratghadah.com";
+
+    // نفس مصدر الإعداد العام اللي يستخدمه video-scheduler.js
+    // (settings/scheduling → thankYouHoursAfter) عشان الاستبيان يوصل
+    // بنفس توقيت فيديو الشكر بالضبط.
+    let thankYouDefaultHours = DEFAULT_SURVEY_HOURS;
+    try {
+      const settingsSnap = await db.collection("settings").doc("scheduling").get();
+      if (settingsSnap.exists) {
+        const s = settingsSnap.data() || {};
+        if (Number(s.thankYouHoursAfter) > 0) thankYouDefaultHours = Number(s.thankYouHoursAfter);
+      }
+    } catch {
+      /* استخدمي الافتراضي لو تعذرت القراءة */
+    }
 
     const couplesSnap = await db.collection("couples").get();
     const now = Date.now();
     const WINDOW_MS = 60 * 60 * 1000; // ±1 ساعة
-    const TARGET_MS = daysAfter * 24 * 60 * 60 * 1000;
 
     let totalSurveysSent = 0;
     const processedEvents = [];
@@ -113,7 +131,12 @@ exports.handler = async (event) => {
       const eventDate = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]), 18, 0, 0);
       if (isNaN(eventDate.getTime())) continue;
 
-      const targetTime = eventDate.getTime() + TARGET_MS;
+      // تخصيص لهذي المناسبة تحديدًا (نفس الحقل اللي يقرأه فيديو الشكر
+      // على couples/<slug>) — لو موجود يُستخدم، وإلا الإعداد العام.
+      const hoursForThisEvent = Number(coupleData.thankYouHoursAfter) > 0
+        ? Number(coupleData.thankYouHoursAfter)
+        : thankYouDefaultHours;
+      const targetTime = eventDate.getTime() + hoursForThisEvent * 60 * 60 * 1000;
       const diff = targetTime - now;
       if (Math.abs(diff) > WINDOW_MS) continue; // لسا ما وصل وقت الإرسال
 

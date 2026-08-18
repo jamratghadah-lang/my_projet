@@ -18,6 +18,9 @@ schedule = "*/5 * * * *"
 [functions."post-event-survey"]
 schedule = "0 * * * *"
 
+[functions."video-scheduler"]
+schedule = "0 * * * *"
+
 # ===== CSP العامة لكل الموقع =====
 # لوحة تحكم Decap CMS تحتاج 'unsafe-eval' عشان تشتغل (مكتبة decap-cms.js
 # تستخدم eval/new Function داخلياً). عشان ما نضعّف أمان باقي الموقع،

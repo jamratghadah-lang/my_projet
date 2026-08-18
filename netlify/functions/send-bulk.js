@@ -14,6 +14,7 @@
 // not uploaded directly from the browser.
 
 const crypto = require("crypto");
+const admin = require("firebase-admin");
 const { getAdminDb } = require("./_report-lib");
 const { requireAdmin } = require("./_auth");
 
@@ -309,6 +310,27 @@ exports.handler = async (event) => {
     const attempted = [perGuest.whatsapp, perGuest.email].filter(Boolean);
     const success = attempted.length > 0 && attempted.every((r) => r.ok);
     results.push({ id, name, ok: success, whatsapp: perGuest.whatsapp, email: perGuest.email });
+
+    // سجل دائم لكل محاولة إرسال — بدونه، نتيجة الإرسال الجماعي تظهر مرة وحدة
+    // على شاشة لوحة التحكم وتضيع نهائيًا بعد إعادة تحميل الصفحة. هذا السجل
+    // هو اللي تعرضه صفحة dashboard/send-log.html، فيسمح بمراجعة أي إرسال
+    // قديم لاحقًا (نجح/فشل ولمين بالضبط).
+    if (perGuest.whatsapp) {
+      logSendAttempt(db, {
+        guestName: name, recipient: guestData.phone || "", channel: "whatsapp",
+        status: perGuest.whatsapp.ok ? "sent" : "failed",
+        failReason: perGuest.whatsapp.ok ? "" : (perGuest.whatsapp.error || ""),
+        triggeredBy: uid,
+      });
+    }
+    if (perGuest.email) {
+      logSendAttempt(db, {
+        guestName: name, recipient: guestData.email || "", channel: "email",
+        status: perGuest.email.ok ? "sent" : "failed",
+        failReason: perGuest.email.ok ? "" : (perGuest.email.error || ""),
+        triggeredBy: uid,
+      });
+    }
   }
 
   const sent = results.filter((r) => r.ok).length;
@@ -320,3 +342,18 @@ exports.handler = async (event) => {
     body: JSON.stringify({ sent, failed, total: results.length, results }),
   };
 };
+
+// كتابة سجل إرسال — best effort، ما توقف الإرسال الفعلي لو فشلت الكتابة نفسها.
+async function logSendAttempt(db, { guestName, recipient, channel, status, failReason, triggeredBy }) {
+  try {
+    await db.collection("send_logs").add({
+      guestName, recipient, channel, status,
+      failReason: failReason || null,
+      type: "custom",
+      triggeredBy: triggeredBy || null,
+      time: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  } catch (e) {
+    // لا نكسر الإرسال الفعلي إذا فشل التسجيل نفسه
+  }
+}

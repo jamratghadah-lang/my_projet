@@ -234,13 +234,18 @@ exports.handler = async (event) => {
       try {
         await db.collection("send_logs").add({
           channel: msgData.channel || "unknown",
-          phone: msgData.phone || (msgData.content && typeof msgData.content === "object" ? msgData.content.phone : ""),
+          recipient: msgData.phone || (msgData.content && typeof msgData.content === "object" ? msgData.content.phone : ""),
+          guestName: msgData.guestName || msgData.name || "",
+          type: msgData.type || "reminder",
           status: result.ok ? "sent" : "failed",
-          error: result.error || null,
+          failReason: result.error || null,
           messageId: result.messageId || null,
           scheduledMessageId: doc.id,
           triggeredBy: "scheduler",
-          timestamp: admin.firestore.FieldValue.serverTimestamp(),
+          // ملاحظة: لوحة سجل الإرسال (dashboard/send-log.html) تعمل orderBy("time"),
+          // فأي وثيقة بدون حقل "time" بالضبط تُستبعد تلقائيًا من نتائج الاستعلام
+          // ولا تظهر بالسجل إطلاقًا — كانت مكتوبة سابقًا باسم "timestamp" فقط.
+          time: admin.firestore.FieldValue.serverTimestamp(),
         });
       } catch (e) {
         // تجاهل خطأ التسجيل
