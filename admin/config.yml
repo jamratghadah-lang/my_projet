@@ -76,6 +76,7 @@ collections:
       - file: "content/pricing.json"
         label: "باقات الأسعار"
         name: "pricing"
+        preview_path: "pricing.html"
         fields:
           - { label: "مقدمة الصفحة", name: "intro", widget: "text", required: false }
           - { label: "الباقات (اسحبي لتغيير الترتيب)", name: "packages", widget: "list", fields: [
@@ -91,6 +92,7 @@ collections:
       - file: "content/learn-videos.json"
         label: "الفيديوهات التعليمية"
         name: "learn_videos"
+        preview_path: "learn.html"
         fields:
           - { label: "مقدمة الصفحة", name: "intro", widget: "text", required: false }
           - { label: "الفيديوهات (اسحبي لتغيير الترتيب)", name: "videos", widget: "list", fields: [
@@ -101,6 +103,7 @@ collections:
       - file: "content/testimonials.json"
         label: "آراء العملاء"
         name: "testimonials"
+        preview_path: "learn.html"
         fields:
           - { label: "مقدمة الصفحة", name: "intro", widget: "text", required: false }
           - { label: "الآراء (اسحبي لتغيير الترتيب)", name: "reviews", widget: "list", fields: [
@@ -114,7 +117,7 @@ collections:
   - name: "rsvp"
     label: "صفحات تأكيد الحضور (13)"
     files:
-      - { file: "content/rsvp/wedding-silver.json", label: "زفاف - Silver", name: "wedding_silver", media_folder: "/images/uploads/rsvp/wedding-silver", public_folder: "/images/uploads/rsvp/wedding-silver", fields: &rsvp_fields [
+      - { file: "content/rsvp/wedding-silver.json", preview_path: "rsvp/wedding-silver.html", label: "زفاف - Silver", name: "wedding_silver", media_folder: "/images/uploads/rsvp/wedding-silver", public_folder: "/images/uploads/rsvp/wedding-silver", fields: &rsvp_fields [
             { label: "الأسماء", name: "names", widget: "string", required: false },
             { label: "التاريخ", name: "date", widget: "string", required: false, hint: "مثال: 12 / 10 / 2026" },
             { label: "الموقع", name: "location", widget: "string", required: false },
@@ -224,23 +227,23 @@ collections:
                   ] }
               ] }
           ] }
-      - { file: "content/rsvp/wedding-royal.json", label: "زفاف - Royal", name: "wedding_royal", media_folder: "/images/uploads/rsvp/wedding-royal", public_folder: "/images/uploads/rsvp/wedding-royal", fields: *rsvp_fields }
-      - { file: "content/rsvp/wedding-classic.json", label: "زفاف - Classic", name: "wedding_classic", media_folder: "/images/uploads/rsvp/wedding-classic", public_folder: "/images/uploads/rsvp/wedding-classic", fields: *rsvp_fields }
-      - { file: "content/rsvp/wedding-modern.json", label: "زفاف - Modern", name: "wedding_modern", media_folder: "/images/uploads/rsvp/wedding-modern", public_folder: "/images/uploads/rsvp/wedding-modern", fields: *rsvp_fields }
-      - { file: "content/rsvp/wedding-vip.json", label: "زفاف - VIP", name: "wedding_vip", media_folder: "/images/uploads/rsvp/wedding-vip", public_folder: "/images/uploads/rsvp/wedding-vip", fields: *rsvp_fields }
-      - { file: "content/rsvp/wedding-gold.json", label: "زفاف - Golden Royal", name: "wedding_gold", media_folder: "/images/uploads/rsvp/wedding-gold", public_folder: "/images/uploads/rsvp/wedding-gold", fields: *rsvp_fields }
-      - { file: "content/rsvp/wedding-pink.json", label: "زفاف - Rose", name: "wedding_pink", media_folder: "/images/uploads/rsvp/wedding-pink", public_folder: "/images/uploads/rsvp/wedding-pink", fields: *rsvp_fields }
-      - { file: "content/rsvp/baby-boy.json", label: "مولود", name: "baby_boy", media_folder: "/images/uploads/rsvp/baby-boy", public_folder: "/images/uploads/rsvp/baby-boy", fields: *rsvp_fields }
-      - { file: "content/rsvp/baby-girl.json", label: "مولودة", name: "baby_girl", media_folder: "/images/uploads/rsvp/baby-girl", public_folder: "/images/uploads/rsvp/baby-girl", fields: *rsvp_fields }
-      - { file: "content/rsvp/graduation-luxury.json", label: "تخرج - Luxury", name: "graduation_luxury", media_folder: "/images/uploads/rsvp/graduation-luxury", public_folder: "/images/uploads/rsvp/graduation-luxury", fields: *rsvp_fields }
-      - { file: "content/rsvp/graduation-classic.json", label: "تخرج - Classic", name: "graduation_classic", media_folder: "/images/uploads/rsvp/graduation-classic", public_folder: "/images/uploads/rsvp/graduation-classic", fields: *rsvp_fields }
-      - { file: "content/rsvp/corporate.json", label: "شركات ومؤسسات", name: "rsvp_corporate", media_folder: "/images/uploads/rsvp/corporate", public_folder: "/images/uploads/rsvp/corporate", fields: *rsvp_fields }
-      - { file: "content/rsvp/conference.json", label: "مؤتمرات وجمعيات", name: "rsvp_conference", media_folder: "/images/uploads/rsvp/conference", public_folder: "/images/uploads/rsvp/conference", fields: *rsvp_fields }
+      - { file: "content/rsvp/wedding-royal.json", preview_path: "rsvp/wedding-royal.html", label: "زفاف - Royal", name: "wedding_royal", media_folder: "/images/uploads/rsvp/wedding-royal", public_folder: "/images/uploads/rsvp/wedding-royal", fields: *rsvp_fields }
+      - { file: "content/rsvp/wedding-classic.json", preview_path: "rsvp/wedding-classic.html", label: "زفاف - Classic", name: "wedding_classic", media_folder: "/images/uploads/rsvp/wedding-classic", public_folder: "/images/uploads/rsvp/wedding-classic", fields: *rsvp_fields }
+      - { file: "content/rsvp/wedding-modern.json", preview_path: "rsvp/wedding-modern.html", label: "زفاف - Modern", name: "wedding_modern", media_folder: "/images/uploads/rsvp/wedding-modern", public_folder: "/images/uploads/rsvp/wedding-modern", fields: *rsvp_fields }
+      - { file: "content/rsvp/wedding-vip.json", preview_path: "rsvp/wedding-vip.html", label: "زفاف - VIP", name: "wedding_vip", media_folder: "/images/uploads/rsvp/wedding-vip", public_folder: "/images/uploads/rsvp/wedding-vip", fields: *rsvp_fields }
+      - { file: "content/rsvp/wedding-gold.json", preview_path: "rsvp/wedding-gold.html", label: "زفاف - Golden Royal", name: "wedding_gold", media_folder: "/images/uploads/rsvp/wedding-gold", public_folder: "/images/uploads/rsvp/wedding-gold", fields: *rsvp_fields }
+      - { file: "content/rsvp/wedding-pink.json", preview_path: "rsvp/wedding-pink.html", label: "زفاف - Rose", name: "wedding_pink", media_folder: "/images/uploads/rsvp/wedding-pink", public_folder: "/images/uploads/rsvp/wedding-pink", fields: *rsvp_fields }
+      - { file: "content/rsvp/baby-boy.json", preview_path: "rsvp/baby-boy.html", label: "مولود", name: "baby_boy", media_folder: "/images/uploads/rsvp/baby-boy", public_folder: "/images/uploads/rsvp/baby-boy", fields: *rsvp_fields }
+      - { file: "content/rsvp/baby-girl.json", preview_path: "rsvp/baby-girl.html", label: "مولودة", name: "baby_girl", media_folder: "/images/uploads/rsvp/baby-girl", public_folder: "/images/uploads/rsvp/baby-girl", fields: *rsvp_fields }
+      - { file: "content/rsvp/graduation-luxury.json", preview_path: "rsvp/graduation-luxury.html", label: "تخرج - Luxury", name: "graduation_luxury", media_folder: "/images/uploads/rsvp/graduation-luxury", public_folder: "/images/uploads/rsvp/graduation-luxury", fields: *rsvp_fields }
+      - { file: "content/rsvp/graduation-classic.json", preview_path: "rsvp/graduation-classic.html", label: "تخرج - Classic", name: "graduation_classic", media_folder: "/images/uploads/rsvp/graduation-classic", public_folder: "/images/uploads/rsvp/graduation-classic", fields: *rsvp_fields }
+      - { file: "content/rsvp/corporate.json", preview_path: "rsvp/corporate.html", label: "شركات ومؤسسات", name: "rsvp_corporate", media_folder: "/images/uploads/rsvp/corporate", public_folder: "/images/uploads/rsvp/corporate", fields: *rsvp_fields }
+      - { file: "content/rsvp/conference.json", preview_path: "rsvp/conference.html", label: "مؤتمرات وجمعيات", name: "rsvp_conference", media_folder: "/images/uploads/rsvp/conference", public_folder: "/images/uploads/rsvp/conference", fields: *rsvp_fields }
 
   - name: "portfolio"
     label: "فيديوهات الأقسام"
     files:
-      - { file: "content/portfolio/wedding.json", label: "الزفاف والخطوبة", name: "portfolio_wedding", fields: &portfolio_fields [
+      - { file: "content/portfolio/wedding.json", label: "الزفاف والخطوبة", name: "portfolio_wedding", preview_path: "categories/wedding.html", fields: &portfolio_fields [
             { label: "الفيديوهات (اسحبي أي فيديو من المقبض لتغيير ترتيب ظهوره)", name: "videos", widget: "list", fields: [
                 { label: "رقم الفيديو", name: "number", widget: "string" },
                 { label: "عنوان (اختياري)", name: "title", widget: "string", required: false },
@@ -249,9 +252,9 @@ collections:
                 { label: "رابط الفيديو (Cloudinary)", name: "video_url", widget: "string", required: false }
               ] }
           ] }
-      - { file: "content/portfolio/births.json", label: "المواليد", name: "portfolio_births", fields: *portfolio_fields }
-      - { file: "content/portfolio/graduation.json", label: "التخرج", name: "portfolio_graduation", fields: *portfolio_fields }
-      - { file: "content/portfolio/religious-national.json", label: "الأعياد الدينية والوطنية", name: "portfolio_religious", fields: *portfolio_fields }
-      - { file: "content/portfolio/corporate.json", label: "المناسبات الرسمية", name: "portfolio_corporate", fields: *portfolio_fields }
-      - { file: "content/portfolio/ads-openings.json", label: "الإعلانات والافتتاح", name: "portfolio_ads", fields: *portfolio_fields }
-      - { file: "content/portfolio/other.json", label: "باقي المناسبات", name: "portfolio_other", fields: *portfolio_fields }
+      - { file: "content/portfolio/births.json", label: "المواليد", name: "portfolio_births", preview_path: "categories/births.html", fields: *portfolio_fields }
+      - { file: "content/portfolio/graduation.json", label: "التخرج", name: "portfolio_graduation", preview_path: "categories/graduation.html", fields: *portfolio_fields }
+      - { file: "content/portfolio/religious-national.json", label: "الأعياد الدينية والوطنية", name: "portfolio_religious", preview_path: "categories/religious-national.html", fields: *portfolio_fields }
+      - { file: "content/portfolio/corporate.json", label: "المناسبات الرسمية", name: "portfolio_corporate", preview_path: "categories/corporate.html", fields: *portfolio_fields }
+      - { file: "content/portfolio/ads-openings.json", label: "الإعلانات والافتتاح", name: "portfolio_ads", preview_path: "categories/ads-openings.html", fields: *portfolio_fields }
+      - { file: "content/portfolio/other.json", label: "باقي المناسبات", name: "portfolio_other", preview_path: "categories/other.html", fields: *portfolio_fields }
