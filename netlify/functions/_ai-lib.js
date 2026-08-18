@@ -3,9 +3,13 @@
 // المكتبة المشتركة لنظام الذكاء الاصطناعي في جمرة غضى.
 // الدماغ الموحّد الذي تستخدمه ai-webhook.js و ai-chat.js.
 //
-// التصنيف: هجين (كلمات مفتاحية سريعة + Gemini للغامض)
+// التصنيف: هجين (كلمات مفتاحية سريعة + LLM للغامض)
 // البيانات: Firestore (ai_knowledge, responses, events)
-// النموذج: gemini-2.0-flash
+// النموذج: مزوّدين مجانيين بالتوالي (Groq أولاً، Z.ai احتياطي) —
+//           لو فشل الاثنين، يرجع خطأ يُمسك بمكانه ويعرض رسالة ودّية.
+//   متغيرات البيئة المطلوبة:
+//     GROQ_API_KEY  — من console.groq.com
+//     ZAI_API_KEY   — من z.ai (لوحة API Keys)
 // الرسائل: WhatsApp Business API v21
 
 const { safeEqual, getAdminApp } = require("./_auth");
@@ -1294,50 +1298,98 @@ const SYSTEM_PROMPT = `أنت مساعد ذكي لمنصة جمرة غضى لل�
 - مناسب لسياق المناسبات`;
 
 /**
- * Call Gemini API with the given prompt.
+ * Call Groq's OpenAI-compatible chat completions endpoint.
+ * @returns {Promise<{text: string, tokensUsed: number}>}
+ */
+async function callGroq(prompt, maxTokens, systemInstruction) {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) throw new Error("GROQ_API_KEY not configured");
+
+  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "llama-3.3-70b-versatile",
+      messages: [
+        { role: "system", content: systemInstruction || SYSTEM_PROMPT },
+        { role: "user", content: prompt },
+      ],
+      temperature: 0.3,
+      max_tokens: maxTokens,
+    }),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text().catch(() => "");
+    throw new Error(`Groq API error ${response.status}: ${errText.slice(0, 200)}`);
+  }
+
+  const data = await response.json();
+  const text = data.choices?.[0]?.message?.content || "";
+  const tokensUsed = data.usage?.total_tokens || 0;
+  return { text: text.trim(), tokensUsed };
+}
+
+/**
+ * Call Z.ai's OpenAI-compatible chat completions endpoint (GLM models).
+ * @returns {Promise<{text: string, tokensUsed: number}>}
+ */
+async function callZai(prompt, maxTokens, systemInstruction) {
+  const apiKey = process.env.ZAI_API_KEY;
+  if (!apiKey) throw new Error("ZAI_API_KEY not configured");
+
+  const response = await fetch("https://api.z.ai/api/paas/v4/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "glm-4.7-flash",
+      messages: [
+        { role: "system", content: systemInstruction || SYSTEM_PROMPT },
+        { role: "user", content: prompt },
+      ],
+      temperature: 0.3,
+      max_tokens: maxTokens,
+    }),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text().catch(() => "");
+    throw new Error(`Z.ai API error ${response.status}: ${errText.slice(0, 200)}`);
+  }
+
+  const data = await response.json();
+  const text = data.choices?.[0]?.message?.content || "";
+  const tokensUsed = data.usage?.total_tokens || 0;
+  return { text: text.trim(), tokensUsed };
+}
+
+/**
+ * Call the LLM with automatic fallback: Groq أولاً (أسرع)، ولو فشل
+ * (مفتاح ناقص، حصة منتهية، أو أي خطأ) يجرب Z.ai تلقائياً بنفس الطلب.
+ * لو فشل الاثنين، يرمي آخر خطأ (يُمسك بمكانه بالكود اللي يستدعيها).
  * @param {string} prompt - The user/system prompt to send.
  * @param {number} maxTokens - Max tokens in response (default 500).
  * @param {string} [systemInstruction] - Override system instruction.
  * @returns {Promise<{text: string, tokensUsed: number}>}
  */
 async function callGemini(prompt, maxTokens = 500, systemInstruction) {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error("GEMINI_API_KEY not configured");
+  try {
+    return await callGroq(prompt, maxTokens, systemInstruction);
+  } catch (groqErr) {
+    console.error("[AI] Groq failed, falling back to Z.ai:", groqErr.message);
+    try {
+      return await callZai(prompt, maxTokens, systemInstruction);
+    } catch (zaiErr) {
+      console.error("[AI] Z.ai also failed:", zaiErr.message);
+      throw new Error(`كل المزوّدين فشلوا — Groq: ${groqErr.message} | Z.ai: ${zaiErr.message}`);
+    }
   }
-
-  const model = "gemini-2.0-flash";
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-
-  const sys = systemInstruction || SYSTEM_PROMPT;
-
-  const body = {
-    system_instruction: { parts: [{ text: sys }] },
-    contents: [{ parts: [{ text: prompt }] }],
-    generationConfig: {
-      temperature: 0.3,
-      maxOutputTokens: maxTokens,
-      topP: 0.9,
-      topK: 40,
-    },
-  };
-
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-
-  if (!response.ok) {
-    const errText = await response.text().catch(() => "");
-    throw new Error(`Gemini API error ${response.status}: ${errText.slice(0, 200)}`);
-  }
-
-  const data = await response.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-  const tokensUsed = data.usageMetadata?.totalTokenCount || 0;
-
-  return { text: text.trim(), tokensUsed };
 }
 
 // ============================================================
