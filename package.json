@@ -8,6 +8,8 @@
   "dependencies": {
     "exceljs": "^4.4.0",
     "pdfkit": "^0.15.0",
-    "firebase-admin": "^12.1.0"
+    "firebase-admin": "^12.1.0",
+    "@napi-rs/canvas": "^0.1.65",
+    "qrcode": "^1.5.4"
   }
 }

@@ -70,6 +70,26 @@ function sanitizeInviteSettings(raw) {
   };
 }
 
+// اسم/تاريخ/مكان المناسبة لتعبئة متغيرات القالب — نفس مصدر event-reminder.js
+// و video-scheduler.js بالضبط (content/rsvp/<slug>.json) عشان يبقى مصدر
+// موحّد بدون ازدواجية بيانات.
+const eventInfoCache = new Map();
+async function getEventInfo(slug) {
+  if (!slug) return { names: "", date: "", location: "" };
+  if (eventInfoCache.has(slug)) return eventInfoCache.get(slug);
+  const eventHost = process.env.URL || process.env.DEPLOY_URL || "https://jamratghadah.com";
+  let info = { names: "", date: "", location: "" };
+  try {
+    const res = await fetch(`${eventHost}/content/rsvp/${encodeURIComponent(slug)}.json`);
+    if (res.ok) {
+      const json = await res.json();
+      info = { names: json.names || "", date: json.date || "", location: json.location || "" };
+    }
+  } catch { /* تبقى قيم فاضية لو تعذّرت القراءة — بديل آمن، مو خطأ يوقف الإرسال */ }
+  eventInfoCache.set(slug, info);
+  return info;
+}
+
 async function getGuestEventSettings(db, guestData) {
   const eventId = guestData.eventId || guestData.eventCode || guestData.eventSlug;
   if (!eventId) return {};
@@ -101,6 +121,59 @@ async function waRequest(phoneId, token, body) {
   } catch (err) {
     return { ok: false, error: String(err) };
   }
+}
+
+// ===== قوالب واتساب المعتمدة (WhatsApp Message Templates) =====
+// هذا أول اتصال بالضيف عادة (لسه ما راسلك) — واتساب يرفض أي رسالة حرة
+// بهالحالة، لازم قالب معتمد من ميتا. الاسم واللغة هنا يجب أن يطابقا
+// بالضبط الاسم/اللغة المسجّلين فعليًا بـ WhatsApp Manager. القيم
+// الافتراضية أدناه تطابق القوالب الخمسة المتفق عليها.
+const WHATSAPP_TEMPLATES = {
+  invitation: { name: "wedding_invitation_video", language: "ar", hasVideoHeader: true, bodyParams: 4 },
+  reminder:   { name: "event_reminder_48h",       language: "ar", hasVideoHeader: false, bodyParams: 4 },
+  thankyou:   { name: "event_thank_you",          language: "ar", hasVideoHeader: false, bodyParams: 2 },
+};
+
+function buildTemplatePayload(to, tpl, { videoUrl, params }) {
+  const components = [];
+  if (tpl.hasVideoHeader) {
+    if (!videoUrl) return { error: "هذا القالب يتطلب فيديو بالرأس — ما فيه رابط فيديو لهذي المناسبة" };
+    components.push({
+      type: "header",
+      parameters: [{ type: "video", video: { link: videoUrl } }],
+    });
+  }
+  const bodyParams = (params || []).slice(0, tpl.bodyParams);
+  while (bodyParams.length < tpl.bodyParams) bodyParams.push(""); // ميتا يرفض عدد متغيرات ناقص
+  components.push({
+    type: "body",
+    parameters: bodyParams.map((v) => ({ type: "text", text: String(v || "") })),
+  });
+
+  return {
+    body: {
+      messaging_product: "whatsapp",
+      to,
+      type: "template",
+      template: { name: tpl.name, language: { code: tpl.language }, components },
+    },
+  };
+}
+
+async function sendWhatsAppTemplate(phone, templateKey, opts) {
+  const phoneId = process.env.WHATSAPP_PHONE_ID || "";
+  const token = process.env.WHATSAPP_TOKEN || "";
+  if (!phoneId || !token) return { ok: false, error: "واتساب غير مضبوط (WHATSAPP_PHONE_ID/WHATSAPP_TOKEN)" };
+  const to = String(phone || "").replace(/[^0-9]/g, "");
+  if (!to) return { ok: false, error: "رقم جوال غير صالح" };
+
+  const tpl = WHATSAPP_TEMPLATES[templateKey];
+  if (!tpl) return { ok: false, error: `قالب غير معروف: ${templateKey}` };
+
+  const built = buildTemplatePayload(to, tpl, opts);
+  if (built.error) return { ok: false, error: built.error };
+
+  return waRequest(phoneId, token, built.body);
 }
 
 async function sendOneWhatsApp(phone, { message, contentTypes, imageUrl, videoUrl }) {
@@ -301,7 +374,21 @@ exports.handler = async (event) => {
     const perGuest = { id, name, whatsapp: null, email: null };
 
     if (useWhatsApp) {
-      perGuest.whatsapp = await sendOneWhatsApp(guestData.phone, mediaOpts);
+      // إرسال أول تواصل مع الضيف (دعوة فيها فيديو) لازم يكون عبر قالب
+      // معتمد من ميتا — رسالة حرة ترفض لو الضيف ما راسلنا هو أول. نفس
+      // هذا الطلب صراحة عبر payload.templateKey يفعّل قالب محدد (تذكير/شكر)
+      // لو احتجناه لاحقًا من مكان ثاني بالداشبورد.
+      const templateKey = payload.templateKey || (effectiveContentTypes.includes("video") ? "invitation" : "");
+      if (templateKey) {
+        const eventSlug = guestData.style || guestData.eventSlug || "";
+        const eventInfo = await getEventInfo(eventSlug);
+        perGuest.whatsapp = await sendWhatsAppTemplate(guestData.phone, templateKey, {
+          videoUrl: effectiveVideoUrl,
+          params: [name, eventInfo.names, eventInfo.date, eventInfo.location],
+        });
+      } else {
+        perGuest.whatsapp = await sendOneWhatsApp(guestData.phone, mediaOpts);
+      }
     }
     if (useEmail) {
       perGuest.email = await sendOneEmail(guestData.email, effectiveSubject, mediaOpts);

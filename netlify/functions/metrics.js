@@ -181,27 +181,18 @@ exports.handler = async (event) => {
         result.connections.whatsapp = "error";
       }
 
-      // ===== 6) Connection status — Gemini =====
+      // ===== 6) Connection status — AI (Groq أساسي، Z.ai احتياطي) =====
       try {
-        let geminiKey = process.env.GEMINI_API_KEY;
+        const groqKey = process.env.GROQ_API_KEY;
+        const zaiKey = process.env.ZAI_API_KEY;
 
-        if (!geminiKey) {
-          try {
-            const gemConfig = await fs.collection("integration_configs").doc("gemini").get();
-            if (gemConfig.exists) {
-              const gemData = gemConfig.data();
-              if (!geminiKey) geminiKey = gemData.apiKey;
-            }
-          } catch (_) {
-            // ignore
-          }
-        }
-
-        if (geminiKey) {
-          const gemRes = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models?key=${geminiKey}`
-          );
-          result.connections.gemini = gemRes.ok ? "connected" : "error";
+        if (groqKey) {
+          const groqRes = await fetch("https://api.groq.com/openai/v1/models", {
+            headers: { Authorization: `Bearer ${groqKey}` },
+          });
+          result.connections.gemini = groqRes.ok ? "connected" : "error";
+        } else if (zaiKey) {
+          result.connections.gemini = "connected"; // Groq missing but fallback key present
         } else {
           result.connections.gemini = "not_configured";
         }

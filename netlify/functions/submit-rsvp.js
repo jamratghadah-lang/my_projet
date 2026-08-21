@@ -1,5 +1,10 @@
 const crypto = require("crypto");
 const { getAdminApp } = require("./_auth");
+const { checkRateLimit } = require("./_rate-limit");
+// ===== قواعد التصميم (form_fields) من content/rsvp/{slug}.json =====
+// مستوردة من ملف مشترك (_rsvp-rules.js) يستخدمه أيضًا _ai-lib.js لمسار
+// واتساب — عشان تبقى نفس القاعدة بالضبط بغض النظر عن قناة التأكيد.
+const { loadDesignRules, enforceCompanions } = require("./_rsvp-rules");
 
 const ENTRY_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 function generateEntryCode() {
@@ -39,6 +44,13 @@ async function handle(event) {
 
   try {
     const body = JSON.parse(event.body || "{}");
+
+    // Rate limiting: 5 طلبات لكل IP في الدقيقة
+    const rl = await checkRateLimit(() => getAdminApp().firestore(), event, "submit-rsvp", { max: 5, windowSeconds: 60 });
+    if (!rl.allowed) {
+      return { statusCode: 429, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ error: "طلبات كثيرة، حاول بعد دقيقة" }) };
+    }
+
     const tokenData = verifyToken(body.token);
     if (!tokenData) {
       return { statusCode: 403, body: JSON.stringify({ error: "RSVP token invalid" }) };
@@ -60,17 +72,21 @@ async function handle(event) {
     if (!eventCode || !guestCode) return { statusCode: 400, body: JSON.stringify({ error: "Missing invitation identity" }) };
     const responseId = `${eventCode}_${guestCode}`;
 
+    // قواعد التصميم المرتبط بهالمناسبة (design_id = tokenData.slug) — مصدر موثوق من السيرفر
+    const formFields = loadDesignRules(tokenData.slug);
+    const finalCompanions = enforceCompanions(body.companions, formFields);
+
     const responseData = {
       name: clean(body.name, 180),
       phone: clean(body.phone, 30),
       status,
-      guests: clean(body.guests, 10),
+      guests: String(finalCompanions),
       style: tokenData.slug,
       eventSlug: tokenData.slug,
       personalCode: guestCode,
       guestId: guestCode,
       eventCode,
-      companions: Math.max(0, Math.min(20, Number(body.companions || 0) || 0)),
+      companions: finalCompanions,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     };
 

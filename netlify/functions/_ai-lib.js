@@ -17,6 +17,9 @@ const admin = require("firebase-admin");
 const crypto = require("crypto");
 const https = require("https");
 const { getInvitationAccessCode } = require("./_invitation-access");
+// نفس قواعد المرافقين المستخدمة في submit-rsvp.js (مسار الموقع) — مصدر
+// واحد مشترك عشان مصدر التأكيد (موقع أو واتساب) ما يغيّر الشروط أبدًا.
+const { loadDesignRules, enforceCompanions } = require("./_rsvp-rules");
 
 // ============================================================
 //  A. INTENT CLASSIFICATION
@@ -558,7 +561,7 @@ function extractGuestNameFromCommand(text) {
  * Never searches outside the given eventId — this is the security boundary.
  */
 async function findGuestInEvent(db, eventId, nameQuery) {
-  const snap = await db.collection("responses").where("eventCode", "==", eventId).get();
+  const snap = await db.collection("responses").where("eventCode", "==", eventId).limit(500).get();
   const needle = normalizeArabic(nameQuery).toLowerCase();
   const matches = [];
   snap.forEach((doc) => {
@@ -809,7 +812,7 @@ async function buildClientStatsContext(phone) {
     const eventData = eventDoc.data();
     const eventId = eventDoc.id;
 
-    const responsesSnap = await db.collection("responses").where("eventCode", "==", eventId).get();
+    const responsesSnap = await db.collection("responses").where("eventCode", "==", eventId).limit(5000).get();
 
     let confirmed = 0, declined = 0, pending = 0, totalGuests = 0;
     responsesSnap.forEach((doc) => {
@@ -822,7 +825,7 @@ async function buildClientStatsContext(phone) {
 
     let attendedCount = 0;
     try {
-      const checkinsSnap = await db.collection("checkins").where("eventId", "==", eventId).get();
+      const checkinsSnap = await db.collection("checkins").where("eventId", "==", eventId).limit(5000).get();
       attendedCount = checkinsSnap.size;
     } catch {
       // checkins may not be readable/available; stats still return without it
@@ -936,6 +939,55 @@ async function getEffectiveQrEnabled(event) {
   }
 }
 
+
+// ─── إرسال بطاقة دخول كاملة عبر واتساب ───
+async function sendFullEntryCard(opts) {
+  const { guestName, entryCode, eventId, slug, companions, phone, db } = opts;
+
+  // جلب بيانات الضيف الكاملة (طاولة/مقعد/بوابة)
+  let guestData = {};
+  try {
+    const snap = await db.collection("responses")
+      .where("entryCode", "==", entryCode)
+      .limit(1)
+      .get();
+    if (!snap.empty) guestData = snap.docs[0].data();
+  } catch {}
+
+  // جلب إعدادات البطاقة وتوليد صورتها
+  const { loadCardSettings, createCardImage } = require("./generate-entry-card");
+  const settings = loadCardSettings(slug);
+
+  const imageBuffer = await createCardImage({
+    guestName,
+    date: opts.date || settings.date || "",
+    location: opts.location || settings.location || "",
+    table: guestData.table || "",
+    seat: guestData.seat || "",
+    gate: guestData.gate || "",
+    entryCode,
+    eventId,
+    companions: String(companions || ""),
+    cardText: settings.text || "",
+    bgImage: opts.bgImage || settings.bgImage || "",
+    logoImage: opts.logoImage || settings.logoImage || "",
+  });
+
+  if (!imageBuffer) return null;
+
+  // حفظ في Firebase Storage
+  const app = getAdminApp();
+  if (!app) return null;
+  const bucket = app.storage().bucket();
+  const storagePath = `entry-cards/${eventId || "default"}/${entryCode || guestName}.png`;
+  const file = bucket.file(storagePath);
+  await file.save(imageBuffer, {
+    metadata: { contentType: "image/png", cacheControl: "public, max-age=3600" },
+  });
+  await file.makePublic();
+  return file.publicUrl();
+}
+
 function buildQrImageUrl(eventId, entryCode) {
   const payload = JSON.stringify({ eventId: String(eventId || ""), entryCode: String(entryCode || "") });
   // Public image endpoint used only as a transportable QR renderer for WhatsApp.
@@ -964,13 +1016,42 @@ const TOOLS = {
     if (!phone) return { error: "رقم الجوال مطلوب" };
     if (!context.guest) return { error: "ما لقيت بيانات الضيف" };
 
-    // WhatsApp invitation delivery must be the actual video media, not a text URL.
+    // لو الضيف مؤكد الحضور وأبغى يعيد إرسال البطاقة
+    if (context.guest.rsvpStatus === "yes" && context.private && context.private.entryCode) {
+      const entryCode = context.private.entryCode;
+      const eventId = context.event && (context.event._id || context.event.eventCode || context.event.packageId);
+      const slug = context.guest.style || context.guest.eventSlug || "";
+      const db = getDb();
+
+      if (entryCode && eventId && db) {
+        try {
+          const cardUrl = await sendFullEntryCard({
+            guestName: context.guest.name || "",
+            entryCode,
+            eventId,
+            slug,
+            companions: context.guest.companions || 0,
+            phone,
+            db,
+          });
+          if (cardUrl) {
+            const caption = "بطاقة الدخول مرة ثانية يا " + (context.guest.name || "ضيفنا");
+            const result = await sendWhatsAppMessage(phone, caption, "image", { link: cardUrl });
+            return { sent: !!result.ok, mediaType: "card", messageId: result.messageId, error: result.ok ? null : result.error };
+          }
+        } catch (err) {
+          console.error("[AI] resend card failed, falling back to video:", err.message);
+        }
+      }
+    }
+
+    // الفورمات الأصل: إرسال فيديو الدعوة
     const videoUrl = context.event && context.event.invitationVideoUrl;
     if (!videoUrl) {
       return { error: "ما لقيت فيديو الدعوة المخصص لهذي المناسبة" };
     }
 
-    const caption = `سلام ${context.guest.name || "ضيفنا"} 🌹\n\nهذه دعوتك الخاصة 💛`;
+    const caption = "سلام " + (context.guest.name || "ضيفنا") + " هذه دعوتك الخاصة";
     const result = await sendWhatsAppMessage(phone, caption, "video", { link: videoUrl });
 
     return {
@@ -980,6 +1061,7 @@ const TOOLS = {
       error: result.ok ? null : result.error,
     };
   },
+
 
   send_location: async (params, context) => {
     if (!context.event) return { error: "ما لقيت بيانات المناسبة" };
@@ -1034,11 +1116,31 @@ const TOOLS = {
     const db = getDb();
     if (!db) return { error: "خطأ في قاعدة البيانات" };
 
+    // ─── توحيد قواعد المرافقين (نفس submit-rsvp.js) ───
+    const slug = context.guest.style || context.guest.eventSlug || "";
+    const formFields = loadDesignRules(slug);
+    const rawCompanions = context.guest.companions || 0;
+    const finalCompanions = enforceCompanions(rawCompanions, formFields);
+
     try {
-      await db.doc(context.guest._ref).update({
+      const updateData = {
         status: params.newStatus,
+        companions: finalCompanions,
+        guests: String(finalCompanions + 1),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
+      };
+
+      // توليد entryCode لو ما عنده (بيانات قديمة)
+      const existingEntryCode = context.private && context.private.entryCode;
+      if (!existingEntryCode && params.newStatus === "yes") {
+        const ENTRY_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        const bytes = require("crypto").randomBytes(8);
+        let code = "JG-";
+        for (let i = 0; i < 8; i++) code += ENTRY_CHARS[bytes[i] % ENTRY_CHARS.length];
+        updateData.entryCode = code;
+      }
+
+      await db.doc(context.guest._ref).update(updateData);
 
       // Log the operation
       await logOperation({
@@ -1050,15 +1152,40 @@ const TOOLS = {
 
       if (params.newStatus === "yes") {
         const qrEnabled = await getEffectiveQrEnabled(context.event);
-        if (qrEnabled) {
-          const entryCode = context.private && context.private.entryCode;
-          const phone = context.phone || (context.private && context.private.phone);
-          const eventId = context.event && (context.event._id || context.event.eventCode || context.event.packageId);
-          if (entryCode && phone && eventId) {
+        const phone = context.phone || (context.private && context.private.phone);
+        const entryCode = existingEntryCode || updateData.entryCode || "";
+        const eventId = context.event && (context.event._id || context.event.eventCode || context.event.packageId);
+
+        if (qrEnabled && entryCode && phone && eventId) {
+          // ─── إرسال بطاقة دخول كاملة (صورة) بدل QR فقط ───
+          let cardSent = false;
+          let cardError = null;
+          try {
+            const cardUrl = await sendFullEntryCard({
+              guestName: context.guest.name || "",
+              entryCode,
+              eventId,
+              slug,
+              companions: finalCompanions,
+              phone,
+              db,
+            });
+            if (cardUrl) {
+              const caption = "\u{1F3AB} \u062a\u0645 \u062a\u0623\u0643\u064a\u062f \u062d\u0636\u0648\u0631\u0643 \u064a\u0627 " + (context.guest.name || "\u0636\u064a\u0641\u0646\u0627") + " \u{1F339}\n\n\u0628\u0637\u0627\u0642\u0629 \u0627\u0644\u062f\u062e\u0648\u0644 \u0628\u0627\u0644\u0623\u0633\u0641\u0644 \u2014 \u0627\u062d\u062a\u0641\u0638 \u0628\u0647\u0627 \u0648\u0627\u0639\u0631\u0636\u0647\u0627 \u0639\u0646\u062f \u0627\u0644\u0628\u0627\u0628.";
+              const cardResult = await sendWhatsAppMessage(phone, caption, "image", { link: cardUrl });
+              cardSent = !!cardResult.ok;
+              cardError = cardResult.ok ? null : cardResult.error;
+            }
+          } catch (err) {
+            console.error("[AI] full card generation failed, falling back to QR:", err.message);
+          }
+
+          // Fallback: QR \u0641\u0642\u0637 \u0644\u0648 \u0641\u0634\u0644\u062a \u0627\u0644\u0628\u0637\u0627\u0642\u0629 \u0627\u0644\u0643\u0627\u0645\u0644\u0629
+          if (!cardSent) {
             const qrUrl = buildQrImageUrl(eventId, entryCode);
             const qrResult = await sendWhatsAppMessage(
               phone,
-              `🎟️ تم تأكيد حضورك يا ${context.guest.name || "ضيفنا"} 🌹\n\nهذه بطاقة دخولك الشخصية. احتفظ بها وبرز الـQR عند الدخول.`,
+              "\u{1F3AB} \u062a\u0645 \u062a\u0623\u0643\u064a\u062f \u062d\u0636\u0648\u0631\u0643 \u064a\u0627 " + (context.guest.name || "\u0636\u064a\u0641\u0646\u0627") + " \u{1F339}\n\n\u0647\u0630\u0647 \u0628\u0637\u0627\u0642\u0629 \u062f\u062e\u0648\u0644\u0643 \u0627\u0644\u0634\u062e\u0635\u064a\u0629. \u0627\u062d\u062a\u0641\u0638 \u0628\u0647\u0627 \u0648\u0628\u0631\u0632 \u0627\u0644\u0640QR \u0639\u0646\u062f \u0627\u0644\u062f\u062e\u0648\u0644.",
               "image",
               { link: qrUrl }
             );
@@ -1067,26 +1194,37 @@ const TOOLS = {
               newStatus: params.newStatus,
               name: context.guest.name || "",
               qrEnabled: true,
+              cardSent: false,
               qrSent: !!qrResult.ok,
               qrError: qrResult.ok ? null : qrResult.error,
             };
           }
+
+          return {
+            updated: true,
+            newStatus: params.newStatus,
+            name: context.guest.name || "",
+            qrEnabled: true,
+            cardSent,
+            cardError,
+          };
         }
         return {
           updated: true,
           newStatus: params.newStatus,
           name: context.guest.name || "",
           qrEnabled: false,
-          qrSent: false,
+          cardSent: false,
         };
       }
 
       return { updated: true, newStatus: params.newStatus, name: context.guest.name || "" };
     } catch (err) {
       console.error("[AI] update_rsvp error:", err.message);
-      return { error: "ما قدرت نحدّث الحالة، حاول بعد شوي" };
+      return { error: "\u0645\u0627 \u0642\u062f\u0631 \u0646\u062d\u062f\u0651\u062b \u0627\u0644\u062d\u0627\u0644\u0629\u060c \u062d\u0627\u0648\u0644 \u0628\u0639\u062f \u0634\u0648\u064a" };
     }
   },
+
 
   update_guest_count: async (params, context) => {
     if (!params.confirmed) {
@@ -1501,19 +1639,31 @@ function formatStructuredResponse(intent, data) {
     }
 
     case "UPDATE_RSVP": {
-      if (data.error) return `عذراً، ${data.error} 🌹`;
+      if (data.error) return `عذراً، ${data.error} \u{1F339}`;
+
       if (data.newStatus === "yes") {
-        if (data.qrEnabled && data.qrSent) {
-          return `✅ تم تأكيد حضورك يا ${data.name || "ضيفنا"} 🌹\\n\\n🎟️ أرسلت لك بطاقة الدخول الشخصية والـQR هنا على الواتساب. احتفظ بها عند الدخول.`;
+        if (data.cardSent) {
+          return `✅ تم تأكيد حضورك يا ${data.name || "ضيفنا"} 🌹
+
+🎫️ أرسلت لك بطاقة الدخول الشخصية هنا على الواتساب. احتفظ بها واعرضها عند الباب.`;
         }
-        if (data.qrEnabled && data.qrSent === false) {
-          return `✅ تم تأكيد حضورك يا ${data.name || "ضيفنا"} 🌹\\n\\nلكن ما قدرت أرسل الـQR الآن، حاول تطلبه مرة ثانية لاحقاً.`;
+        if (data.qrEnabled && data.qrSent) {
+          return `✅ تم تأكيد حضورك يا ${data.name || "ضيفنا"} 🌹
+
+🎫️ أرسلت لك بطاقة الدخول الشخصية هنا على الواتساب. احتفظ بها واعرضها عند الباب.`;
+        }
+        if (data.qrEnabled && !data.cardSent && !data.qrSent) {
+          return `✅ تم تأكيد حضورك يا ${data.name || "ضيفنا"} 🌹
+
+لكن ما قدرت أرسل البطاقة الآن، حاول تطلبها مرة ثانية لاحقاً.`;
         }
         return `✅ تم تأكيد حضورك يا ${data.name || "ضيفنا"} 🌹`;
       }
+
       if (data.newStatus === "no") {
-        return `❌ تم تسجيل اعتذارك، وشكرًا لإبلاغنا 🌹`;
+        return `❌ تم تسجيل اعتذارك، وشكراً لإبلاغنا 🌹`;
       }
+
       return `⏳ تم تحديث حالتك إلى الانتظار 🌹`;
     }
 
@@ -2188,11 +2338,38 @@ function parseWhatsAppPayload(body) {
     // Only process messages
     if (value.messages && value.messages.length > 0) {
       const msg = value.messages[0];
+
+      // ردود أزرار قوالب واتساب (Quick Reply على رسالة type=template) تصل
+      // بحمولة msg.type === "button" مع msg.button.text — مو msg.text.
+      // وردود الأزرار التفاعلية (type=interactive) تصل بـ
+      // msg.interactive.button_reply.title.
+      // نستخرج النص من أي من الشكلين ونمرره كـ messageText عادي، عشان
+      // يمر بنفس مسار فهم النية (classifyIntent) اللي يفهم الرد الحر —
+      // فيشتغل الاثنين (ضغط زر أو كتابة نص) بنفس المنطق دون تكرار.
+      //
+      // لكن النص المعروض على الزر (title/text) قابل للتغيير أو الترجمة،
+      // فما يصلح كمعرّف دقيق للزر اللي انضغط فعليًا. لهذا نستخرج أيضًا
+      // المعرّف الثابت: msg.button.payload لقوالب Quick Reply، أو
+      // msg.interactive.button_reply.id للأزرار التفاعلية — وهذا المعرّف
+      // (buttonId) هو اللي تعتمد عليه أي منطق يحتاج يعرف بالضبط أي زر
+      // ضغطه الضيف (مثل تقييم ما بعد المناسبة)، بدل مطابقة النص.
+      let messageText = msg.text?.body || "";
+      let buttonId = null;
+      if (msg.type === "button" && msg.button) {
+        messageText = msg.button.text || messageText;
+        buttonId = msg.button.payload || null;
+      } else if (msg.type === "interactive" && msg.interactive?.button_reply) {
+        messageText = msg.interactive.button_reply.title || messageText;
+        buttonId = msg.interactive.button_reply.id || null;
+      }
+
       return {
         phone: msg.from,
         messageId: msg.id,
-        messageText: msg.text?.body || "",
+        messageText,
+        buttonId,
         messageType: msg.type || "text",
+        isButtonReply: msg.type === "button" || (msg.type === "interactive" && msg.interactive?.type === "button_reply"),
         timestamp: msg.timestamp,
         displayName: value.contacts?.[0]?.profile?.name || null,
       };
@@ -2307,6 +2484,10 @@ module.exports = {
 
   // Analytics
   trackAnalytics,
+
+  // Unified companion rules
+  loadDesignRules,
+  enforceCompanions,
 
   // Security
   sanitizeForAI,

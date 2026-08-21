@@ -101,7 +101,7 @@ service cloud.firestore {
       allow read: if isStaff();
       allow create, update: if isStaff()
         && request.resource.data.keys().hasOnly([
-             "name","client","phone","date","time","location","status","type",
+             "name","client","phone","reportEmail","date","time","location","status","type",
              "guests","confirmed","attended","notes",
              "budgetEstimated","budgetActual","budgetItems",
              "closureChecklist","closeChecklist","closureSummary","createdAt","updatedAt","closedAt",

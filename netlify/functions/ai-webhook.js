@@ -129,7 +129,10 @@ async function getPendingSurvey(phone) {
     const snap = await db.collection("ai_pending_sessions").doc(pendingDocId(phone)).get();
     if (!snap.exists) return null;
     const data = snap.data();
-    if (data.kind !== "awaiting_survey" || Date.now() - Number(data.timestamp || 0) > SURVEY_TTL) {
+    const kind = data.kind || "";
+    // "awaiting_survey" = استنى ضغطة الزر (أو رد حر)، و
+    // "awaiting_survey_note" = ضغط "فيه ملاحظة" وسألناه، ننتظر نص الملاحظة.
+    if (!kind.startsWith("awaiting_survey") || Date.now() - Number(data.timestamp || 0) > SURVEY_TTL) {
       await snap.ref.delete().catch(() => {});
       return null;
     }
@@ -140,10 +143,49 @@ async function getPendingSurvey(phone) {
   }
 }
 
+// ─── Reminder action pending state (QR request / confirm) ───
+async function getPendingReminderAction(phone) {
+  const db = getPendingDb();
+  if (!db) return null;
+  try {
+    const snap = await db.collection("ai_pending_sessions").doc(pendingDocId(phone)).get();
+    if (!snap.exists) return null;
+    const data = snap.data();
+    if (data.kind !== "awaiting_reminder_action" || Date.now() - Number(data.timestamp || 0) > SURVEY_TTL) {
+      await snap.ref.delete().catch(() => {});
+      return null;
+    }
+    return data;
+  } catch (err) {
+    console.error("[AI Webhook] getPendingReminderAction error:", err.message);
+    return null;
+  }
+}
+
+async function clearPendingReminderAction(phone) {
+  const db = getPendingDb();
+  if (!db) return;
+  await db.collection("ai_pending_sessions").doc(pendingDocId(phone)).delete().catch(() => {});
+}
+
 async function clearPendingSurvey(phone) {
   const db = getPendingDb();
   if (!db) return;
   await db.collection("ai_pending_sessions").doc(pendingDocId(phone)).delete().catch(() => {});
+}
+
+// لما الضيف يضغط "📝 فيه ملاحظة" — نسأله عن نص الملاحظة قبل ما نسجّل
+// أي تقييم، ونحوّل الجلسة المعلّقة لانتظار هذا النص تحديدًا.
+async function setPendingSurveyNote(phone, slug, guestName) {
+  const db = getPendingDb();
+  if (!db) return;
+  await db.collection("ai_pending_sessions").doc(pendingDocId(phone)).set({
+    kind: "awaiting_survey_note",
+    slug,
+    guestName,
+    timestamp: Date.now(),
+    expiresAt: Date.now() + SURVEY_TTL,
+  });
 }
 
 /**
@@ -260,7 +302,7 @@ async function handlePost(event) {
   // error in the logs. Meta tolerates a few seconds before retrying,
   // so awaiting this is safe.
   try {
-    await processMessage(phone, messageText, msg.displayName);
+    await processMessage(phone, messageText, msg.displayName, msg.buttonId);
   } catch (err) {
     console.error('[AI Webhook] processMessage error:', err.message);
   }
@@ -272,7 +314,7 @@ async function handlePost(event) {
 //  MESSAGE PROCESSING PIPELINE
 // ============================================================
 
-async function processMessage(phone, messageText, displayName) {
+async function processMessage(phone, messageText, displayName, buttonId) {
   let guestContext = null;
   let intent = 'PUBLIC_INFO';
   let responseText = '';
@@ -292,12 +334,133 @@ async function processMessage(phone, messageText, displayName) {
       return;
     }
 
-    // 6.5 Check for pending post-event survey — a short reply here
-    // ("رائع" or a free-text note) is feedback, not a normal intent.
+    // 6.4 Check for pending reminder action (QR request / confirm)
+    const pendingReminder = await getPendingReminderAction(phone);
+    if (pendingReminder) {
+      await clearPendingReminderAction(phone);
+      const name = pendingReminder.guestName || "ضيفنا";
+      const slug = pendingReminder.slug || "";
+      const eventCode = pendingReminder.eventCode || "";
+
+      if (buttonId === "reminder_qr_request") {
+        // الضيف يبي بطاقة الدخول — نجيب بياناته ونبعتها
+        try {
+          const { getAdminDb } = require("./_report-lib");
+          const { sendFullEntryCard } = require("./_ai-lib");
+          const db = getAdminDb();
+          if (db) {
+            let guestDoc = null;
+            const byPhone = await db.collection("responses").where("phone", "==", phone).limit(1).get();
+            if (!byPhone.empty) guestDoc = byPhone.docs[0];
+            if (guestDoc) {
+              const gd = guestDoc.data();
+              const cardUrl = await sendFullEntryCard({
+                guestName: gd.name || name,
+                entryCode: gd.entryCode || "",
+                eventId: gd.eventId || gd.eventCode || eventCode,
+                slug: gd.style || slug,
+                companions: gd.companions || 0,
+                phone,
+                db,
+              });
+              if (cardUrl) {
+                const msg = `🎫 بطاقة دخولك الشخصية يا ${gd.name || name} — احتفظي بها واعرضيها عند الباب`;
+                await sendWhatsAppMessage(phone, msg, "image", { link: cardUrl });
+              } else {
+                await sendWhatsAppMessage(phone, `عذراً ${name}، ما قدرنا نولّد بطاقتك الآن. حاولي تراسلنا "بطاقتي" بعد شوي 🌹`);
+              }
+            } else {
+              await sendWhatsAppMessage(phone, `ما لقينا بياناتك عندنا ${name} — تأكدي إن الرابط اللي وصلك هو نفس الرابط اللي سجلتِ منه 🌹`);
+            }
+          }
+        } catch (err) {
+          console.error("[AI Webhook] reminder QR error:", err.message);
+          await sendWhatsAppMessage(phone, `حدث خطأ تقني — حاولي بعد شوي ${name} 🌹`);
+        }
+        return;
+      }
+
+      if (buttonId === "reminder_confirm") {
+        // الضيف يبي يتأكد — نفحص حالته ونخبره
+        try {
+          const { getAdminDb } = require("./_report-lib");
+          const db = getAdminDb();
+          if (db) {
+            const byPhone = await db.collection("responses").where("phone", "==", phone).limit(1).get();
+            if (!byPhone.empty) {
+              const gd = byPhone.docs[0].data();
+              const st = gd.status || "";
+              if (st === "yes" || st === "confirmed") {
+                await sendWhatsAppMessage(phone, `حضورك مؤكد يا ${gd.name || name} 🌹 ننتظركم يوم المناسبة`);
+              } else if (st === "no") {
+                await sendWhatsAppMessage(phone, `ملاحظ إنك مسجّلة كمعتذرة يا ${gd.name || name}. لو تغيرت رأيك وتبين تحضرين، ردي بـ "أبي أحضر" 🌹`);
+              } else {
+                await sendWhatsAppMessage(phone, `ما تلقينا تأكيد حضورك بعد يا ${gd.name || name}. ردي بـ "أبي أحضر" عشان نؤكد حضورك 🌹`);
+              }
+            }
+          }
+        } catch (err) {
+          console.error("[AI Webhook] reminder confirm error:", err.message);
+        }
+        return;
+      }
+    }
+
+    // 6.5 Check for pending post-event survey — either a button press
+    // ("🤍 رائعة" / "📝 فيه ملاحظة") or a free-text reply is feedback,
+    // not a normal intent.
     const pendingSurvey = await getPendingSurvey(phone);
     if (pendingSurvey) {
       const trimmed = (messageText || "").trim();
-      const isPositive = /^(رائع|ممتاز|تمام|زين|حلو|كويس|👍|❤️|💛)/i.test(trimmed);
+
+      if (pendingSurvey.kind === "awaiting_survey_note") {
+        // وصل نص الملاحظة الفعلي بعد ما سألناها — نسجّل التقييم الآن.
+        await getPendingDb().collection("post_event_feedback").add({
+          slug: pendingSurvey.slug,
+          guestName: pendingSurvey.guestName,
+          guestPhone: phone,
+          rating: "issue",
+          note: trimmed,
+          time: new Date().toISOString(),
+        });
+        await clearPendingSurvey(phone);
+
+        const thankYouMsg = "تسلمين على صراحتك 🌹 ملاحظتك وصلتنا وراح نستفيد منها. شرفتونا 💛";
+        await sendWhatsAppMessage(phone, thankYouMsg);
+        await logConversation({
+          platform: "whatsapp",
+          guestPhone: phone,
+          userMessage: messageText,
+          assistantResponse: thankYouMsg,
+          intent: "SURVEY_RESPONSE",
+          tokensUsed: 0,
+        });
+        await trackAnalytics({ intent: "SURVEY_RESPONSE", platform: "whatsapp", tokensUsed: 0, guestMatched: true });
+        return;
+      }
+
+      // pendingSurvey.kind === "awaiting_survey"
+      if (buttonId === "survey_issue") {
+        // ضغط "فيه ملاحظة" — نسجّل التقييم لاحقًا، بعد ما ياخذ ردّه.
+        await setPendingSurveyNote(phone, pendingSurvey.slug, pendingSurvey.guestName);
+        const askMsg = "تسلمين 🌹 وش الملاحظة اللي حابين نعرفها؟";
+        await sendWhatsAppMessage(phone, askMsg);
+        await logConversation({
+          platform: "whatsapp",
+          guestPhone: phone,
+          userMessage: messageText,
+          assistantResponse: askMsg,
+          intent: "SURVEY_ASK_NOTE",
+          tokensUsed: 0,
+        });
+        await trackAnalytics({ intent: "SURVEY_ASK_NOTE", platform: "whatsapp", tokensUsed: 0, guestMatched: true });
+        return;
+      }
+
+      // ضغط "رائعة" فيسجَّل فورًا، أو رد حر (بدون زر) فنخمّن النية من
+      // النص كما كان سابقًا — احتياط لو الرسالة وصلت بدون معرّف زر.
+      const isPositive = buttonId === "survey_positive"
+        || /^(رائع|ممتاز|تمام|زين|حلو|كويس|👍|❤️|💛)/i.test(trimmed);
       const rating = isPositive ? "happy" : "issue";
       const note = isPositive ? null : trimmed;
 

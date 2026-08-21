@@ -58,7 +58,11 @@ exports.handler = async (event) => {
     }
     const html = await pageRes.text();
     const params = new URLSearchParams(event.rawQuery || new URLSearchParams(event.queryStringParameters || {}).toString());
-    const eventCode = params.get("eid") || "";
+    // eventCode: نفضّل الحقل المخزّن على couples/{slug} (لو ربطته العميلة
+    // بمناسبة حقيقية من dashboard/couples.html) — أدق وما يعتمد على وجود
+    // ?eid= بكل رابط يوصل للضيف. لو الرابط قديم وغير مربوط بعد، نرجع
+    // لقراءة ?eid= من الرابط كتوافق رجعي (نفس السلوك القديم).
+    const eventCode = docSnap.data()?.eventCode || params.get("eid") || "";
     const guestCode = params.get("g") || "";
     // هروب كامل للقيم قبل حقنها بسمات HTML لمنع XSS حتى لو افترضنا تلاعب
     // بمحتوىFirestore. نوفر هنا هروب &, <, >, ", ' كاملة.
@@ -72,7 +76,7 @@ exports.handler = async (event) => {
     const htmlWithCoupleSlug = html.includes("<body")
       ? html.replace(/<body(\s|>)/, `<body${attrs}$1`)
       : html;
-    return { statusCode: 200, headers: { "Content-Type": "text/html; charset=utf-8" }, body: htmlWithCoupleSlug };
+    return { statusCode: 200, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=300, s-maxage=300, stale-while-revalidate=60" }, body: htmlWithCoupleSlug };
   } catch (err) {
     return {
       statusCode: 500,

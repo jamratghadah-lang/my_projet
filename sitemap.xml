@@ -1,112 +1,63 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://jamratghadah.com/</loc>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://jamratghadah.com/"/>
-    <xhtml:link rel="alternate" hreflang="en" href="https://jamratghadah.com/"/>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://jamratghadah.com/"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://jamratghadah.com/"/>
-    <lastmod>2026-08-16</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://jamratghadah.com/about.html</loc>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://jamratghadah.com/about.html"/>
-    <xhtml:link rel="alternate" hreflang="en" href="https://jamratghadah.com/about.html"/>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://jamratghadah.com/about.html"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://jamratghadah.com/about.html"/>
-    <lastmod>2026-08-16</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://jamratghadah.com/contact.html</loc>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://jamratghadah.com/contact.html"/>
-    <xhtml:link rel="alternate" hreflang="en" href="https://jamratghadah.com/contact.html"/>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://jamratghadah.com/contact.html"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://jamratghadah.com/contact.html"/>
-    <lastmod>2026-08-16</lastmod>
-    <priority>0.6</priority>
+    <lastmod>2026-08-20</lastmod>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://jamratghadah.com/pricing.html</loc>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://jamratghadah.com/pricing.html"/>
-    <xhtml:link rel="alternate" hreflang="en" href="https://jamratghadah.com/pricing.html"/>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://jamratghadah.com/pricing.html"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://jamratghadah.com/pricing.html"/>
-    <lastmod>2026-08-16</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://jamratghadah.com/learn.html</loc>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://jamratghadah.com/learn.html"/>
-    <xhtml:link rel="alternate" hreflang="en" href="https://jamratghadah.com/learn.html"/>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://jamratghadah.com/learn.html"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://jamratghadah.com/learn.html"/>
-    <lastmod>2026-08-16</lastmod>
-    <priority>0.6</priority>
+    <lastmod>2026-08-20</lastmod>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://jamratghadah.com/categories/wedding.html</loc>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://jamratghadah.com/categories/wedding.html"/>
-    <xhtml:link rel="alternate" hreflang="en" href="https://jamratghadah.com/categories/wedding.html"/>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://jamratghadah.com/categories/wedding.html"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://jamratghadah.com/categories/wedding.html"/>
-    <lastmod>2026-08-16</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://jamratghadah.com/categories/births.html</loc>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://jamratghadah.com/categories/births.html"/>
-    <xhtml:link rel="alternate" hreflang="en" href="https://jamratghadah.com/categories/births.html"/>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://jamratghadah.com/categories/births.html"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://jamratghadah.com/categories/births.html"/>
-    <lastmod>2026-08-16</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://jamratghadah.com/categories/graduation.html</loc>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://jamratghadah.com/categories/graduation.html"/>
-    <xhtml:link rel="alternate" hreflang="en" href="https://jamratghadah.com/categories/graduation.html"/>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://jamratghadah.com/categories/graduation.html"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://jamratghadah.com/categories/graduation.html"/>
-    <lastmod>2026-08-16</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://jamratghadah.com/categories/religious-national.html</loc>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://jamratghadah.com/categories/religious-national.html"/>
-    <xhtml:link rel="alternate" hreflang="en" href="https://jamratghadah.com/categories/religious-national.html"/>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://jamratghadah.com/categories/religious-national.html"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://jamratghadah.com/categories/religious-national.html"/>
-    <lastmod>2026-08-16</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://jamratghadah.com/categories/corporate.html</loc>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://jamratghadah.com/categories/corporate.html"/>
-    <xhtml:link rel="alternate" hreflang="en" href="https://jamratghadah.com/categories/corporate.html"/>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://jamratghadah.com/categories/corporate.html"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://jamratghadah.com/categories/corporate.html"/>
-    <lastmod>2026-08-16</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://jamratghadah.com/categories/ads-openings.html</loc>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://jamratghadah.com/categories/ads-openings.html"/>
-    <xhtml:link rel="alternate" hreflang="en" href="https://jamratghadah.com/categories/ads-openings.html"/>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://jamratghadah.com/categories/ads-openings.html"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://jamratghadah.com/categories/ads-openings.html"/>
-    <lastmod>2026-08-16</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://jamratghadah.com/categories/other.html</loc>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://jamratghadah.com/categories/other.html"/>
-    <xhtml:link rel="alternate" hreflang="en" href="https://jamratghadah.com/categories/other.html"/>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://jamratghadah.com/categories/other.html"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://jamratghadah.com/categories/other.html"/>
-    <lastmod>2026-08-16</lastmod>
+    <lastmod>2026-08-20</lastmod>
     <priority>0.8</priority>
   </url>
 </urlset>

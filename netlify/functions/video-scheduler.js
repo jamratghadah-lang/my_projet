@@ -2,7 +2,11 @@
 //
 // دالة مجدولة (cron كل ساعة) — تُرسل تلقائيًا:
 //   1) فيديو التذكير قبل المناسبة (افتراضي 48 ساعة، قابل للتعديل).
-//   2) فيديو الشكر بعد المناسبة (افتراضي 12 ساعة، قابل للتعديل).
+//   2) فيديو الشكر بعد المناسبة (افتراضي 12 ساعة، قابل للتعديل) — وبنفس
+//      اللحظة (رسالة مرفقة، مو استبيان منفصل بجدولة خاصة) رسالة تقييم
+//      بزرين "🤍 رائعة" / "📝 فيه ملاحظة" (انظر sendSurveyButtons أدناه).
+//      هذا يحل محل post-event-survey.js القديم كمسار تلقائي أساسي —
+//      ذاك الملف باقٍ موجود احتياطيًا لكن أُلغيت جدولته (netlify.toml).
 //
 // نفس مصدر البيانات اللي يستخدمه event-reminder.js بالضبط — بدون ازدواجية:
 //   - مجموعة "couples" (كل مستند = رابط دعوة بأسماء العروسين + القالب).
@@ -79,6 +83,84 @@ async function sendVideoWhatsApp(phone, videoUrl, caption) {
         to,
         type: "video",
         video: { link: videoUrl, caption },
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { ok: false, error: data?.error?.message || `HTTP ${res.status}` };
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: String(err) };
+  }
+}
+
+// بعد ما يوصل فيديو التذكير بنجاح عبر واتساب، نرسل فورًا رسالة تفاعلية
+// بأزرار: "🎫 QR شخصي" (يعيد إرسال بطاقة الدخول) و"✅ تأكيد الحضور"
+// (للضيوف اللي ما أكدوا بعد أو يبيون يتأكدون).
+// الأزرار عندها معرّف ثابت (id) — reminder_qr_request / reminder_confirm
+// يُستخرج بدقة في _ai-lib.js بغض النظر عن نص الزر المعروض.
+async function sendReminderButtons(phone, guestName, eventDate) {
+  const phoneId = process.env.WHATSAPP_PHONE_ID || "";
+  const token = process.env.WHATSAPP_TOKEN || "";
+  if (!phoneId || !token) return { ok: false, error: "WHATSAPP_NOT_CONFIGURED" };
+  const to = normalizePhone(phone);
+  if (!to) return { ok: false, error: "رقم غير صالح" };
+  try {
+    const res = await fetch(`https://graph.facebook.com/v21.0/${phoneId}/messages`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        to,
+        type: "interactive",
+        interactive: {
+          type: "button",
+          body: { text: `${guestName}، مناسبتنا يوم ${eventDate || "قريبًا"} \nهل تحتاجين شي قبل المناسبة؟` },
+          action: {
+            buttons: [
+              { type: "reply", reply: { id: "reminder_qr_request", title: "🎫 QR شخصي" } },
+              { type: "reply", reply: { id: "reminder_confirm", title: "✅ تأكيد الحضور" } },
+            ],
+          },
+        },
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { ok: false, error: data?.error?.message || `HTTP ${res.status}` };
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: String(err) };
+  }
+}
+
+// بعد ما يوصل فيديو الشكر بنجاح عبر واتساب، نرسل فورًا (نفس اللحظة،
+// بدون جدولة منفصلة) رسالة تفاعلية بزرين لالتقاط رضا الضيف: "🤍 رائعة"
+// أو "📝 فيه ملاحظة". الأزرار عندها معرّف ثابت (id) — survey_positive /
+// survey_issue — يُستخرج بدقة في _ai-lib.js بغض النظر عن نص الزر
+// المعروض، ويُستخدم في ai-webhook.js لتسجيل التقييم فورًا عند الضغط.
+async function sendSurveyButtons(phone) {
+  const phoneId = process.env.WHATSAPP_PHONE_ID || "";
+  const token = process.env.WHATSAPP_TOKEN || "";
+  if (!phoneId || !token) return { ok: false, error: "WHATSAPP_NOT_CONFIGURED" };
+  const to = normalizePhone(phone);
+  if (!to) return { ok: false, error: "رقم غير صالح" };
+  try {
+    const res = await fetch(`https://graph.facebook.com/v21.0/${phoneId}/messages`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        to,
+        type: "interactive",
+        interactive: {
+          type: "button",
+          body: { text: "هل كل شي كان زي ما تحبون؟ 🌹" },
+          action: {
+            buttons: [
+              { type: "reply", reply: { id: "survey_positive", title: "🤍 كانت رائعة" } },
+              { type: "reply", reply: { id: "survey_issue", title: "📝 فيه ملاحظة" } },
+            ],
+          },
+        },
       }),
     });
     const data = await res.json().catch(() => ({}));
@@ -181,10 +263,19 @@ exports.handler = async (event) => {
 
       const diff = eventDate.getTime() - now; // موجب = المناسبة لسا ما جت، سالب = خلصت
 
+      // لو رابط الدعوة هذا مربوط بمعرّف مناسبة حقيقي (couples/{slug}.eventCode)،
+      // نفلتر بيه حصرًا — أدق ربط ممكن، ما يتأثر بمشاركة نفس القالب مع
+      // مناسبات ثانية. لو ما فيه ربط بعد (رابط قديم)، نرجع للطريقة القديمة
+      // بمطابقة الثيم (style) عشان ما ينكسر شي شغال حاليًا.
+      const coupleEventCode = c.eventCode || "";
       const guests = responseDocs.filter((f) => {
         const status = f.status || "";
-        const docStyle = f.style || "";
-        if (docStyle !== template && docStyle !== slug) return false;
+        if (coupleEventCode) {
+          if ((f.eventCode || "") !== coupleEventCode) return false;
+        } else {
+          const docStyle = f.style || "";
+          if (docStyle !== template && docStyle !== slug) return false;
+        }
         return status === "yes" || status === "confirmed" || status === "نعم";
       });
 
@@ -202,6 +293,26 @@ exports.handler = async (event) => {
               const r = await sendVideoWhatsApp(g.phone, reminderVideoUrl, caption);
               r.ok ? reminderSent++ : reminderFailed++;
               await logSend(db, { eventId: slug, channel: "whatsapp", recipient: g.phone, guestName: name, type: "reminder", status: r.ok ? "sent" : "failed", failReason: r.error });
+
+              // فيديو التذكير وصل بنجاح → نرسل معه فورًا رسالة بأزرار
+              // "🎫 QR شخصي" و"✅ تأكيد الحضور"، ونسجّل جلسة انتظار
+              // عشان ai-webhook.js يربط ضغطة الزر بهذه المناسبة.
+              if (r.ok) {
+                const btnResult = await sendReminderButtons(g.phone, name, String(jsonDate));
+                if (btnResult.ok) {
+                  const normalizedPhone = normalizePhone(g.phone);
+                  const pendingDocId = normalizedPhone.replace(/[^0-9A-Za-z_-]/g, "").slice(0, 120);
+                  await db.collection("ai_pending_sessions").doc(pendingDocId).set({
+                    kind: "awaiting_reminder_action",
+                    slug,
+                    eventCode: coupleEventCode || "",
+                    guestName: name,
+                    guestPhone: normalizedPhone,
+                    timestamp: Date.now(),
+                    expiresAt: Date.now() + 3 * 24 * 60 * 60 * 1000,
+                  });
+                }
+              }
             }
             if (g.email) {
               const r = await sendVideoEmail(g.email, reminderVideoUrl, "تذكير بمناسبتنا 🌸", "تذكير بمناسبتنا 🌸", caption, "مشاهدة فيديو التذكير");
@@ -228,6 +339,26 @@ exports.handler = async (event) => {
               const r = await sendVideoWhatsApp(g.phone, thankYouVideoUrl, caption);
               r.ok ? thankYouSent++ : thankYouFailed++;
               await logSend(db, { eventId: slug, channel: "whatsapp", recipient: g.phone, guestName: name, type: "thank_you", status: r.ok ? "sent" : "failed", failReason: r.error });
+
+              // فيديو الشكر وصل بنجاح → نرسل معه فورًا رسالة التقييم
+              // بالزرين (مرفقة، مو استبيان منفصل بجدولة خاصة)، ونسجّل
+              // جلسة انتظار الرد عشان ai-webhook.js يربط ضغطة الزر
+              // بهذه المناسبة تحديدًا.
+              if (r.ok) {
+                const surveyResult = await sendSurveyButtons(g.phone);
+                if (surveyResult.ok) {
+                  const normalizedPhone = normalizePhone(g.phone);
+                  const pendingDocId = normalizedPhone.replace(/[^0-9A-Za-z_-]/g, "").slice(0, 120);
+                  await db.collection("ai_pending_sessions").doc(pendingDocId).set({
+                    kind: "awaiting_survey",
+                    slug,
+                    guestName: name,
+                    guestPhone: normalizedPhone,
+                    timestamp: Date.now(),
+                    expiresAt: Date.now() + 3 * 24 * 60 * 60 * 1000,
+                  });
+                }
+              }
             }
             if (g.email) {
               const r = await sendVideoEmail(g.email, thankYouVideoUrl, "شكرًا لحضوركم 🤍", "شكرًا لحضوركم 🤍", caption, "مشاهدة فيديو الشكر");

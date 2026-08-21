@@ -36,6 +36,14 @@ exports.handler = async (event) => {
     const couplesSnap = await getAdminDb().collection("couples").get();
     const couples = couplesSnap.docs.map((d) => ({ id: d.id, data: d.data() || {} }));
 
+    // مجموعة "events" (المناسبات الحقيقية) — نحتاجها هنا فقط عشان نقرأ
+    // reportEmail (بريد العميلة الخاص بهذي المناسبة تحديدًا، لو معبّى من
+    // dashboard/events.html) ونستخدمه بدل الإعداد العام لمن يستلم تقرير
+    // الـ٢٤-ساعة.
+    const eventsSnap = await getAdminDb().collection("events").get();
+    const eventsById = new Map();
+    eventsSnap.forEach((d) => eventsById.set(d.id, d.data() || {}));
+
     // 2) اقرأ جميع الردود — تحتاج صلاحية إدارية لأن قواعد الأمان تشترط
     // تسجيل دخول لقراءة "responses"
     const responsesSnap = await getAdminDb().collection("responses").get();
@@ -75,14 +83,23 @@ exports.handler = async (event) => {
       const diff = eventDate.getTime() - now;
       if (Math.abs(diff - TARGET_MS) > WINDOW_MS) continue;
 
-      eventsInWindow.push({ slug, template, jsonDate });
+      // نفس منطق video-scheduler.js: لو الرابط مربوط بمعرّف مناسبة حقيقي
+      // (couples/{slug}.eventCode) نفلتر بيه حصرًا، وإلا نرجع للطريقة
+      // القديمة بمطابقة الثيم (style) للروابط القديمة غير المربوطة بعد.
+      const coupleEventCode = couple.data.eventCode || "";
+      const eventReportEmail = coupleEventCode ? (eventsById.get(coupleEventCode)?.reportEmail || "") : "";
+      eventsInWindow.push({ slug, template, jsonDate, eventCode: coupleEventCode, reportEmail: eventReportEmail });
 
       if (provider) {
         const guests = [];
         for (const f of responseDocs) {
           const status = f.status || "";
-          const docStyle = f.style || "";
-          if (docStyle !== template && docStyle !== slug) continue;
+          if (coupleEventCode) {
+            if ((f.eventCode || "") !== coupleEventCode) continue;
+          } else {
+            const docStyle = f.style || "";
+            if (docStyle !== template && docStyle !== slug) continue;
+          }
           if (status !== "yes") continue;
           const phone = f.phone || "";
           if (!phone) continue;
@@ -103,33 +120,51 @@ exports.handler = async (event) => {
     }
 
     // 5) تقرير إيميل لصاحبة المناسبة/المدير قبل المناسبة بـ24 ساعة
+    //
+    // مهم: تقرير منفصل لكل مناسبة بحدودها الحقيقية (eventCode) — قبل كان
+    // fetchResponses() تُستدعى بدون معرّف، فترجع ردود كل المناسبات على
+    // الموقع مجتمعة بتقرير واحد، حتى لو مناسبة وحدة بس داخلة بنافذة الـ24
+    // ساعة. الروابط القديمة غير المربوطة بعد بمعرّف مناسبة حقيقي (eventCode)
+    // تكمل بنفس السلوك القديم (كل الردود) كتوافق رجعي مؤقت.
+    //
+    // المستلم: لو المناسبة عندها reportEmail خاص (events/{eventCode}.reportEmail
+    // من dashboard/events.html)، يُرسل التقرير لبريدها هي حصرًا. وإلا يُرسل
+    // للمستلمين العامين المعرَّفين بإعدادات الموقع (نفس السلوك القديم).
+    let emailReportsSent = 0;
     if (eventsInWindow.length) {
-      const { recipients, reportsCfg } = await resolveRecipients();
-      if (reportsCfg.before_event !== "off" && recipients.length) {
-        const { rows, total, yes, no, pending } = await fetchResponses();
+      const { recipients: globalRecipients, reportsCfg } = await resolveRecipients();
+      if (reportsCfg.before_event !== "off") {
         const dateStr = new Date().toLocaleDateString("ar-SA-u-nu-latn");
-        const eventsList = eventsInWindow.map(e => `- ${e.slug} (${e.jsonDate})`).join("\n");
 
-        const [excelBuf, pdfBuf] = await Promise.all([
-          buildExcelBuffer(rows),
-          buildPdfBuffer(rows, { total, yes, no, pending }, `تقرير ما قبل المناسبة بـ24 ساعة — ${dateStr}`),
-        ]);
+        for (const e of eventsInWindow) {
+          const toRecipients = e.reportEmail ? [e.reportEmail] : globalRecipients;
+          if (!toRecipients.length) continue; // ما فيه مين نرسل له هذي المناسبة، تخطّيها
 
-        const result = await sendReportEmail({
-          to: recipients,
-          subject: `تذكير: مناسبتكم غدًا — تقرير آخر الردود`,
-          text: `مناسبتكم بعد 24 ساعة تقريبًا:\n${eventsList}\n\nإجمالي: ${total} | مؤكد: ${yes} | معتذر: ${no} | لم يرد: ${pending}`,
-          html: `<div dir="rtl" style="font-family:Tahoma,Arial,sans-serif">مناسبتكم بعد 24 ساعة تقريبًا 🌸<br><br>إجمالي: ${total} | مؤكد: ${yes} | معتذر: ${no} | لم يرد: ${pending}<br><br>الملفات مرفقة بصيغتي Excel وPDF.</div>`,
-          attachments: [
-            { filename: `تقرير-قبل-المناسبة-${dateStr}.xlsx`, content: excelBuf },
-            { filename: `تقرير-قبل-المناسبة-${dateStr}.pdf`, content: pdfBuf },
-          ],
-        });
-        emailReportSent = !!result.sent;
+          const { rows, total, yes, no, pending } = await fetchResponses(e.eventCode || undefined);
+          const titleSuffix = e.eventCode ? `— ${e.slug}` : `— ${e.slug} (رابط غير مربوط بعد، الأرقام قد تشمل مناسبات أخرى بنفس القالب)`;
+
+          const [excelBuf, pdfBuf] = await Promise.all([
+            buildExcelBuffer(rows),
+            buildPdfBuffer(rows, { total, yes, no, pending }, `تقرير ما قبل المناسبة بـ24 ساعة ${titleSuffix} — ${dateStr}`),
+          ]);
+
+          const result = await sendReportEmail({
+            to: toRecipients,
+            subject: `تذكير: مناسبتكم غدًا (${e.slug}) — تقرير آخر الردود`,
+            text: `مناسبتكم بعد 24 ساعة تقريبًا (${e.jsonDate}):\n\nإجمالي: ${total} | مؤكد: ${yes} | معتذر: ${no} | لم يرد: ${pending}`,
+            html: `<div dir="rtl" style="font-family:Tahoma,Arial,sans-serif">مناسبتكم بعد 24 ساعة تقريبًا 🌸<br><br>إجمالي: ${total} | مؤكد: ${yes} | معتذر: ${no} | لم يرد: ${pending}<br><br>الملفات مرفقة بصيغتي Excel وPDF.</div>`,
+            attachments: [
+              { filename: `تقرير-قبل-المناسبة-${e.slug}-${dateStr}.xlsx`, content: excelBuf },
+              { filename: `تقرير-قبل-المناسبة-${e.slug}-${dateStr}.pdf`, content: pdfBuf },
+            ],
+          });
+          if (result.sent) emailReportsSent++;
+        }
+        emailReportSent = emailReportsSent > 0;
       }
     }
 
-    return { statusCode: 200, body: JSON.stringify({ sent: true, totalSmsSent, emailReportSent, eventsInWindow: eventsInWindow.length }) };
+    return { statusCode: 200, body: JSON.stringify({ sent: true, totalSmsSent, emailReportSent, emailReportsSent, eventsInWindow: eventsInWindow.length }) };
   } catch (err) {
     return { statusCode: 200, body: JSON.stringify({ sent: false, error: 'error' }) };
   }

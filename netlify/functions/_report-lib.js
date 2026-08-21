@@ -73,9 +73,16 @@ async function resolveRecipients() {
 }
 
 // ===== 2) قراءة الردود من Firestore =====
-async function fetchResponses() {
+// eventId اختياري: إذا انمرر، التقرير يقتصر على مناسبة واحدة فقط بدل كل
+// المناسبات مجتمعة (هذا هو الفرق بين "تقرير مناسبة" و"تقرير الموقع كامل").
+async function fetchResponses(eventId) {
   const db = getAdminDb();
-  const snap = await db.collection("responses").get();
+  let ref = db.collection("responses");
+  // ملاحظة: الحقل الحقيقي المخزَّن على مستندات "responses" اسمه eventCode
+  // (شوفي submit-rsvp.js) — وليس eventId. كانت هذي الفلترة تكتب دايمًا
+  // صفر نتائج لأن الحقل غلط، حتى مع تمرير eventId صحيح.
+  if (eventId) ref = ref.where("eventCode", "==", eventId);
+  const snap = await ref.get();
 
   const rows = [];
   let yes = 0, no = 0, pending = 0;

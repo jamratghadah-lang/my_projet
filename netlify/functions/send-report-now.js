@@ -48,34 +48,45 @@ exports.handler = async (event) => {
     return { statusCode: 429, headers: cors, body: JSON.stringify({ error: "طلبات كثيرة — حاولي بعد دقائق" }) };
   }
 
+  // eventId اختياري يوصل من زر "إرسال التقرير الآن" — إذا مُرسل، التقرير
+  // يقتصر على مناسبة واحدة بس (بدل خلط كل المناسبات ببعض بتقرير واحد،
+  // وهي كانت المشكلة الأصلية).
+  let eventId = null, eventName = "";
+  try {
+    const body = event.body ? JSON.parse(event.body) : {};
+    eventId = body.eventId || null;
+    eventName = (body.eventName || "").trim();
+  } catch { /* body فاضي أو غير صالح — نكمل بدون تحديد مناسبة */ }
+
   try {
     const { recipients } = await resolveRecipients();
     if (!recipients.length) {
       return { statusCode: 200, headers: cors, body: JSON.stringify({ sent: false, reason: "NO_RECIPIENT_CONFIGURED" }) };
     }
 
-    const { rows, total, yes, no, pending } = await fetchResponses();
+    const { rows, total, yes, no, pending } = await fetchResponses(eventId);
     const dateStr = new Date().toLocaleDateString("ar-SA-u-nu-latn");
-    const subject = `تقرير فوري — ${dateStr} (${total} مدعو)`;
+    const label = eventName ? `تقرير — ${eventName}` : "تقرير فوري (كل المناسبات)";
+    const subject = `${label} — ${dateStr} (${total} مدعو)`;
 
     const [excelBuf, pdfBuf] = await Promise.all([
       buildExcelBuffer(rows),
-      buildPdfBuffer(rows, { total, yes, no, pending }, `تقرير فوري — ${dateStr}`),
+      buildPdfBuffer(rows, { total, yes, no, pending }, `${label} — ${dateStr}`),
     ]);
 
     const result = await sendReportEmail({
       to: recipients,
       subject,
-      text: `تقرير فوري بطلب من لوحة التحكم — ${dateStr}\nإجمالي: ${total} | مؤكد: ${yes} | معتذر: ${no} | لم يرد: ${pending}`,
-      html: `<div dir="rtl" style="font-family:Tahoma,Arial,sans-serif">تقرير فوري بطلب من لوحة التحكم — ${dateStr}<br>الملفات مرفقة بصيغتي Excel وPDF.</div>`,
+      text: `${label} بطلب من لوحة التحكم — ${dateStr}\nإجمالي: ${total} | مؤكد: ${yes} | معتذر: ${no} | لم يرد: ${pending}`,
+      html: `<div dir="rtl" style="font-family:Tahoma,Arial,sans-serif">${label} بطلب من لوحة التحكم — ${dateStr}<br>الملفات مرفقة بصيغتي Excel وPDF.</div>`,
       attachments: [
-        { filename: `تقرير-فوري-${dateStr}.xlsx`, content: excelBuf },
-        { filename: `تقرير-فوري-${dateStr}.pdf`, content: pdfBuf },
+        { filename: `${eventName ? "تقرير-" + eventName : "تقرير-فوري"}-${dateStr}.xlsx`, content: excelBuf },
+        { filename: `${eventName ? "تقرير-" + eventName : "تقرير-فوري"}-${dateStr}.pdf`, content: pdfBuf },
       ],
     });
 
-    return { statusCode: 200, headers: cors, body: JSON.stringify({ ...result, total, yes, no, pending }) };
+    return { statusCode: 200, headers: cors, body: JSON.stringify({ ...result, total, yes, no, pending, eventId, eventName }) };
   } catch (err) {
-    return { statusCode: 200, headers: cors, body: JSON.stringify({ sent: false, error: "error" }) };
+    return { statusCode: 200, headers: cors, body: JSON.stringify({ sent: false, error: err && err.message ? err.message : "error" }) };
   }
 };

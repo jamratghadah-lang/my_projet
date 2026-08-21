@@ -1,5 +1,12 @@
 // netlify/functions/post-event-survey.js
 //
+// ⚠️ غير مُجدولة حاليًا (أُلغي سطرها من netlify.toml). رسالة تقييم
+// الرضا صارت تُرسل تلقائيًا من video-scheduler.js مباشرة مع فيديو
+// الشكر (بزرين "🤍 رائعة" / "📝 فيه ملاحظة"، نفس اللحظة، بلا استبيان
+// منفصل). هذا الملف باقٍ كنسخة احتياطية يدوية فقط (استدعاء بـ
+// x-cron-secret لو احتجناه لاحقًا) — منطقه القديم (رسالة نصية حرة)
+// غير مرتبط بالتدفق التلقائي الحالي.
+//
 // دالة مُجدولة (كل ساعة) تفحص المناسبات المنتهية وترسل استبيان رضا
 // تلقائي عبر واتساب لكل ضيف أكّد حضوره (status = "yes").
 //
@@ -140,12 +147,13 @@ exports.handler = async (event) => {
       const diff = targetTime - now;
       if (Math.abs(diff) > WINDOW_MS) continue; // لسا ما وصل وقت الإرسال
 
-      // اجمعي الضيوف المؤكدين لهذي المناسبة
-      const responsesSnap = await db
-        .collection("responses")
-        .where("style", "==", template)
-        .where("status", "==", "yes")
-        .get();
+      // اجمعي الضيوف المؤكدين لهذي المناسبة — لو الرابط مربوط بمعرّف
+      // مناسبة حقيقي (eventCode) نفلتر بيه حصرًا (أدق، ما يتأثر بمشاركة
+      // القالب مع مناسبات ثانية)، وإلا نرجع للطريقة القديمة بالثيم.
+      const coupleEventCode = coupleData.eventCode || "";
+      const responsesSnap = coupleEventCode
+        ? await db.collection("responses").where("eventCode", "==", coupleEventCode).where("status", "==", "yes").get()
+        : await db.collection("responses").where("style", "==", template).where("status", "==", "yes").get();
 
       let sentForThisEvent = 0;
       for (const rDoc of responsesSnap.docs) {

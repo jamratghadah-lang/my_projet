@@ -14,6 +14,9 @@ function headers(event) {
 }
 function json(statusCode, h, body) { return { statusCode, headers: h, body: JSON.stringify(body) }; }
 function validSlug(slug) { return /^[A-Za-z0-9_-]{1,128}$/.test(slug); }
+// eventCode = معرّف مستند حقيقي بمجموعة "events" (Firestore auto-id) —
+// نفس صيغة validSlug تكفي للتحقق منه.
+function validEventCode(v) { return /^[A-Za-z0-9_-]{1,128}$/.test(v); }
 
 exports.handler = async (event) => {
   const h = headers(event);
@@ -30,6 +33,15 @@ exports.handler = async (event) => {
       : (() => { try { return String(JSON.parse(event.body || '{}').slug || '').trim(); } catch { return ''; } })();
     if (!validSlug(requestSlug)) return json(400, h, { error: 'Invalid slug' });
 
+    // eventCode (اختياري) = المعرّف الحقيقي للمناسبة (من couples/{slug}.eventCode
+    // اللي يبعته الفرونت). لو موجود وصحيح، نستخدمه هو الفلتر الرئيسي بدل
+    // slug (اسم القالب المشترك بين عدة مناسبات) — عشان ما تختلط تعليقات
+    // مناسبتين تستخدمن نفس القالب.
+    const requestEventCode = event.httpMethod === 'GET'
+      ? String(event.queryStringParameters?.eventCode || '').trim()
+      : (() => { try { return String(JSON.parse(event.body || '{}').eventCode || '').trim(); } catch { return ''; } })();
+    const hasEventCode = requestEventCode && validEventCode(requestEventCode);
+
     // Rate limit is per IP *and* per event (slug), enforced via Firestore so it
     // holds across all function instances — same shared mechanism used by
     // checkin.js / notify-rsvp.js / send-bulk.js, not a per-instance in-memory map.
@@ -38,7 +50,9 @@ exports.handler = async (event) => {
 
     if (event.httpMethod === 'GET') {
       const slug = requestSlug;
-      const snap = await db.collection('guest_wall').where('slug', '==', slug).limit(50).get();
+      const snap = hasEventCode
+        ? await db.collection('guest_wall').where('eventCode', '==', requestEventCode).limit(50).get()
+        : await db.collection('guest_wall').where('slug', '==', slug).limit(50).get();
       const docs = snap.docs.map(d => {
         const x = d.data() || {};
         return { name: String(x.name || '').slice(0, 120), message: String(x.message || '').slice(0, 2000), createdAt: x.createdAt?.toMillis?.() || 0 };
@@ -54,9 +68,14 @@ exports.handler = async (event) => {
     if (!validSlug(slug) || !name || name.length > 120 || !message || message.length > 2000) {
       return json(400, h, { error: 'بيانات الرسالة غير صالحة' });
     }
+    // eventCode بالـ POST نفس منطق الـ GET: اختياري، ونتحقق من صيغته لو انبعث.
+    const postEventCode = String(body.eventCode || '').trim();
+    const hasPostEventCode = postEventCode && validEventCode(postEventCode);
+
     // The wall is intentionally server-mediated. Only accept fields needed by the public UI.
     await db.collection('guest_wall').add({
       slug,
+      ...(hasPostEventCode ? { eventCode: postEventCode } : {}),
       name,
       message,
       createdAt: require('firebase-admin').firestore.FieldValue.serverTimestamp(),

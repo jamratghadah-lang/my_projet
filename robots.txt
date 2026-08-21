@@ -2,6 +2,7 @@ User-agent: *
 Allow: /
 Disallow: /admin/
 Disallow: /dashboard/
+Disallow: /checkin.html
 Disallow: /rsvp/
 Disallow: /rsvp.html
 
