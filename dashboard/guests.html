@@ -134,6 +134,9 @@
 <option value="no">معتذر</option>
 <option value="pending">لم يرد</option>
 </select>
+<select id="filterEvent">
+<option value="all">كل المناسبات</option>
+</select>
 <button class="btn btn-excel" id="exportExcel">📊 Excel</button>
 <button class="btn btn-pdf" id="exportPdf">📄 PDF</button>
 </div>
@@ -147,6 +150,7 @@
 <input id="showArchived" type="checkbox"/> إظهار المؤرشفين
     </label>
 </div>
+<div class="msg-status err" id="allEventsWarning" style="display:none">⚠️ محددة "كل المناسبات" — الإرسال الجماعي معطّل لتجنّب إرسال رسالة لضيوف من مناسبات مختلفة بالغلط. اختاري مناسبة محددة من القائمة فوق لتفعيل الإرسال.</div>
 <div class="table-wrap">
 <table id="guestTable">
 <thead>
@@ -157,6 +161,7 @@
 <th>الهاتف</th>
 <th>البريد</th>
 <th>الحالة</th>
+<th>المناسبة</th>
 <th>عدد الضيوف</th>
 <th class="col-table">طاولة</th>
 <th class="col-seat">مقعد</th>
@@ -168,7 +173,7 @@
 </tr>
 </thead>
 <tbody id="guestBody">
-<tr><td class="empty" colspan="14">جارِ التحميل...</td></tr>
+<tr><td class="empty" colspan="15">جارِ التحميل...</td></tr>
 </tbody>
 </table>
 </div>
@@ -303,6 +308,35 @@ import {
 let allGuests = [];
 let unsub = null;
 let selectedIds = new Set();
+let eventsMap = {}; // eventId (=eventCode) -> اسم المناسبة
+
+// ===== تحميل قائمة المناسبات لتعبئة قائمة التصفية =====
+async function loadEvents() {
+  const filterEvent = document.getElementById("filterEvent");
+  try {
+    const snap = await getDocs(collection(db, "events"));
+    const opts = [];
+    snap.forEach((d) => {
+      eventsMap[d.id] = d.data().name || d.id;
+      opts.push({ id: d.id, name: d.data().name || d.id });
+    });
+    opts.sort((a, b) => a.name.localeCompare(b.name, "ar"));
+    opts.forEach((o) => {
+      const opt = document.createElement("option");
+      opt.value = o.id;
+      opt.textContent = o.name;
+      filterEvent.appendChild(opt);
+    });
+  } catch (e) {
+    console.error("تعذّر تحميل قائمة المناسبات:", e);
+  }
+  // لو بيانات الضيوف كانت وصلت قبل أسماء المناسبات، حدّثي الأسماء المعروضة الآن
+  if (allGuests.length) {
+    allGuests.forEach((g) => { g.eventName = g.eventId ? (eventsMap[g.eventId] || g.eventId) : "بدون مناسبة"; });
+    renderTable();
+  }
+}
+loadEvents();
 
 // نفس دالة توليد الكود المستخدمة بنماذج RSVP بالموقع (js/rsvp-live.js)
 // عشان أي ضيف نضيفه يدويًا يشتغل بنفس نظام QR وتشيك-إن الموجود.
@@ -322,12 +356,15 @@ requireLogin(() => {
       let status = "pending";
       if (r.status === "yes" || r.attending === true || r.status === "يحضر") status = "yes";
       else if (r.status === "no" || r.attending === false || r.status === "يعتذر") status = "no";
+      const eventId = r.eventCode || r.eventSlug || "";
       allGuests.push({
         id: d.id,
         name: r.name || "—",
         phone: r.phone || "—",
         email: r.email || "",
         status,
+        eventId,
+        eventName: eventId ? (eventsMap[eventId] || eventId) : "بدون مناسبة",
         guests: r.guests || "—",
         table: r.table || "",
         seat: r.seat || "",
@@ -343,7 +380,7 @@ requireLogin(() => {
     updateStats();
     renderTable();
   }, () => {
-    document.getElementById("guestBody").innerHTML = '<tr><td colspan="14" class="empty">تعذّر تحميل البيانات</td></tr>';
+    document.getElementById("guestBody").innerHTML = '<tr><td colspan="15" class="empty">تعذّر تحميل البيانات</td></tr>';
   });
 });
 
@@ -407,22 +444,26 @@ document.getElementById("fieldsSave").addEventListener("click", async () => {
 
 // ===== Stats =====
 function updateStats() {
-  const visible = allGuests.filter(g => !g.archived);
+  const eventId = document.getElementById("filterEvent").value;
+  const base = eventId === "all" ? allGuests : allGuests.filter(g => g.eventId === eventId);
+  const visible = base.filter(g => !g.archived);
   document.getElementById("statTotal").textContent = visible.length;
   document.getElementById("statYes").textContent = visible.filter(g => g.status === "yes").length;
   document.getElementById("statNo").textContent = visible.filter(g => g.status === "no").length;
   document.getElementById("statPending").textContent = visible.filter(g => g.status === "pending").length;
-  document.getElementById("statArchived").textContent = allGuests.filter(g => g.archived).length;
+  document.getElementById("statArchived").textContent = base.filter(g => g.archived).length;
 }
 
 // ===== Filter + Search =====
 function getFiltered() {
   const q = document.getElementById("searchInput").value.trim().toLowerCase();
   const filter = document.getElementById("filterStatus").value;
+  const eventId = document.getElementById("filterEvent").value;
   const showArchived = document.getElementById("showArchived").checked;
   return allGuests.filter(g => {
     if (!showArchived && g.archived) return false;
     if (filter !== "all" && g.status !== filter) return false;
+    if (eventId !== "all" && g.eventId !== eventId) return false;
     if (q && !g.name.toLowerCase().includes(q) && !String(g.phone).toLowerCase().includes(q)) return false;
     return true;
   });
@@ -448,7 +489,7 @@ function renderTable() {
   updateSendButton();
 
   if (!list.length) {
-    body.innerHTML = '<tr><td colspan="14" class="empty">لا يوجد مدعوين مطابقين</td></tr>';
+    body.innerHTML = '<tr><td colspan="15" class="empty">لا يوجد مدعوين مطابقين</td></tr>';
     hint.textContent = "";
     return;
   }
@@ -469,6 +510,7 @@ function renderTable() {
       <td dir="ltr" style="text-align:right">${escapeHtml(g.phone)}</td>
       <td dir="ltr" style="text-align:right">${escapeHtml(g.email || "—")}</td>
       <td><span class="badge ${s.cls}">${s.text}</span></td>
+      <td>${escapeHtml(g.eventName)}</td>
       <td>${escapeHtml(String(g.guests))}</td>
       <td class="col-table">${escapeHtml(g.table || "—")}</td>
       <td class="col-seat">${escapeHtml(g.seat || "—")}</td>
@@ -518,14 +560,22 @@ function renderTable() {
 }
 
 function updateSendButton() {
+  const eventId = document.getElementById("filterEvent").value;
+  const isAllEvents = eventId === "all";
+  document.getElementById("allEventsWarning").style.display = isAllEvents ? "block" : "none";
   document.getElementById("selCount").textContent = selectedIds.size;
-  document.getElementById("openSendModal").disabled = selectedIds.size === 0;
+  document.getElementById("openSendModal").disabled = selectedIds.size === 0 || isAllEvents;
   updateBulkDeleteButton();
 }
 
 document.getElementById("searchInput").addEventListener("input", renderTable);
 document.getElementById("filterStatus").addEventListener("change", renderTable);
 document.getElementById("showArchived").addEventListener("change", renderTable);
+document.getElementById("filterEvent").addEventListener("change", () => {
+  selectedIds.clear(); // تغيير المناسبة يفرّغ التحديد عشان ما ينبقى ضيوف من مناسبة سابقة محددين بالغلط
+  updateStats();
+  renderTable();
+});
 document.getElementById("selectAll").addEventListener("change", (e) => {
   const list = getFiltered();
   if (e.target.checked) list.forEach(g => selectedIds.add(g.id));
@@ -540,12 +590,13 @@ document.getElementById("exportExcel").addEventListener("click", () => {
   const rows = list.map((g, i) => ({
     "#": i + 1, "الاسم": g.name, "الهاتف": g.phone, "البريد": g.email || "—",
     "الحالة": g.status === "yes" ? "مؤكد الحضور" : g.status === "no" ? "معتذر" : "لم يرد",
+    "المناسبة": g.eventName,
     "عدد الضيوف": g.guests, "طاولة": g.table || "—", "مقعد": g.seat || "—", "بوابة": g.gate || "—",
     "القالب": g.style, "التاريخ": g.date,
     "مؤرشف": g.archived ? "نعم" : "لا",
   }));
   const ws = XLSX.utils.json_to_sheet(rows);
-  ws["!cols"] = [{ wch: 5 }, { wch: 25 }, { wch: 18 }, { wch: 22 }, { wch: 14 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 18 }, { wch: 22 }, { wch: 9 }];
+  ws["!cols"] = [{ wch: 5 }, { wch: 25 }, { wch: 18 }, { wch: 22 }, { wch: 14 }, { wch: 18 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 18 }, { wch: 22 }, { wch: 9 }];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "المدعوين");
   XLSX.writeFile(wb, "قائمة-المدعوين.xlsx");
@@ -562,10 +613,10 @@ document.getElementById("exportPdf").addEventListener("click", () => {
   const body = list.map((g, i) => [
     String(i + 1), g.name, g.phone, g.email || "—",
     g.status === "yes" ? "Confirmed" : g.status === "no" ? "Declined" : "No Response",
-    String(g.guests), g.style, g.date,
+    g.eventName, String(g.guests), g.style, g.date,
   ]);
   docPdf.autoTable({
-    head: [["#", "Name", "Phone", "Email", "Status", "Guests", "Template", "Date"]],
+    head: [["#", "Name", "Phone", "Email", "Status", "Event", "Guests", "Template", "Date"]],
     body, startY: 50, styles: { fontSize: 9, cellPadding: 4 },
     headStyles: { fillColor: [212, 175, 55], textColor: 255 },
     alternateRowStyles: { fillColor: [245, 245, 245] },
@@ -732,7 +783,9 @@ document.getElementById("importConfirm").addEventListener("click", async () => {
 // ===================== نافذة الإرسال الجماعي =====================
 const sendModalBg = document.getElementById("sendModalBg");
 document.getElementById("openSendModal").addEventListener("click", () => {
-  document.getElementById("sendCountLabel").textContent = selectedIds.size;
+  const eventId = document.getElementById("filterEvent").value;
+  const eventName = eventId !== "all" ? (eventsMap[eventId] || eventId) : "";
+  document.getElementById("sendCountLabel").textContent = selectedIds.size + (eventName ? ` — مناسبة: ${eventName}` : "");
   document.getElementById("sendMessage").value = "";
   document.getElementById("sendImageUrl").value = "";
   document.getElementById("sendVideoUrl").value = "";
@@ -755,6 +808,17 @@ document.getElementById("ctVideo").addEventListener("change", (e) => {
 
 document.getElementById("sendConfirm").addEventListener("click", async () => {
   const msgEl = document.getElementById("sendStatusMsg");
+
+  // حماية إضافية: تمنع الإرسال لو المحددين ينتمون لأكثر من مناسبة (حتى لو صار خلل بالواجهة)
+  const selectedEventIds = new Set(
+    [...selectedIds].map(id => allGuests.find(g => g.id === id)?.eventId || "")
+  );
+  if (selectedEventIds.size > 1) {
+    msgEl.textContent = "الضيوف المحددين من أكثر من مناسبة — اختاري مناسبة واحدة من قائمة التصفية أولاً";
+    msgEl.className = "msg-status err";
+    return;
+  }
+
   const message = document.getElementById("sendMessage").value.trim();
   const subject = document.getElementById("sendSubject").value.trim();
   const channel = document.querySelector('input[name="channel"]:checked').value;

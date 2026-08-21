@@ -39,6 +39,10 @@
   .row-main{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
   .warn-badge{font-size:11px;padding:2px 8px;border-radius:20px;background:#3a2a10;color:#e0b95a;border:1px solid #5a4315}
   .ok-badge{font-size:11px;padding:2px 8px;border-radius:20px;background:#16301a;color:#7ac97f;border:1px solid #275a2f}
+  .link-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:1px dashed #2a2a2a}
+  .link-row select{width:auto;flex:1;min-width:180px;margin-bottom:0;font-size:12px;padding:6px}
+  .link-row button{font-size:12px;padding:6px 10px}
+  .link-save-status{font-size:11px;color:#8ecb8e}
   .video-panel{display:none;margin-top:12px;padding-top:12px;border-top:1px dashed #333}
   .video-panel.open{display:block}
   .video-panel label{font-size:12px}
@@ -84,6 +88,16 @@
     <option value="conference">conference</option>
   </select>
 
+  <label for="eventSelect">المناسبة الحقيقية المرتبطة بهذا الرابط</label>
+  <select id="eventSelect">
+    <option value="">جارِ تحميل المناسبات...</option>
+  </select>
+  <div class="hint">
+    هذا هو الربط اللي يمنع اختلاط هالمناسبة بمناسبة ثانية تستخدم نفس القالب
+    (بحائط التعليقات، التذكير، الشكر، التقارير). لو ما اخترتِ مناسبة، الرابط
+    يشتغل بالطريقة القديمة (حسب القالب فقط) — تقدرين تربطينه لاحقًا من القائمة تحت.
+  </div>
+
   <button id="saveBtn">حفظ الرابط</button>
   <span id="status"></span>
 </div>
@@ -96,7 +110,7 @@
 <script type="module">
 import {
   db, requireLogin,
-  collection, getDocs, doc, getDoc, setDoc, deleteDoc, serverTimestamp, deleteField,
+  collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, deleteField, query, orderBy,
 } from "../js/firebase-init.js";
 
 requireLogin(() => { loadList(); });
@@ -186,6 +200,55 @@ const slugInput = document.getElementById("slugInput");
 const previewLine = document.getElementById("previewLine");
 const statusEl = document.getElementById("status");
 const listWrap = document.getElementById("listWrap");
+const eventSelect = document.getElementById("eventSelect");
+
+let eventsCache = new Map();
+
+async function ensureEventsCache() {
+  if (eventsCache.size) return eventsCache;
+  try {
+    const q = query(collection(db, "events"), orderBy("createdAt", "desc"));
+    const snap = await getDocs(q);
+    snap.forEach((d) => eventsCache.set(d.id, d.data() || {}));
+  } catch {
+    /* لو تعذّر التحميل، تبقى القائمة فاضية — العناصر تتعامل مع الحالة دي */
+  }
+  return eventsCache;
+}
+
+function formatEventLabel(id, ev) {
+  const name = ev.name || "بدون اسم";
+  const client = ev.client ? ` — ${ev.client}` : "";
+  const date = ev.date ? ` (${ev.date})` : "";
+  return `${name}${client}${date}`;
+}
+
+function buildEventOptions(selectEl, selectedValue) {
+  selectEl.innerHTML = "";
+  const noneOpt = document.createElement("option");
+  noneOpt.value = "";
+  noneOpt.textContent = "— بدون ربط الآن (طريقة قديمة، حسب القالب) —";
+  selectEl.appendChild(noneOpt);
+  eventsCache.forEach((ev, id) => {
+    const opt = document.createElement("option");
+    opt.value = id;
+    opt.textContent = formatEventLabel(id, ev);
+    selectEl.appendChild(opt);
+  });
+  if (selectedValue && eventsCache.has(selectedValue)) selectEl.value = selectedValue;
+}
+
+async function loadEventsIntoSelect(selectEl, selectedValue) {
+  selectEl.innerHTML = '<option value="">جارِ تحميل المناسبات...</option>';
+  await ensureEventsCache();
+  if (!eventsCache.size) {
+    selectEl.innerHTML = '<option value="">لا توجد مناسبات — أنشئي واحدة من صفحة المناسبات أولاً</option>';
+    return;
+  }
+  buildEventOptions(selectEl, selectedValue);
+}
+
+loadEventsIntoSelect(eventSelect, "");
 
 function normalizeSlug(v) {
   return v.trim().toLowerCase()
@@ -208,15 +271,21 @@ function setStatus(msg, ok) {
 document.getElementById("saveBtn").addEventListener("click", async () => {
   const slug = normalizeSlug(slugInput.value);
   const template = document.getElementById("templateSelect").value;
+  const eventCode = eventSelect.value || "";
   if (!slug) { setStatus("اكتبي الجزء اللي تبين يظهر بالرابط أول.", false); return; }
   if (RESERVED.includes(slug)) { setStatus("هذا الاسم محجوز، جربي اسم ثاني.", false); return; }
 
   try {
     const existing = await getDoc(doc(db, "couples", slug));
     if (existing.exists()) { setStatus("فيه رابط بنفس الاسم موجود مسبقًا.", false); return; }
-    await setDoc(doc(db, "couples", slug), { template, createdAt: serverTimestamp() });
-    setStatus("تم حفظ الرابط ✓", true);
+    await setDoc(doc(db, "couples", slug), {
+      template,
+      ...(eventCode ? { eventCode } : {}),
+      createdAt: serverTimestamp(),
+    });
+    setStatus(eventCode ? "تم حفظ الرابط ومربوط بالمناسبة ✓" : "تم حفظ الرابط (بدون ربط بمناسبة بعد) ✓", true);
     slugInput.value = "";
+    eventSelect.value = "";
     previewLine.textContent = "الرابط بيصير: jamratghadah.com/sara-ahmed";
     loadList();
   } catch (e) {
@@ -227,9 +296,10 @@ document.getElementById("saveBtn").addEventListener("click", async () => {
 async function loadList() {
   listWrap.innerHTML = '<li class="empty">جارِ التحميل...</li>';
   try {
-    const snap = await getDocs(collection(db, "couples"));
+    const [snap] = await Promise.all([getDocs(collection(db, "couples")), ensureEventsCache()]);
     if (snap.empty) { listWrap.innerHTML = '<li class="empty">ما فيه روابط مخصصة بعد.</li>'; return; }
     listWrap.innerHTML = "";
+    const couplesDataBySlug = new Map();
     // هروب HTML لمنع XSS من قيم قد تُحقن بمسار الإدارة (template/slug)
     const esc = (s) => {
       const d = document.createElement("div");
@@ -238,8 +308,13 @@ async function loadList() {
     };
     snap.forEach((d) => {
       const data = d.data();
+      couplesDataBySlug.set(d.id, data);
       const slugEsc = esc(d.id);
       const tplEsc = esc(data.template || "");
+      const linkedEventCode = data.eventCode || "";
+      const linkedEventLabel = linkedEventCode && eventsCache.has(linkedEventCode)
+        ? esc(formatEventLabel(linkedEventCode, eventsCache.get(linkedEventCode)))
+        : "";
       // نتحقق أن الرابط آمن (https/http) قبل حقنه في href لتفادي javascript: URLs
       const url = `${SITE_ORIGIN}/${d.id}`;
       const safeUrl = /^https?:\/\//.test(url) ? url : "#";
@@ -250,6 +325,9 @@ async function loadList() {
       const thankYouUrl = esc(data.thankYouVideoUrl || "");
       const reminderHrs = data.reminderHoursBefore || "";
       const thankYouHrs = data.thankYouHoursAfter || "";
+      const linkBadge = linkedEventCode
+        ? `<span class="ok-badge" title="${linkedEventLabel}">✅ مربوط: ${linkedEventLabel}</span>`
+        : `<span class="warn-badge">⚠️ غير مربوط — قد يختلط بمناسبات ثانية بنفس القالب</span>`;
       li.innerHTML = `
         <div class="row-wrap">
           <div class="row-main">
@@ -264,6 +342,12 @@ async function loadList() {
               <button class="video-btn" data-toggle="${slugEsc}">🎥 فيديو التذكير والشكر</button>
               <button class="del-btn" data-id="${slugEsc}">حذف</button>
             </div>
+          </div>
+          <div class="link-row">
+            ${linkBadge}
+            <select class="linkEventSelect" data-slug="${slugEsc}"></select>
+            <button type="button" class="link-save-btn" data-slug="${slugEsc}">ربط/تحديث</button>
+            <span class="link-save-status" data-slug="${slugEsc}"></span>
           </div>
           <div class="video-panel" id="panel-${slugEsc}">
             <div class="invite-note">🎬 فيديو الدعوة نفسه (مو التذكير/الشكر) يُدار من صفحة <a href="events.html" target="_blank">المناسبات</a> — بنفس اسم المناسبة.</div>
@@ -351,6 +435,30 @@ async function loadList() {
         if (!confirm("تأكيد إعادة الإرسال؟ سيُرسل الفيديو تلقائيًا مرة أخرى بموعد الجدولة القادم.")) return;
         await setDoc(doc(db, "couples", b.dataset.slug), { [b.dataset.field]: deleteField() }, { merge: true });
         loadList();
+      });
+    });
+    listWrap.querySelectorAll(".linkEventSelect").forEach((sel) => {
+      const slug = sel.dataset.slug;
+      const currentEventCode = couplesDataBySlug.get(slug)?.eventCode || "";
+      buildEventOptions(sel, currentEventCode);
+    });
+    listWrap.querySelectorAll(".link-save-btn").forEach((b) => {
+      b.addEventListener("click", async () => {
+        const slug = b.dataset.slug;
+        const sel = listWrap.querySelector(`.linkEventSelect[data-slug="${slug}"]`);
+        const st = listWrap.querySelector(`.link-save-status[data-slug="${slug}"]`);
+        const chosenEventCode = sel.value || "";
+        try {
+          await setDoc(
+            doc(db, "couples", slug),
+            { eventCode: chosenEventCode || deleteField() },
+            { merge: true }
+          );
+          st.textContent = chosenEventCode ? "تم الربط ✓" : "تم إلغاء الربط";
+          loadList();
+        } catch (e) {
+          st.textContent = "تعذر الحفظ";
+        }
       });
     });
     wireVideoUploadButtons(listWrap);

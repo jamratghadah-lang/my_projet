@@ -105,13 +105,16 @@
 <div class="field"><label for="wa-phoneId">Phone Number ID</label><input dir="ltr" id="wa-phoneId" placeholder="100234567890" type="text"/></div>
 <div class="field"><label for="wa-token">Access Token</label><input dir="ltr" id="wa-token" placeholder="EAAxxxxxxxxxx" type="password"/></div>
 <div class="field"><label for="wa-bizId">Business Account ID</label><input dir="ltr" id="wa-bizId" placeholder="123456789012345" type="text"/></div>
+<div class="field"><label for="wa-verifyToken">Webhook Verify Token</label><input dir="ltr" id="wa-verifyToken" placeholder="verify-token-من-اختيارك" type="password"/><div class="hint">نفس القيمة اللي تحطينها في إعدادات الـ Webhook بمنصة Meta</div></div>
+<div class="field"><label for="wa-appSecret">App Secret</label><input dir="ltr" id="wa-appSecret" placeholder="xxxxxxxxxx" type="password"/><div class="hint">لتوقيع طلبات الـ Webhook والتحقق من صحتها (X-Hub-Signature)</div></div>
+<div class="field"><div class="note">💾 يُحفظ هنا ويُزامَن تلقائيًا مع متغيرات بيئة Netlify — ما يحتاج تكرار الإدخال هناك</div></div>
 <div class="card-actions">
 <div class="toggle-wrap">
 <label class="toggle"><input id="wa-enabled" type="checkbox"/><span class="slider"></span></label>
         تفعيل
       </div>
 <button class="btn btn-blue btn-sm" onclick="window._testIntegration('whatsapp')">🧪 اختبار الاتصال</button>
-<button class="btn btn-gold btn-sm" onclick="window._saveIntegration('whatsapp')">💾 حفظ</button>
+<button class="btn btn-gold btn-sm" onclick="window._saveIntegration('whatsapp')">💾 حفظ ومزامنة</button>
 </div>
 <div class="msg-status" id="msg-whatsapp"></div>
 <div class="last-updated" id="updated-whatsapp"></div>
@@ -125,15 +128,17 @@
 </div>
 <span class="badge disabled" id="badge-msegat">معطّل</span>
 </div>
+<div class="field"><label for="msegat-username">Username</label><input dir="ltr" id="msegat-username" placeholder="username" type="text"/></div>
 <div class="field"><label for="msegat-key">API Key</label><input dir="ltr" id="msegat-key" placeholder="xxxxxxxxxx" type="password"/></div>
 <div class="field"><label for="msegat-sender">Sender Name</label><input dir="ltr" id="msegat-sender" placeholder="JAMRAT" type="text"/></div>
+<div class="field"><div class="note">💾 يُزامَن تلقائيًا مع متغيرات بيئة Netlify</div></div>
 <div class="card-actions">
 <div class="toggle-wrap">
 <label class="toggle"><input id="msegat-enabled" type="checkbox"/><span class="slider"></span></label>
         تفعيل
       </div>
 <button class="btn btn-blue btn-sm" onclick="window._testIntegration('msegat')">🧪 اختبار</button>
-<button class="btn btn-gold btn-sm" onclick="window._saveIntegration('msegat')">💾 حفظ</button>
+<button class="btn btn-gold btn-sm" onclick="window._saveIntegration('msegat')">💾 حفظ ومزامنة</button>
 </div>
 <div class="msg-status" id="msg-msegat"></div>
 <div class="last-updated" id="updated-msegat"></div>
@@ -147,15 +152,16 @@
 </div>
 <span class="badge disabled" id="badge-unifonic">معطّل</span>
 </div>
-<div class="field"><label for="unifonic-appId">App ID</label><input dir="ltr" id="unifonic-appId" placeholder="xxxxxxxxxx" type="text"/></div>
-<div class="field"><label for="unifonic-token">Auth Token</label><input dir="ltr" id="unifonic-token" placeholder="xxxxxxxxxx" type="password"/></div>
+<div class="field"><label for="unifonic-appId">App SID</label><input dir="ltr" id="unifonic-appId" placeholder="xxxxxxxxxx" type="text"/></div>
+<div class="field"><label for="unifonic-senderId">Sender ID</label><input dir="ltr" id="unifonic-senderId" placeholder="JAMRAT" type="text"/></div>
+<div class="field"><div class="note">💾 يُزامَن تلقائيًا مع متغيرات بيئة Netlify</div></div>
 <div class="card-actions">
 <div class="toggle-wrap">
 <label class="toggle"><input id="unifonic-enabled" type="checkbox"/><span class="slider"></span></label>
         تفعيل
       </div>
 <button class="btn btn-blue btn-sm" onclick="window._testIntegration('unifonic')">🧪 اختبار</button>
-<button class="btn btn-gold btn-sm" onclick="window._saveIntegration('unifonic')">💾 حفظ</button>
+<button class="btn btn-gold btn-sm" onclick="window._saveIntegration('unifonic')">💾 حفظ ومزامنة</button>
 </div>
 <div class="msg-status" id="msg-unifonic"></div>
 <div class="last-updated" id="updated-unifonic"></div>
@@ -172,13 +178,14 @@
 <div class="field"><label for="twilio-sid">Account SID</label><input dir="ltr" id="twilio-sid" placeholder="ACxxxxxxxxxx" type="text"/></div>
 <div class="field"><label for="twilio-token">Auth Token</label><input dir="ltr" id="twilio-token" placeholder="xxxxxxxxxx" type="password"/></div>
 <div class="field"><label for="twilio-from">From Number</label><input dir="ltr" id="twilio-from" placeholder="+1234567890" type="text"/></div>
+<div class="field"><div class="note">💾 يُزامَن تلقائيًا مع متغيرات بيئة Netlify</div></div>
 <div class="card-actions">
 <div class="toggle-wrap">
 <label class="toggle"><input id="twilio-enabled" type="checkbox"/><span class="slider"></span></label>
         تفعيل
       </div>
 <button class="btn btn-blue btn-sm" onclick="window._testIntegration('twilio')">🧪 اختبار</button>
-<button class="btn btn-gold btn-sm" onclick="window._saveIntegration('twilio')">💾 حفظ</button>
+<button class="btn btn-gold btn-sm" onclick="window._saveIntegration('twilio')">💾 حفظ ومزامنة</button>
 </div>
 <div class="msg-status" id="msg-twilio"></div>
 <div class="last-updated" id="updated-twilio"></div>
@@ -236,19 +243,21 @@
 <div class="card" id="card-gemini">
 <div class="card-header">
 <div>
-<h2>Gemini AI</h2>
-<div class="subtitle">مساعد الضيف الذكي — Google Gemini API</div>
+<h2>الذكاء الاصطناعي — Groq + Z.ai</h2>
+<div class="subtitle">مساعد الضيف الذكي — Groq أساسي، Z.ai احتياطي عند التعطل</div>
 </div>
 <span class="badge disabled" id="badge-gemini">معطّل</span>
 </div>
-<div class="field"><label for="gem-apiKey">API Key</label><input dir="ltr" id="gem-apiKey" placeholder="AIza..." type="password"/></div>
+<div class="field"><label for="ai-groqKey">Groq API Key</label><input dir="ltr" id="ai-groqKey" placeholder="gsk_..." type="password"/></div>
+<div class="field"><label for="ai-zaiKey">Z.ai API Key</label><input dir="ltr" id="ai-zaiKey" placeholder="xxxxxxxxxx" type="password"/><div class="hint">يُستخدم تلقائيًا إذا فشل الاتصال بـ Groq</div></div>
+<div class="field"><div class="note">💾 يُزامَن تلقائيًا مع متغيرات بيئة Netlify</div></div>
 <div class="card-actions">
 <div class="toggle-wrap">
 <label class="toggle"><input id="gem-enabled" type="checkbox"/><span class="slider"></span></label>
         تفعيل
       </div>
 <button class="btn btn-blue btn-sm" onclick="window._testGemini()">🧪 اختبار الاتصال</button>
-<button class="btn btn-gold btn-sm" onclick="window._saveIntegration('gemini')">💾 حفظ</button>
+<button class="btn btn-gold btn-sm" onclick="window._saveIntegration('gemini')">💾 حفظ ومزامنة</button>
 </div>
 <div class="msg-status" id="msg-gemini"></div>
 <div class="last-updated" id="updated-gemini"></div>
@@ -295,23 +304,23 @@ function formatTime(ts) {
 
 // Field definitions per integration
 const fieldMap = {
-  whatsapp: ['wa-phoneId', 'wa-token', 'wa-bizId'],
-  msegat: ['msegat-key', 'msegat-sender'],
-  unifonic: ['unifonic-appId', 'unifonic-token'],
+  whatsapp: ['wa-phoneId', 'wa-token', 'wa-bizId', 'wa-verifyToken', 'wa-appSecret'],
+  msegat: ['msegat-username', 'msegat-key', 'msegat-sender'],
+  unifonic: ['unifonic-appId', 'unifonic-senderId'],
   twilio: ['twilio-sid', 'twilio-token', 'twilio-from'],
   smtp: ['smtp-host', 'smtp-port', 'smtp-user', 'smtp-pass', 'smtp-from'],
   cloudinary: ['cl-cloudName', 'cl-apiKey', 'cl-apiSecret', 'cl-preset'],
-  gemini: ['gem-apiKey'],
+  gemini: ['ai-groqKey', 'ai-zaiKey'],
 };
 
 const keyMap = {
-  whatsapp: { 'wa-phoneId': 'phoneNumberId', 'wa-token': 'accessToken', 'wa-bizId': 'businessAccountId' },
-  msegat: { 'msegat-key': 'apiKey', 'msegat-sender': 'senderName' },
-  unifonic: { 'unifonic-appId': 'appId', 'unifonic-token': 'authToken' },
+  whatsapp: { 'wa-phoneId': 'phoneNumberId', 'wa-token': 'accessToken', 'wa-bizId': 'businessAccountId', 'wa-verifyToken': 'verifyToken', 'wa-appSecret': 'appSecret' },
+  msegat: { 'msegat-username': 'username', 'msegat-key': 'apiKey', 'msegat-sender': 'senderName' },
+  unifonic: { 'unifonic-appId': 'appId', 'unifonic-senderId': 'senderId' },
   twilio: { 'twilio-sid': 'accountSid', 'twilio-token': 'authToken', 'twilio-from': 'fromNumber' },
   smtp: { 'smtp-host': 'host', 'smtp-port': 'port', 'smtp-user': 'user', 'smtp-pass': 'password', 'smtp-from': 'fromEmail' },
   cloudinary: { 'cl-cloudName': 'cloudName', 'cl-apiKey': 'apiKey', 'cl-apiSecret': 'apiSecret', 'cl-preset': 'uploadPreset' },
-  gemini: { 'gem-apiKey': 'apiKey' },
+  gemini: { 'ai-groqKey': 'groqApiKey', 'ai-zaiKey': 'zaiApiKey' },
 };
 
 const enabledMap = {
@@ -323,6 +332,11 @@ const enabledMap = {
   cloudinary: 'cl-enabled',
   gemini: 'gem-enabled',
 };
+
+// Cards whose values are also pushed live to Netlify's real environment
+// variables (the ones ai-webhook.js / send-whatsapp.js / etc. actually read).
+// Must match ENV_FIELD_MAP keys in netlify/functions/save-secrets.js.
+const NETLIFY_SYNCED_KEYS = new Set(['whatsapp', 'msegat', 'unifonic', 'twilio', 'gemini']);
 
 // ===== Load existing configs =====
 requireLogin(async () => {
@@ -520,8 +534,40 @@ window._saveIntegration = async function(key) {
 
   try {
     await setDoc(doc(db, "integration_configs", key), data);
-    msgEl.textContent = 'تم الحفظ بنجاح ✅';
-    msgEl.className = 'msg-status ok';
+
+    if (!NETLIFY_SYNCED_KEYS.has(key)) {
+      msgEl.textContent = 'تم الحفظ بنجاح ✅';
+      msgEl.className = 'msg-status ok';
+    } else {
+      msgEl.textContent = 'تم الحفظ — جارِ المزامنة مع Netlify...';
+      // Raw field-id -> value map, as save-secrets.js expects
+      const rawFields = {};
+      fields && Object.keys(fields).forEach(elemId => {
+        rawFields[elemId] = document.getElementById(elemId).value;
+      });
+      try {
+        const idToken = await auth.currentUser.getIdToken();
+        const res = await fetch('/.netlify/functions/save-secrets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+          body: JSON.stringify({ key, fields: rawFields }),
+        });
+        const syncData = await res.json();
+        if (!res.ok) {
+          msgEl.textContent = 'تم الحفظ محليًا لكن تعذّرت المزامنة مع Netlify: ' + (syncData.error || 'خطأ غير معروف');
+          msgEl.className = 'msg-status err';
+        } else {
+          msgEl.textContent = syncData.deployTriggered
+            ? '✅ تم الحفظ والمزامنة — يُعاد نشر الموقع الآن (دقيقة أو دقيقتين حتى تعمل المفاتيح)'
+            : '✅ تم الحفظ والمزامنة، لكن تعذّر بدء إعادة النشر تلقائيًا — أعيدي النشر يدويًا من Netlify';
+          msgEl.className = 'msg-status ok';
+        }
+      } catch (syncErr) {
+        msgEl.textContent = 'تم الحفظ محليًا لكن تعذّرت المزامنة مع Netlify: ' + syncErr.message;
+        msgEl.className = 'msg-status err';
+      }
+    }
+
     const el = document.getElementById('updated-' + key);
     if (el) el.textContent = 'آخر تحديث: الآن';
   } catch (e) {
@@ -561,7 +607,7 @@ window._testIntegration = async function(key) {
         body.senderName = document.getElementById('msegat-sender').value;
       } else if (key === 'unifonic') {
         body.appId = document.getElementById('unifonic-appId').value;
-        body.authToken = document.getElementById('unifonic-token').value;
+        body.senderId = document.getElementById('unifonic-senderId').value;
       } else if (key === 'twilio') {
         body.accountSid = document.getElementById('twilio-sid').value;
         body.authToken = document.getElementById('twilio-token').value;

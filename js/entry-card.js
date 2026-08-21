@@ -281,7 +281,7 @@
     });
   }
 
-  function openWall(slug, guestName) {
+  function openWall(slug, guestName, eventCode) {
     injectStyles();
     let overlay = document.getElementById("jg-wall-overlay");
     if (overlay) overlay.remove();
@@ -340,7 +340,7 @@
     closeBtn.addEventListener("click", close);
     overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
 
-    fetch(`/.netlify/functions/guest-wall?slug=${encodeURIComponent(slug)}`)
+    fetch(`/.netlify/functions/guest-wall?slug=${encodeURIComponent(slug)}${eventCode ? `&eventCode=${encodeURIComponent(eventCode)}` : ""}`)
       .then(r => r.ok ? r.json() : Promise.reject(new Error("wall")))
       .then(data => renderWallList(listEl, Array.isArray(data.items) ? data.items : []))
       .catch(() => renderWallList(listEl, []));
@@ -370,7 +370,7 @@
       fetch("/.netlify/functions/notify-wall-message", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug, name, message, isPrivate }),
+        body: JSON.stringify({ slug, eventCode, name, message, isPrivate }),
       }).catch(() => {});
 
       if (isPrivate) {
@@ -385,7 +385,7 @@
       fetch("/.netlify/functions/guest-wall", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug, name, message }),
+        body: JSON.stringify({ slug, eventCode, name, message }),
       }).then(r => r.ok ? r.json() : Promise.reject(new Error("wall"))).then(() => {
         msgInput.value = "";
         submitBtn.disabled = false;
@@ -436,7 +436,7 @@
     }
   }
 
-  function showCard(data, guestName, slug, entryCode) {
+  function showCard(data, guestName, slug, entryCode, eventCode) {
     // إعدادات الأمان تُقرأ من مفتاح "security" (لوحة التحكم)، مع دعم المفتاح
     // القديم "entry_card" لأي بيانات محفوظة سابقًا للتوافق الرجعي.
     const cfg = Object.assign({}, data.entry_card || {}, data.security || {});
@@ -452,13 +452,13 @@
         if (!res.ok && res.reason === "another_device") {
           showDeviceLockedMessage();
         } else {
-          doShowCard(data, guestName, slug, cfg, ff, wallEnabled, entryCode);
+          doShowCard(data, guestName, slug, cfg, ff, wallEnabled, entryCode, eventCode);
         }
       });
       return;
     }
 
-    doShowCard(data, guestName, slug, cfg, ff, wallEnabled, entryCode);
+    doShowCard(data, guestName, slug, cfg, ff, wallEnabled, entryCode, eventCode);
   }
 
   function showDeviceLockedMessage() {
@@ -477,7 +477,7 @@
     document.body.appendChild(overlay);
   }
 
-  function doShowCard(data, guestName, slug, cfg, ff, wallEnabled, entryCode) {
+  function doShowCard(data, guestName, slug, cfg, ff, wallEnabled, entryCode, eventCode) {
 
     let overlay = document.getElementById("jg-ec-overlay");
     if (overlay) overlay.remove();
@@ -502,7 +502,7 @@
     closeBtn2.addEventListener("click", close);
     overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
 
-    if (wallEnabled) wallBtn.addEventListener("click", () => openWall(slug, guestName));
+    if (wallEnabled) wallBtn.addEventListener("click", () => openWall(slug, guestName, eventCode));
 
     // جلب رقم الطاولة/المقعد/البوابة من بيانات الضيف (لو معبّأة ومفعّلة من
     // لوحة التحكم) وإضافتها لبطاقة الدخول. غير حرج: أي فشل هنا ما يؤثر
@@ -619,7 +619,7 @@
         .then(([data, qr]) => {
           // QR/entry card is feature-gated by the event's effective package setting.
           if (!qr.qrEnabled) return;
-          showCard(data, (ev.detail && ev.detail.guestName) || "", slug, entryCode);
+          showCard(data, (ev.detail && ev.detail.guestName) || "", slug, entryCode, eventCode);
         })
         .catch(() => {});
     });

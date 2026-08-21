@@ -60,7 +60,7 @@
   <div class="empty" id="customEmpty">ما أنشأتي أي رمز مخصص لسا</div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="../js/qrcode.min.js"></script>
 <script type="module">
 import { auth, signOut, requireLogin } from "../js/firebase-init.js";
 requireLogin(() => {});
@@ -79,8 +79,9 @@ const base = origin + "/rsvp/";
 function qrItem(name, url) {
   const wrap = document.createElement("div");
   wrap.className = "qr-item";
-  const canvas = document.createElement("canvas");
-  wrap.appendChild(canvas);
+  const qrHolder = document.createElement("div");
+  qrHolder.style.cssText = "background:#fff;border-radius:6px;display:flex;align-items:center;justify-content:center;overflow:hidden;";
+  wrap.appendChild(qrHolder);
   const nameEl = document.createElement("div");
   nameEl.className = "name";
   nameEl.textContent = name;
@@ -101,13 +102,26 @@ function qrItem(name, url) {
   dl.textContent = "تحميل PNG";
   dl.className = "secondary";
   dl.addEventListener("click", () => {
+    const img = qrHolder.querySelector("img");
+    const canvas = qrHolder.querySelector("canvas");
+    const src = (img && img.src) ? img.src : (canvas ? canvas.toDataURL("image/png") : null);
+    if (!src) return;
     const a = document.createElement("a");
     a.download = name.replace(/\s+/g, "-") + "-qr.png";
-    a.href = canvas.toDataURL("image/png");
+    a.href = src;
     a.click();
   });
   wrap.appendChild(dl);
-  QRCode.toCanvas(canvas, url, { width: 240, margin: 1, color: { dark: "#2B2118", light: "#FFFFFF" } });
+
+  // مكتبة QR محلية (js/qrcode.min.js) — لا تعتمد على أي رابط CDN خارجي
+  new QRCode(qrHolder, {
+    text: url,
+    width: 240,
+    height: 240,
+    colorDark: "#2B2118",
+    colorLight: "#FFFFFF",
+    correctLevel: QRCode.CorrectLevel.M,
+  });
   return wrap;
 }
 

@@ -278,6 +278,7 @@
 <div class="field"><label for="evName">اسم الفعالية *</label><input id="evName" placeholder="مثال: حفل زفاف سارة" type="text"/></div>
 <div class="field"><label for="evClient">العميل / العميلة *</label><input id="evClient" placeholder="اسم العميل" type="text"/></div>
 <div class="field"><label for="evPhone">هاتف العميل</label><input dir="ltr" id="evPhone" placeholder="05xxxxxxxx" type="text"/></div>
+<div class="field"><label for="evReportEmail">بريد العميلة (تُرسل له تقارير هذي المناسبة تحديدًا)</label><input dir="ltr" id="evReportEmail" placeholder="client@example.com" type="email"/></div>
 <div class="field"><label for="evDate">تاريخ الفعالية</label><input dir="ltr" id="evDate" type="date"/></div>
 <div class="field"><label for="evTime">الوقت</label><input dir="ltr" id="evTime" type="time"/></div>
 <div class="field"><label for="evLocation">الموقع</label><input id="evLocation" placeholder="اسم القاعة أو الموقع" type="text"/></div>
@@ -570,7 +571,7 @@ const eventModalBg = document.getElementById("eventModalBg");
 document.getElementById("openAddModal").addEventListener("click", () => {
   editingEventId = null;
   document.getElementById("eventModalTitle").textContent = "إضافة فعالية";
-  ["evName","evClient","evPhone","evDate","evTime","evLocation","evInviteVideo","evEmailBg","evEmailHeadline","evEmailButtonText","evEmailBody","evNotes"].forEach(id => document.getElementById(id).value = "");
+  ["evName","evClient","evPhone","evReportEmail","evDate","evTime","evLocation","evInviteVideo","evEmailBg","evEmailHeadline","evEmailButtonText","evEmailBody","evNotes"].forEach(id => document.getElementById(id).value = "");
   document.getElementById("evPackage").value = "";
   document.getElementById("evQrOverride").value = "auto";
   document.getElementById("evMsg").textContent = "";
@@ -591,6 +592,7 @@ function openEditModal(id) {
   document.getElementById("evName").value = ev.name;
   document.getElementById("evClient").value = ev.client;
   document.getElementById("evPhone").value = ev.phone;
+  document.getElementById("evReportEmail").value = ev.reportEmail || "";
   document.getElementById("evDate").value = ev.date;
   document.getElementById("evTime").value = ev.time;
   document.getElementById("evLocation").value = ev.location;
@@ -611,6 +613,8 @@ document.getElementById("evSave").addEventListener("click", async () => {
   const name = document.getElementById("evName").value.trim().slice(0, 200);
   const client = document.getElementById("evClient").value.trim().slice(0, 200);
   const phone = document.getElementById("evPhone").value.trim().slice(0, 30);
+  const reportEmailRaw = document.getElementById("evReportEmail").value.trim().slice(0, 200);
+  const reportEmail = reportEmailRaw && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(reportEmailRaw) ? reportEmailRaw : "";
   const date = document.getElementById("evDate").value;
   const time = document.getElementById("evTime").value;
   const location = document.getElementById("evLocation").value.trim().slice(0, 300);
@@ -630,16 +634,17 @@ document.getElementById("evSave").addEventListener("click", async () => {
 
   if (!name) { msgEl.textContent = "اسم الفعالية مطلوب"; msgEl.className = "msg-status err"; return; }
   if (!client) { msgEl.textContent = "اسم العميل مطلوب"; msgEl.className = "msg-status err"; return; }
+  if (reportEmailRaw && !reportEmail) { msgEl.textContent = "صيغة بريد العميلة غير صحيحة"; msgEl.className = "msg-status err"; return; }
 
   const btn = document.getElementById("evSave");
   btn.disabled = true;
   try {
     if (editingEventId) {
-      await updateDoc(doc(db, "events", editingEventId), { name, client, phone, date, time, location, notes, packageId, packageName, qrOverride, invitationDelivery });
+      await updateDoc(doc(db, "events", editingEventId), { name, client, phone, reportEmail, date, time, location, notes, packageId, packageName, qrOverride, invitationDelivery });
       msgEl.textContent = "تم التعديل"; msgEl.className = "msg-status ok";
     } else {
       await addDoc(collection(db, "events"), {
-        name, client, phone, date, time, location, notes, packageId, packageName, qrOverride, invitationDelivery,
+        name, client, phone, reportEmail, date, time, location, notes, packageId, packageName, qrOverride, invitationDelivery,
         status: "preparing",
         guests: 0, confirmed: 0, attended: 0,
         closeChecklist: null,

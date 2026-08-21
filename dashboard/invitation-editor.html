@@ -81,14 +81,38 @@
   .inv-preview{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px 20px;text-align:center;position:relative;transition:background .3s}
   .inv-preview .bg-img{position:absolute;inset:0;background-size:cover;background-position:center;opacity:.6;z-index:0}
   .inv-preview .bg-overlay{position:absolute;inset:0;z-index:1}
-  .inv-preview .inv-content{position:relative;z-index:2;width:100%}
-  .inv-preview .ornament{font-size:22px;margin-bottom:12px;opacity:.8}
+  .inv-preview .inv-content{position:absolute;inset:0;z-index:2;width:100%;height:100%}
+  .inv-preview .ornament{font-size:22px;opacity:.8}
   .inv-preview .inv-event-name{font-size:22px;font-weight:bold;margin:0 0 8px;line-height:1.4}
-  .inv-preview .inv-divider{width:60px;height:2px;margin:10px auto;opacity:.6}
-  .inv-preview .inv-welcome{font-size:13px;line-height:1.7;margin:10px 0;opacity:.9}
-  .inv-preview .inv-details{margin-top:14px;font-size:12px;line-height:2;opacity:.85}
+  .inv-preview .inv-divider{width:60px;height:2px;margin:10px auto 0}
+  .inv-preview .inv-welcome{font-size:13px;line-height:1.7}
+  .inv-preview .inv-details{font-size:12px;line-height:2}
   .inv-preview .inv-details span{display:block}
-  .inv-preview .inv-footer{margin-top:20px;font-size:11px;opacity:.5}
+  .inv-preview .inv-footer{font-size:11px;opacity:.5}
+
+  /* ===== Draggable text blocks (full position control) ===== */
+  .drag-block{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:88%;
+    cursor:move;touch-action:none;padding:6px 8px;border-radius:8px;user-select:none;
+    transition:box-shadow .15s;}
+  .drag-block:hover{box-shadow:0 0 0 1px rgba(212,175,55,.5)}
+  .drag-block.selected{box-shadow:0 0 0 2px #d4af37}
+  .drag-block.dragging{box-shadow:0 0 0 2px #fff;z-index:9}
+  .edit-hint{font-size:11px;color:#888;margin:8px 0 0;text-align:center;line-height:1.6}
+
+  /* ===== Custom colors toggle ===== */
+  .custom-colors-toggle{display:flex;align-items:center;gap:8px;margin:10px 0 4px;font-size:12.5px;color:#ddd;cursor:pointer}
+  .custom-colors-grid{display:none;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+  .custom-colors-grid.show{display:grid}
+  .color-field{display:flex;flex-direction:column;gap:4px}
+  .color-field label{font-size:11px;color:#999}
+  .color-field input[type=color]{height:36px;padding:2px;cursor:pointer}
+
+  /* ===== Selected-element panel ===== */
+  .element-panel{background:#1c1c1c;border:1px solid #d4af37;border-radius:10px;padding:16px;margin-top:16px;display:none}
+  .element-panel.show{display:block}
+  .element-panel .el-title{font-size:12.5px;color:#d4af37;margin-bottom:10px;font-weight:bold}
+  .element-panel label{display:block;font-size:12px;color:#aaa;margin-bottom:5px}
+  .element-panel .el-actions{display:flex;gap:8px;margin-top:10px}
 
   /* ===== Toast ===== */
   .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#333;color:#fff;padding:12px 24px;border-radius:10px;font-size:13px;z-index:1100;opacity:0;transition:all .35s ease;pointer-events:none;border:1px solid #555}
@@ -164,6 +188,36 @@
 <div class="field">
 <label>مخطط الألوان</label>
 <div class="schemes-grid" id="schemesGrid"></div>
+<label class="custom-colors-toggle"><input id="useCustomColors" type="checkbox"/> تخصيص الألوان يدويًا (يتجاوز المخطط أعلاه)</label>
+<div class="custom-colors-grid" id="customColorsGrid">
+<div class="color-field"><label for="colorPrimary">اللون الأساسي (العنوان)</label><input id="colorPrimary" type="color" value="#d4af37"/></div>
+<div class="color-field"><label for="colorSecondary">اللون الثانوي</label><input id="colorSecondary" type="color" value="#111111"/></div>
+<div class="color-field"><label for="colorText">لون النص</label><input id="colorText" type="color" value="#ffffff"/></div>
+<div class="color-field"><label for="colorBackground">لون الخلفية</label><input id="colorBackground" type="color" value="#1a1a1a"/></div>
+</div>
+</div>
+<div class="field">
+<label for="fontFamily">نوع الخط</label>
+<select id="fontFamily">
+<option value="Aref Ruqaa">أريف رقعة (Aref Ruqaa)</option>
+<option value="Amiri">أميري (Amiri)</option>
+<option value="Cairo">القاهرة (Cairo)</option>
+<option value="Tajawal">تجول (Tajawal)</option>
+<option value="Reem Kufi">ريم كوفي (Reem Kufi)</option>
+<option value="Lalezar">لالزار (Lalezar)</option>
+<option value="Rakkas">رقّاص (Rakkas)</option>
+<option value="Markazi Text">مركزي (Markazi Text)</option>
+</select>
+</div>
+<div class="edit-hint">💡 اضغطي مطولاً على أي نص بالمعاينة واسحبيه لتحريكه لأي مكان تبينه. اضغطي عليه ضغطة عادية لتغيير شفافيته.</div>
+<div class="element-panel" id="elementPanel">
+<div class="el-title" id="elTitle">العنصر المحدد</div>
+<label for="elOpacity">الشفافية: <span id="elOpacityValue">100%</span></label>
+<input id="elOpacity" max="100" min="10" step="5" type="range" value="100"/>
+<div class="el-actions">
+<button class="btn btn-outline" id="elResetPos" type="button">↺ إعادة الموضع الافتراضي</button>
+<button class="btn btn-outline" id="elClose" type="button">إغلاق</button>
+</div>
 </div>
 <div class="actions-row">
 <button class="btn btn-gold" id="saveBtn">💾 حفظ التخصيص</button>
@@ -180,15 +234,17 @@
 <div class="bg-img" id="previewBgImg"></div>
 <div class="bg-overlay" id="previewBgOverlay"></div>
 <div class="inv-content">
-<div class="ornament" id="previewOrnament">✦ ✦ ✦</div>
+<div class="ornament drag-block" data-el="ornament" id="previewOrnament">✦ ✦ ✦</div>
+<div class="drag-block" data-el="nameGroup" id="previewNameGroup">
 <div class="inv-event-name" id="previewEventName">اسم المناسبة</div>
 <div class="inv-divider" id="previewDivider"></div>
-<div class="inv-welcome" id="previewWelcome">رسالة الترحيب ستظهر هنا</div>
-<div class="inv-details">
+</div>
+<div class="inv-welcome drag-block" data-el="welcome" id="previewWelcome">رسالة الترحيب ستظهر هنا</div>
+<div class="inv-details drag-block" data-el="details" id="previewDetails">
 <span id="previewDate">📅 —</span>
 <span id="previewLocation">📍 —</span>
 </div>
-<div class="inv-footer">جمرة غضى للدعوات</div>
+<div class="inv-footer drag-block" data-el="footer" id="previewFooter">جمرة غضى للدعوات</div>
 </div>
 </div>
 </div>
@@ -260,10 +316,51 @@ const COLOR_SCHEMES = {
   }
 };
 
+// ===== Fonts (same set used across rsvp/entry-card pages) =====
+const FONT_MAP = {
+  "Aref Ruqaa": { css: "'Aref Ruqaa', serif", google: "Aref+Ruqaa:wght@400;700" },
+  "Amiri": { css: "'Amiri', serif", google: "Amiri:wght@400;700" },
+  "Cairo": { css: "'Cairo', sans-serif", google: "Cairo:wght@400;700" },
+  "Tajawal": { css: "'Tajawal', sans-serif", google: "Tajawal:wght@400;700" },
+  "Reem Kufi": { css: "'Reem Kufi', sans-serif", google: "Reem+Kufi:wght@400;700" },
+  "Lalezar": { css: "'Lalezar', cursive", google: "Lalezar" },
+  "Rakkas": { css: "'Rakkas', cursive", google: "Rakkas" },
+  "Markazi Text": { css: "'Markazi Text', serif", google: "Markazi+Text:wght@400;700" }
+};
+function loadFont(name) {
+  const info = FONT_MAP[name] || FONT_MAP["Aref Ruqaa"];
+  const id = "jg-editor-font-" + info.google.split(":")[0];
+  if (!document.getElementById(id)) {
+    const link = document.createElement("link");
+    link.id = id;
+    link.rel = "stylesheet";
+    link.href = "https://fonts.googleapis.com/css2?family=" + info.google + "&display=swap";
+    document.head.appendChild(link);
+  }
+  return info.css;
+}
+
+// ===== Default text positions (% of preview area, center-anchored) =====
+const DEFAULT_POSITIONS = {
+  ornament: { x: 50, y: 14 },
+  nameGroup: { x: 50, y: 30 },
+  welcome: { x: 50, y: 48 },
+  details: { x: 50, y: 68 },
+  footer: { x: 50, y: 92 }
+};
+function freshElementStyles() {
+  const o = {};
+  for (const k in DEFAULT_POSITIONS) o[k] = { x: DEFAULT_POSITIONS[k].x, y: DEFAULT_POSITIONS[k].y, opacity: 100 };
+  return o;
+}
+
 // ===== State =====
 let currentEventId = null;
 let currentScheme = 'classic_gold';
 let eventsList = [];
+let elementStyles = freshElementStyles();
+let selectedEl = null;
+let dragState = null;
 
 // ===== XSS Protection =====
 function escapeHtml(s) {
@@ -307,9 +404,84 @@ function renderSwatches() {
   }
 }
 
+// ===== Custom (manual) colors, override the preset scheme when enabled =====
+function useCustomColorsActive() {
+  return document.getElementById('useCustomColors').checked;
+}
+function getCustomColors() {
+  return {
+    primary: document.getElementById('colorPrimary').value,
+    secondary: document.getElementById('colorSecondary').value,
+    text: document.getElementById('colorText').value,
+    background: document.getElementById('colorBackground').value
+  };
+}
+
+// ===== Apply saved position/opacity to each draggable text block =====
+function applyElementStyles() {
+  document.querySelectorAll('.drag-block').forEach(block => {
+    const key = block.dataset.el;
+    const st = elementStyles[key] || DEFAULT_POSITIONS[key];
+    block.style.left = st.x + '%';
+    block.style.top = st.y + '%';
+    block.style.opacity = String((st.opacity != null ? st.opacity : 100) / 100);
+  });
+}
+
+// ===== Selected-element panel =====
+function openElementPanel(key) {
+  selectedEl = key;
+  document.querySelectorAll('.drag-block').forEach(b => b.classList.toggle('selected', b.dataset.el === key));
+  const names = { ornament: 'الزخرفة العلوية ✦', nameGroup: 'اسم المناسبة', welcome: 'رسالة الترحيب', details: 'التاريخ والمكان', footer: 'الفوتر' };
+  document.getElementById('elTitle').textContent = 'العنصر المحدد: ' + (names[key] || key);
+  const st = elementStyles[key] || DEFAULT_POSITIONS[key];
+  document.getElementById('elOpacity').value = st.opacity != null ? st.opacity : 100;
+  document.getElementById('elOpacityValue').textContent = (st.opacity != null ? st.opacity : 100) + '%';
+  document.getElementById('elementPanel').classList.add('show');
+}
+function closeElementPanel() {
+  selectedEl = null;
+  document.querySelectorAll('.drag-block').forEach(b => b.classList.remove('selected'));
+  document.getElementById('elementPanel').classList.remove('show');
+}
+
+// ===== Drag-to-position wiring (pointer events cover mouse + touch) =====
+function wireDraggable() {
+  document.querySelectorAll('.drag-block').forEach(block => {
+    block.addEventListener('pointerdown', (e) => {
+      const container = document.getElementById('invPreview');
+      const rect = container.getBoundingClientRect();
+      dragState = { key: block.dataset.el, startX: e.clientX, startY: e.clientY, moved: false, rect };
+      block.setPointerCapture(e.pointerId);
+      block.classList.add('dragging');
+    });
+    block.addEventListener('pointermove', (e) => {
+      if (!dragState || dragState.key !== block.dataset.el) return;
+      const dx = e.clientX - dragState.startX;
+      const dy = e.clientY - dragState.startY;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) dragState.moved = true;
+      if (!dragState.moved) return;
+      const rect = dragState.rect;
+      const xPct = Math.min(95, Math.max(5, ((e.clientX - rect.left) / rect.width) * 100));
+      const yPct = Math.min(97, Math.max(3, ((e.clientY - rect.top) / rect.height) * 100));
+      const st = elementStyles[block.dataset.el] || (elementStyles[block.dataset.el] = { opacity: 100 });
+      st.x = xPct; st.y = yPct;
+      block.style.left = xPct + '%';
+      block.style.top = yPct + '%';
+    });
+    block.addEventListener('pointerup', (e) => {
+      block.classList.remove('dragging');
+      if (dragState && dragState.key === block.dataset.el) {
+        if (!dragState.moved) openElementPanel(block.dataset.el); // plain click = select, no drag = opacity panel
+        dragState = null;
+      }
+    });
+  });
+}
+
 // ===== Update Live Preview =====
 function updatePreview() {
-  const scheme = COLOR_SCHEMES[currentScheme];
+  const scheme = useCustomColorsActive() ? getCustomColors() : COLOR_SCHEMES[currentScheme];
   const eventName = document.getElementById('eventName').value || 'اسم المناسبة';
   const date = document.getElementById('eventDate').value;
   const location = document.getElementById('eventLocation').value;
@@ -375,6 +547,18 @@ function updatePreview() {
 
   // Details
   preview.querySelector('.inv-details').style.color = scheme.text;
+
+  // Font family
+  const fontKey = document.getElementById('fontFamily').value;
+  preview.style.fontFamily = loadFont(fontKey);
+
+  // Custom colors grid visibility
+  document.getElementById('customColorsGrid').classList.toggle('show', useCustomColorsActive());
+  document.getElementById('schemesGrid').style.opacity = useCustomColorsActive() ? '.4' : '1';
+  document.getElementById('schemesGrid').style.pointerEvents = useCustomColorsActive() ? 'none' : 'auto';
+
+  // Per-element position + opacity
+  applyElementStyles();
 }
 
 // ===== Load Events Dropdown =====
@@ -419,6 +603,10 @@ async function loadCustomization(eventId) {
   document.getElementById('bgOpacity').value = '30';
   document.getElementById('bgOpacityValue').textContent = '30%';
   currentScheme = 'classic_gold';
+  document.getElementById('fontFamily').value = 'Aref Ruqaa';
+  document.getElementById('useCustomColors').checked = false;
+  elementStyles = freshElementStyles();
+  closeElementPanel();
 
   // Load event data for defaults
   const eventRef = doc(db, 'events', eventId);
@@ -447,6 +635,23 @@ async function loadCustomization(eventId) {
       if (c.colorScheme && COLOR_SCHEMES[c.colorScheme]) {
         currentScheme = c.colorScheme;
       }
+      if (c.fontFamily && FONT_MAP[c.fontFamily]) {
+        document.getElementById('fontFamily').value = c.fontFamily;
+      }
+      if (c.useCustomColors) {
+        document.getElementById('useCustomColors').checked = true;
+        if (c.customColors) {
+          if (c.customColors.primary) document.getElementById('colorPrimary').value = c.customColors.primary;
+          if (c.customColors.secondary) document.getElementById('colorSecondary').value = c.customColors.secondary;
+          if (c.customColors.text) document.getElementById('colorText').value = c.customColors.text;
+          if (c.customColors.background) document.getElementById('colorBackground').value = c.customColors.background;
+        }
+      }
+      if (c.textStyles) {
+        for (const key in DEFAULT_POSITIONS) {
+          if (c.textStyles[key]) elementStyles[key] = { ...DEFAULT_POSITIONS[key], ...c.textStyles[key] };
+        }
+      }
     }
   } catch (e) {
     console.error('Error loading customization:', e);
@@ -470,12 +675,26 @@ async function saveCustomization() {
   statusEl.className = 'save-status';
 
   const scheme = COLOR_SCHEMES[currentScheme];
+  // تصحيح رابط الصورة تلقائيًا: روابط ملصوقة من بعض مواقع الاستضافة (مثل Sirv)
+  // تجي أحيانًا بمسافات غير مُرمّزة داخل الرابط (مثال: ".../filay 2/...")
+  // فيفشل تحميلها بالمتصفح رغم إنها "تبدو" رابط سليم. نرمّزها هنا قبل الحفظ.
+  let bgImageRaw = document.getElementById('bgImage').value.trim();
+  if (bgImageRaw && /\s/.test(bgImageRaw)) {
+    try {
+      const u = new URL(bgImageRaw);
+      u.pathname = u.pathname.split('/').map(encodeURIComponent).join('/');
+      bgImageRaw = u.toString();
+      document.getElementById('bgImage').value = bgImageRaw;
+    } catch (e) {
+      // رابط غير صالح أصلًا — بيُترك كما هو ويُترك الفحص أدناه يوقف الحفظ
+    }
+  }
   const data = {
     eventName: document.getElementById('eventName').value.trim(),
     date: document.getElementById('eventDate').value,
     location: document.getElementById('eventLocation').value.trim(),
     welcomeMessage: document.getElementById('welcomeMessage').value.trim(),
-    backgroundImage: document.getElementById('bgImage').value.trim() || null,
+    backgroundImage: bgImageRaw || null,
     backgroundOpacity: parseInt(document.getElementById('bgOpacity').value, 10) || 0,
     colorScheme: currentScheme,
     colorSchemeData: {
@@ -484,6 +703,10 @@ async function saveCustomization() {
       text: scheme.text,
       background: scheme.background
     },
+    fontFamily: document.getElementById('fontFamily').value,
+    useCustomColors: useCustomColorsActive(),
+    customColors: useCustomColorsActive() ? getCustomColors() : null,
+    textStyles: elementStyles,
     updatedAt: serverTimestamp()
   };
 
@@ -493,10 +716,21 @@ async function saveCustomization() {
     statusEl.className = 'save-status ok';
     showToast('تم الحفظ ✅');
   } catch (e) {
+    // نعرض سبب الفشل الحقيقي بدل رسالة عامة — أغلب حالات "تعذّر الحفظ" سببها
+    // إما صلاحيات Firestore (permission-denied) أو رابط صورة غير صالح
     console.error('Error saving customization:', e);
-    statusEl.textContent = 'تعذّر حفظ التخصيص ❌';
+    const code = e && e.code ? e.code : '';
+    let reason = 'تعذّر حفظ التخصيص ❌';
+    if (code === 'permission-denied') {
+      reason = 'تعذّر الحفظ: لا تملكين صلاحية — تأكدي من تسجيل الدخول وصلاحيات Firestore Rules ❌';
+    } else if (code) {
+      reason = `تعذّر حفظ التخصيص (${code}) ❌`;
+    } else if (e && e.message) {
+      reason = `تعذّر حفظ التخصيص: ${e.message} ❌`;
+    }
+    statusEl.textContent = reason;
     statusEl.className = 'save-status err';
-    showToast('خطأ في الحفظ');
+    showToast('خطأ في الحفظ — شوفي التفاصيل تحت الزر');
   }
   btn.disabled = false;
 }
@@ -525,12 +759,16 @@ async function resetCustomization() {
     document.getElementById('bgOpacity').value = '30';
     document.getElementById('bgOpacityValue').textContent = '30%';
     currentScheme = 'classic_gold';
+    document.getElementById('fontFamily').value = 'Aref Ruqaa';
+    document.getElementById('useCustomColors').checked = false;
+    elementStyles = freshElementStyles();
+    closeElementPanel();
     renderSwatches();
     updatePreview();
 
     // Delete customization doc
     try {
-      await updateDoc(doc(db, 'events', currentEventId, 'customization', 'design'), { eventName: null, date: null, location: null, welcomeMessage: null, backgroundImage: null, backgroundOpacity: null, colorScheme: null, colorSchemeData: null, updatedAt: serverTimestamp() });
+      await updateDoc(doc(db, 'events', currentEventId, 'customization', 'design'), { eventName: null, date: null, location: null, welcomeMessage: null, backgroundImage: null, backgroundOpacity: null, colorScheme: null, colorSchemeData: null, fontFamily: null, useCustomColors: null, customColors: null, textStyles: null, updatedAt: serverTimestamp() });
     } catch {
       // If doc doesn't exist, ignore
     }
@@ -556,6 +794,28 @@ function wireInputs() {
     document.getElementById('bgOpacityValue').textContent = document.getElementById('bgOpacity').value + '%';
     updatePreview();
   });
+  document.getElementById('fontFamily').addEventListener('change', updatePreview);
+  document.getElementById('useCustomColors').addEventListener('change', updatePreview);
+  ['colorPrimary', 'colorSecondary', 'colorText', 'colorBackground'].forEach(id => {
+    document.getElementById(id).addEventListener('input', updatePreview);
+  });
+  document.getElementById('elOpacity').addEventListener('input', () => {
+    if (!selectedEl) return;
+    const val = parseInt(document.getElementById('elOpacity').value, 10);
+    document.getElementById('elOpacityValue').textContent = val + '%';
+    const st = elementStyles[selectedEl] || (elementStyles[selectedEl] = { ...DEFAULT_POSITIONS[selectedEl] });
+    st.opacity = val;
+    applyElementStyles();
+  });
+  document.getElementById('elResetPos').addEventListener('click', () => {
+    if (!selectedEl) return;
+    elementStyles[selectedEl] = { ...DEFAULT_POSITIONS[selectedEl], opacity: 100 };
+    document.getElementById('elOpacity').value = 100;
+    document.getElementById('elOpacityValue').textContent = '100%';
+    applyElementStyles();
+  });
+  document.getElementById('elClose').addEventListener('click', closeElementPanel);
+  wireDraggable();
 }
 
 // ===== Init =====

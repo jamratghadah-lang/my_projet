@@ -495,7 +495,22 @@ requireLogin(async (user) => {
   /* ===== Load QR Usage Log (realtime) ===== */
   function initLogListener() {
     const qLog = query(collection(db, "qr_usages"), orderBy("timestamp", "desc"));
+
+    // مؤقّت أمان: لو الاستماع اللحظي ما استجاب (لا نجاح ولا خطأ) خلال 8 ثوانٍ —
+    // غالبًا بسبب صلاحيات Firestore Rules أو مشكلة اتصال — نوقف "جارِ التحميل..."
+    // العالق ونعرض رسالة واضحة بدل ما تظل معلّقة للأبد بدون تفسير.
+    let responded = false;
+    const stuckTimer = setTimeout(() => {
+      if (!responded) {
+        logBody.innerHTML = '<tr><td colspan="5" class="empty">تعذّر تحميل السجل (تأخر الاستجابة) — تأكدي من صلاحيات Firestore Rules لمجموعة qr_usages، أو <a href="#" id="retryLogBtn" style="color:#d4af37">أعيدي المحاولة</a></td></tr>';
+        const retryBtn = document.getElementById("retryLogBtn");
+        if (retryBtn) retryBtn.addEventListener("click", (e) => { e.preventDefault(); initLogListener(); });
+      }
+    }, 8000);
+
     onSnapshot(qLog, (snap) => {
+      responded = true;
+      clearTimeout(stuckTimer);
       logBody.innerHTML = "";
       const docs = snap.docs.slice(0, 200); // Show last 200
       if (docs.length === 0) {
@@ -514,8 +529,10 @@ requireLogin(async (user) => {
         logBody.appendChild(tr);
       });
     }, (err) => {
+      responded = true;
+      clearTimeout(stuckTimer);
       console.error("Log listener error:", err);
-      logBody.innerHTML = '<tr><td colspan="5" class="empty">حدث خطأ في تحميل السجل</td></tr>';
+      logBody.innerHTML = '<tr><td colspan="5" class="empty">حدث خطأ في تحميل السجل: ' + escapeHtml(err.code || err.message || "غير معروف") + '</td></tr>';
     });
   }
 

@@ -16,8 +16,8 @@
   .card h2{font-size:15px;color:#d4af37;margin-top:0}
   .mode-switch{display:flex;gap:10px;margin-bottom:14px}
   .mode-switch label{flex:1;text-align:center;padding:10px;border-radius:8px;border:1px solid #444;cursor:pointer;background:#222}
+  .mode-switch label span{color:#eee}
   .mode-switch input{display:none}
-  .mode-switch input:checked + span{color:#111}
   .mode-switch label:has(input:checked){background:#d4af37;border-color:#d4af37}
   .mode-switch label:has(input:checked) span{color:#111;font-weight:bold}
   select,textarea,input[type=text]{width:100%;box-sizing:border-box;padding:9px;border-radius:6px;border:1px solid #444;background:#222;color:#fff;margin-bottom:10px}
@@ -52,8 +52,7 @@
 <div class="card">
 <h2>طريقة التذكير</h2>
 <div class="mode-switch">
-<label><input id="modeWhatsapp" name="mode" type="radio" value="whatsapp"/><span>واتساب يدوي (مجاني)</span></label>
-<label><input id="modeSms" name="mode" type="radio" value="sms"/><span>SMS جماعي تلقائي</span></label>
+<label><input id="modeSms" name="mode" type="radio" value="sms" checked/><span>SMS جماعي تلقائي</span></label>
 <label><input id="modeEmail" name="mode" type="radio" value="email"/><span>بريد إلكتروني جماعي</span></label>
 </div>
 <div id="emailOptions" style="display:none">
@@ -146,8 +145,8 @@ async function loadSettings() {
   const snap = await getDoc(ref);
   const data = snap.exists() ? snap.data() : {};
 
-  const mode = data.mode || "whatsapp";
-  const modeId = mode === "sms" ? "modeSms" : mode === "email" ? "modeEmail" : "modeWhatsapp";
+  const mode = data.mode === "email" ? "email" : "sms"; // "واتساب يدوي" أُزيل — أي إعداد قديم يرجع لـ SMS تلقائيًا
+  const modeId = mode === "email" ? "modeEmail" : "modeSms";
   document.getElementById(modeId).checked = true;
   document.getElementById("smsOptions").style.display = mode === "sms" ? "block" : "none";
   document.getElementById("emailOptions").style.display = mode === "email" ? "block" : "none";
@@ -172,7 +171,7 @@ document.querySelectorAll('input[name="mode"]').forEach((el) => {
 });
 
 document.getElementById("saveSettings").addEventListener("click", async () => {
-  const mode = document.querySelector('input[name="mode"]:checked')?.value || "whatsapp";
+  const mode = document.querySelector('input[name="mode"]:checked')?.value || "sms";
   const smsProvider = document.getElementById("smsProvider").value;
   const template = document.getElementById("template").value;
   const emailSubject = document.getElementById("emailSubject").value;
@@ -222,7 +221,7 @@ function renderGuests() {
     wrap.innerHTML = `<div class="empty">ما فيه ضيوف مؤكدين حالياً</div>`;
     return;
   }
-  const mode = document.querySelector('input[name="mode"]:checked')?.value || "whatsapp";
+  const mode = document.querySelector('input[name="mode"]:checked')?.value || "sms";
   const template = document.getElementById("template").value;
 
   // هروب HTML لاسم ورقم الضيف لمنع XSS — بيانات الضيوف قابلة للكتابة من أي
@@ -241,11 +240,8 @@ function renderGuests() {
   }
 
   wrap.innerHTML = `<ul class="guest-list">` + visibleGuests.map((g) => {
-    const msg = template.replace(/\{name\}/g, g.name);
-    const waLink = `https://wa.me/${encodeURIComponent(g.phone)}?text=${encodeURIComponent(msg)}`;
     return `<li>
       <span class="who">${esc(g.name)} <span class="badge">${esc(mode === "email" ? g.email : g.phone)}</span></span>
-      ${mode === "whatsapp" ? `<a class="wa-btn" target="_blank" rel="noopener noreferrer" href="${esc(waLink)}">إرسال واتساب</a>` : ""}
     </li>`;
   }).join("") + `</ul>`;
 }
